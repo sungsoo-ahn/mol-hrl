@@ -60,7 +60,11 @@ class Vocabulary:
         """Decodes a vocabulary index matrix to a list of tokens."""
         tokens = []
         for idx in vocab_index:
-            tokens.append(self[idx])
+            token = self[idx]
+            tokens.append(token)
+            if token == END_TOKEN:
+                break
+
         return tokens
 
     def _add(self, token, idx):
@@ -74,10 +78,19 @@ class Vocabulary:
         """Returns the tokens from the vocabulary"""
         return [t for t in self._tokens if isinstance(t, str)]
 
+    def get_start_id(self):
+        return self._tokens[START_TOKEN]
+    
+    def get_end_id(self):
+        return self._tokens[END_TOKEN]
+
+    def get_pad_id(self):
+        return self._tokens[PAD_TOKEN]
+    
 
 class SmilesTokenizer:
     REGEXP = re.compile(
-        "(\[[^\]]+]|Br?|Cl?|Si?|Se?|se?|@@?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
+        "(\[|\]|Br?|Cl?|Si?|Se?|se?|@@?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
     )
     def tokenize(self, data):
         tokens = self.REGEXP.split(data)
@@ -87,7 +100,9 @@ class SmilesTokenizer:
         return tokens
 
     def untokenize(self, tokens):
-        assert tokens[0] == START_TOKEN and tokens[-1] == END_TOKEN
+        if tokens[0] != START_TOKEN or tokens[-1] != END_TOKEN:
+            return ""
+
         return "".join(tokens[1:-1])
 
 def create_vocabulary(smiles_list, tokenizer):
