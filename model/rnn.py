@@ -3,29 +3,44 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
 
+def compute_rnn_accuracy(logits, y, batch_size):
+    y_pred = torch.argmax(logits, dim=-1)
+    correct = (y_pred == y)
+    correct[y == 0] = True
+    elem_acc = correct[y != 0].float().mean()
+    seq_acc = correct.view(batch_size, -1).all(dim=1).float().mean()
+
+    return elem_acc, seq_acc
+
+def compute_rnn_ce(logits, y_seq, lengths):
+    logits = logits.view(-1, logits.size(-1))
+    y_seq = y_seq.reshape(-1)
+    
+    loss = torch.nn.functional.cross_entropy(logits, y_seq, reduction="sum", ignore_index=0)
+    loss /= torch.sum(lengths - 1)
+
+    return loss
+
 class RnnGenerator(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim, cond_dim, num_layers):
         super(RnnGenerator, self).__init__()
         self.hidden_dim = hidden_dim
         
         self.encoder = nn.Embedding(input_dim, hidden_dim)
-        self.decoder = torch.nn.Sequential(
-            nn.Linear(hidden_dim + cond_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim)
-        )
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
+        self.decoder = nn.Linear(hidden_dim, output_dim)
+        self.lstm = nn.LSTM(hidden_dim + cond_dim, hidden_dim, batch_first=True, num_layers=num_layers)
 
     def forward(self, x, h, c, lengths):
         out = self.encoder(x)
-        out = pack_padded_sequence(out, batch_first=True, lengths=lengths, enforce_sorted=False)
-        out, h = self.lstm(out, h)
-        out, _ = pad_packed_sequence(out, batch_first=True)
-
         if c is not None:
             c = c.unsqueeze(1).expand(c.size(0), out.size(1), c.size(1))
             out = torch.cat([out, c], dim=2)
 
+        out = pack_padded_sequence(out, batch_first=True, lengths=lengths, enforce_sorted=False)
+        out, h = self.lstm(out, h)
+        out, _ = pad_packed_sequence(out, batch_first=True)
+
+        
         out = self.decoder(out)
         return out, h
 
@@ -41,10 +56,11 @@ class RnnGenerator(nn.Module):
         log_prob = 0.0
         for _ in range(max_length):
             out = self.encoder(x)
-            out, h = self.lstm(out, h)
             if c is not None:
                 out = torch.cat([out, c], dim=2)
-
+            
+            out, h = self.lstm(out, h)
+            
             logit = self.decoder(out)
 
             prob = torch.softmax(logit, dim=2)
@@ -73,9 +89,10 @@ class RnnGenerator(nn.Module):
         terminated = torch.zeros(batch_size, dtype=torch.bool).cuda()
         for _ in range(max_length):
             out = self.encoder(x)
-            out, h = self.lstm(out, h)
             if c is not None:
                 out = torch.cat([out, c], dim=2)
+
+            out, h = self.lstm(out, h)
 
             logit = self.decoder(out)
 

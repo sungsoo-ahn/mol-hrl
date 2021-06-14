@@ -7,8 +7,9 @@ import torch
 import torch.nn.functional as F
 
 from vocabulary import SmilesTokenizer, create_vocabulary
-from dataset import SmilesDataset
 from model.rnn import RnnGenerator
+from model.gnn import GnnProjector
+from pretrain_vae import VAE
 from scoring.factory import get_scoring_func
 
 
@@ -17,30 +18,46 @@ import neptune.new as neptune
 
 from torch.distributions import Normal
 
-def train(generator, code_mean, code_logstd, optimizer, scoring_func, vocab, tokenizer, batch_size, max_length):
-    statistics = defaultdict(float)
-    #code = code_mean.unsqueeze(0).expand(batch_size, code_mean.size(0))
-    #code = code_mean.unsqueeze(0) + code_logstd.exp().unsqueeze(0) * torch.randn(batch_size, code_mean.size(0)).cuda() 
+class HigherModel(torch.nn.Module):
+    def __init__(self, proj_dim):
+        super(HigherModel, self).__init__()
+        self.mean = torch.nn.Parameter(torch.zeros(proj_dim))
+        self.var = torch.nn.Parameter(torch.zeros(proj_dim))
     
-    distribution = Normal(code_mean.unsqueeze(0).expand(batch_size, code_mean.size(0)), 0.1 + code_logstd.unsqueeze(0).expand(batch_size, code_mean.size(0)).exp())
-    code = distribution.sample()
-    log_probs = distribution.log_prob(code)
+    def sample(self, batch_size):
+        mean_ = self.mean.unsqueeze(0).expand(batch_size, self.mean.size(0))
+        std_ = torch.exp(self.var.unsqueeze(0).expand(batch_size, self.var.size(0)) / 2)
+        distribution = Normal(mean_, std_)
+        code = distribution.sample()
+        log_probs = distribution.log_prob(code)
 
+        return code, log_probs
+
+def train(model, model_optimizer, higher_model, higher_optimizer, scoring_func, vocab, tokenizer, batch_size, max_length):
+    statistics = defaultdict(float)
+    code, log_probs = higher_model.sample(batch_size)
+    
     with torch.no_grad():
-        strings = generator.max_sample_strings(code, batch_size, max_length, vocab, tokenizer)
-
+        strings = model.decoder.max_sample_strings(code, batch_size, max_length, vocab, tokenizer)
+    
     scores = scoring_func(strings)
     scores = torch.tensor(scores).cuda()
     
-    topk_idxs = torch.topk(scores, 128)[1]
+    topk_idxs = torch.topk(scores, 1)[1]
     loss = -torch.mean(log_probs[topk_idxs])
     
-    optimizer.zero_grad()
+    higher_optimizer.zero_grad()
     loss.backward()
-    optimizer.step()
+    higher_optimizer.step()
 
+    topk_strings = [strings[idx] for idx in topk_idxs.tolist()]
+    topk_pyg_
+
+
+    statistics["loss"] = loss.item()
     statistics["score/max"] = scores.max().item()
     statistics["score/mean"] = scores.mean().item()
+    statistics["ratio"] = len(set(strings)) / len(strings)
 
     print(statistics)
 
@@ -72,14 +89,19 @@ if __name__ == "__main__":
 
     vocab = create_vocabulary(smiles_list, tokenizer)
     
-    generator = RnnGenerator(len(vocab), len(vocab), args.generator_hidden_dim, args.proj_dim, args.generator_num_layers).cuda()
-    
-    state_dict = torch.load(args.load_path)
-    generator.load_state_dict(state_dict["generator"])
-    generator.eval()
-    for param in generator.parameters():
+    generator = RnnGenerator(len(vocab), len(vocab), args.generator_hidden_dim, args.code_dim, args.generator_num_layers)
+    projector = GnnProjector(args.projector_num_layers, args.projector_hidden_dim, args.code_dim)
+    for param in projector.parameters():
         param.requires_grad = False
-
+    
+    model = VAE(encoder=projector, decoder=generator, code_dim=args.code_dim).cuda()
+    state_dict = torch.load(args.load_path)
+    model.encoder.load_state_dict(state_dict["generator"])
+    model.decoder.load_state_dict(state_dict["projector"])
+    model.fc_mu.load_state_dict(state_dict["fc_mu"])
+    model.fc_var.load_state_dict(state_dict["fc_var"])
+    
+    model_optimizer = torch.optim.Adam([param for param in model.parameters() if param.requires_grad], lr=1e-3)
 
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])
     run["parameters"] = vars(args)
@@ -107,12 +129,11 @@ if __name__ == "__main__":
         "decoration_hop", 
         "scaffold_hop"
         ]:
-        code_mean = torch.nn.Parameter(torch.randn(args.proj_dim).cuda())
-        code_logstd = torch.nn.Parameter(torch.randn(args.proj_dim).cuda())
-        optimizer = torch.optim.Adam([code_mean, code_logstd], lr=1e-1)
+        higher_model = HigherModel(args.proj_dim).cuda()
+        higher_optimizer = torch.optim.Adam(higher_model.parameters(), lr=1e-1)
 
         scoring_func = get_scoring_func(scoring_func_name)
         for step in tqdm(range(args.steps)):
-            statistics = train(generator, code_mean, code_logstd, optimizer, scoring_func, vocab, tokenizer, args.batch_size, args.max_length)
+            statistics = train(model, model_optimizer, higher_model, higher_optimizer, scoring_func, vocab, tokenizer, args.batch_size, args.max_length)
             for key in statistics:
                 run[f"{scoring_func_name}/{key}"].log(statistics[key])

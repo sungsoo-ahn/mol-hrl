@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch_scatter import scatter_mean
 from torch_geometric.nn import MessagePassing, global_add_pool
-from ogb.graphproppred.mol_encoder import AtomEncoder,BondEncoder
+from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 
 
 class GinConv(MessagePassing):
@@ -53,7 +53,11 @@ class GnnProjector(torch.nn.Module):
             if layer < self.num_layer - 1:
                 h = F.relu(h)
 
-        out = global_add_pool(h, batch)
-        out = self.linear(out)
+        h = self.linear(h)
         
-        return out
+        return h
+
+        #out = global_add_pool(h, batch)
+        #out = self.linear(out)
+        #out = F.normalize(out, dim=1, p=2)
+
