@@ -6,21 +6,24 @@ import torch
 from torch.optim import Adam
 
 from vocabulary import SmilesTokenizer, create_vocabulary
-from dataset import SmilesDataset
+from dataset import PairedSmilesDataset
 from model.rnn import RnnDecoder, RnnEncoder
-from model.ae import RnnAutoEncoder
+from model.ae import EducatedRnnAutoEncoder
 from util.mol import randomize_smiles
+from util.mutate import mutate
 
 from tqdm import tqdm
 import neptune.new as neptune
 
 def train(model, optimizer, loader):
     statistics = defaultdict(float)
-    for seqs, lengths in tqdm(loader):        
-        seqs = seqs.cuda()
-        lengths = lengths.cuda()
+    for seqs0, seqs1, lengths0, lengths1 in tqdm(loader):        
+        seqs0 = seqs0.cuda()
+        seqs1 = seqs1.cuda()
+        lengths0 = lengths0.cuda()
+        lengths1 = lengths1.cuda()
 
-        loss, step_statistics = model.step(seqs, lengths)
+        loss, step_statistics = model.step(seqs0, seqs1, lengths0, lengths1)
         for key, val in step_statistics.items():
             statistics[key] += val
         
@@ -58,6 +61,7 @@ if __name__ == "__main__":
     parser.add_argument("--tag", type=str, default="default")
 
     parser.add_argument("--randomize_smiles", action="store_true")
+    parser.add_argument("--mutate", action="store_true")
 
     args = parser.parse_args()
 
@@ -65,8 +69,16 @@ if __name__ == "__main__":
     with open(f"{args.data_dir}/{args.data_tag}.txt", "r") as f:
         smiles_list = f.read().splitlines()
 
+    def transform(smiles):
+        if args.randomize_smiles:
+            smiles = randomize_smiles(smiles)
+        if args.mutate:
+            smiles = mutate(smiles)
+        
+        return smiles
+
     vocab = create_vocabulary(smiles_list, tokenizer, args.max_length)
-    dataset = SmilesDataset(smiles_list, tokenizer, vocab, transform=randomize_smiles)
+    dataset = PairedSmilesDataset(smiles_list, tokenizer, vocab, transform=transform)
 
     loader = torch.utils.data.DataLoader(
         dataset=dataset,
@@ -78,7 +90,7 @@ if __name__ == "__main__":
     encoder = RnnEncoder(len(vocab), args.goal_dim, args.hidden_dim, args.num_layers)
     decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.goal_dim, args.num_layers)
     global_goal = torch.nn.Parameter(torch.randn(args.goal_dim))
-    model = RnnAutoEncoder(encoder=encoder, decoder=decoder, global_goal=global_goal).cuda()
+    model = EducatedRnnAutoEncoder(encoder=encoder, decoder=decoder, global_goal=global_goal).cuda()
     optimizer = Adam(model.parameters(), lr=1e-3)
     
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])
