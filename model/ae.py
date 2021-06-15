@@ -53,14 +53,18 @@ class RnnAutoEncoder(torch.nn.Module):
         return x_seq, lengths, log_prob
 
 class EducatedRnnAutoEncoder(RnnAutoEncoder):
-    def step(self, x_seq0, x_seq1, lengths0, lengths1):
+    def step(self, x_seq0, x_seq1, lengths0, lengths1, swap=True):
         batch_size = x_seq0.size(0)        
         global_goal = self.global_goal.unsqueeze(0).expand(batch_size, -1)
         goal0 = self.encoder(x_seq0, lengths0)
         goal1 = self.encoder(x_seq1, lengths1)
         
-        global_logits0, logits0 = self.decoder(x_seq0[:, :-1], goal_list=[global_goal, goal1], lengths=lengths0-1)
-        global_logits1, logits1 = self.decoder(x_seq1[:, :-1], goal_list=[global_goal, goal0], lengths=lengths1-1)
+        if swap:
+            global_logits0, logits0 = self.decoder(x_seq0[:, :-1], goal_list=[global_goal, goal1], lengths=lengths0-1)
+            global_logits1, logits1 = self.decoder(x_seq1[:, :-1], goal_list=[global_goal, goal0], lengths=lengths1-1)
+        else:
+            global_logits0, logits0 = self.decoder(x_seq0[:, :-1], goal_list=[global_goal, goal0], lengths=lengths0-1)
+            global_logits1, logits1 = self.decoder(x_seq1[:, :-1], goal_list=[global_goal, goal1], lengths=lengths1-1)
         
         global_recon_loss = 0.5 * (
             compute_rnn_ce(global_logits0, x_seq0[:, 1:], lengths0) 
