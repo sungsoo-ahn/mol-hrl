@@ -18,8 +18,8 @@ from util.priority_queue import MaxRewardPriorityQueue
 from tqdm import tqdm
 import neptune.new as neptune
 
-def train(model, optimizer, storage, vocab, tokenizer, scoring_func, sample_size, warmup):
-    for _ in range(8):
+def train(model, optimizer, storage, vocab, tokenizer, scoring_func, num_samples, num_updates, sample_size, batch_size, warmup):
+    for _ in range(num_samples):
         with torch.no_grad():
             seqs, lengths, _ = model.global_sample(sample_size, vocab)
         
@@ -40,20 +40,23 @@ def train(model, optimizer, storage, vocab, tokenizer, scoring_func, sample_size
     statistics["score/guacamol"] = (torch.topk(scores, k=100)[0].mean().item() + torch.topk(scores, k=10)[0].mean().item() + scores.max().item()) / 3
     
     if not warmup:
-        seqs = [smiles2seq(string, tokenizer, vocab) for string in strings]
-        lengths = torch.tensor([seq.size(0) for seq in seqs])
-        seqs = pad_sequence(seqs, batch_first=True, padding_value=0)
+        for _ in range(num_updates):
+            strings, seqs, lengths, scores = storage.sample_batch(batch_size)
 
-        seqs = seqs.cuda()
-        lengths = lengths.cuda()
-        loss, step_statistics = model.global_step(seqs, lengths)
-        for key, val in step_statistics.items():
-            statistics[key] += val
-        
-        optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
+            seqs = [smiles2seq(string, tokenizer, vocab) for string in strings]
+            lengths = torch.tensor([seq.size(0) for seq in seqs])
+            seqs = pad_sequence(seqs, batch_first=True, padding_value=0)
+
+            seqs = seqs.cuda()
+            lengths = lengths.cuda()
+            loss, step_statistics = model.global_step(seqs, lengths)
+            for key, val in step_statistics.items():
+                statistics[key] += val / num_updates
+            
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
 
     return statistics
 
@@ -62,18 +65,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="pretrain", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("--dataset", type=str, default="zinc")
-    parser.add_argument("--smiles_list_path", type=str, default="./data/zinc/test.txt")
-    
+    parser.add_argument("--data_dir", type=str, default="../resource/data/")
+    parser.add_argument("--checkpoint_dir", type=str, default="../resource/checkpoint/")
+    parser.add_argument("--data_tag", type=str, default="zinc")
+    parser.add_argument("--checkpoint_tag", type=str, default="default")
+
     parser.add_argument("--hidden_dim", type=int, default=1024)
-    parser.add_argument("--num_layers", type=int, default=2)
+    parser.add_argument("--num_layers", type=int, default=3)
     parser.add_argument("--goal_dim", type=int, default=32)
     parser.add_argument("--load_path", default="")
     
     parser.add_argument("--steps", type=int, default=200)
     parser.add_argument("--warmup_steps", type=int, default=5)
     parser.add_argument("--max_length", type=int, default=120)
+    
+    parser.add_argument("--num_samples", type=int, default=8)
     parser.add_argument("--sample_size", type=int, default=1024)
+
+    parser.add_argument("--num_updates", type=int, default=8)
+    parser.add_argument("--batch_size", type=int, default=256)
     
     parser.add_argument("--freeze_decoder", action="store_true")
     parser.add_argument("--freeze_lstm", action="store_true")
@@ -81,7 +91,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tokenizer = SmilesTokenizer()
-    with open(args.smiles_list_path, "r") as f:
+    with open(f"{args.data_dir}/{args.data_tag}.txt", "r") as f:
         smiles_list = f.read().splitlines()
 
     vocab = create_vocabulary(smiles_list, tokenizer, args.max_length)
@@ -102,31 +112,31 @@ if __name__ == "__main__":
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])
     run["parameters"] = vars(args)
     
-    for idx, scoring_func_name in enumerate([
-        #"celecoxib", 
-        #"troglitazone", 
-        #"thiothixene", 
-        #"aripiprazole", 
-        #"albuterol", 
-        #"mestranol", 
-        #"c11h24", 
-        #"c9h10n2o2pf2cl", 
-        "camphor_menthol", 
-        "tadalafil_sildenafil", 
-        "osimertinib", 
-        "fexofenadine", 
-        "ranolazine", 
-        "perindopril", 
-        "amlodipine", 
-        "sitagliptin", 
-        "zaleplon", 
-        #"valsartan_smarts", 
-        #"decoration_hop", 
-        #"scaffold_hop"
-        #"penalized_logp", 
-        ]):
+    for idx, scoring_func_name in [
+        (1, "celecoxib"), 
+        (2, "troglitazone"), 
+        (3, "thiothixene"), 
+        (4, "aripiprazole"), 
+        (5, "albuterol"), 
+        (6, "mestranol"), 
+        (7, "c11h24"), 
+        (8, "c9h10n2o2pf2cl"), 
+        (9, "camphor_menthol"), 
+        (10, "tadalafil_sildenafil"), 
+        (11, "osimertinib"), 
+        (12, "fexofenadine"), 
+        (13, "ranolazine"), 
+        (14, "perindopril"), 
+        (15, "amlodipine"), 
+        (16, "sitagliptin"), 
+        (17, "zaleplon"), 
+        (18, "valsartan_smarts"), 
+        (19, "decoration_hop"), 
+        (20, "scaffold_hop"),
+        (21, "penalized_logp"), 
+        ]:
         
-        model.load_state_dict(torch.load(args.load_path))
+        model.load_state_dict(torch.load(f"{args.checkpoint_dir}/{args.checkpoint_tag}.pth"))
         for param in model.encoder.parameters():
             param.requires_grad = False
         if args.freeze_decoder:
@@ -138,7 +148,7 @@ if __name__ == "__main__":
             for param in model.decoder.encoder.parameters():
                 param.requires_grad = False
 
-        optimizer = torch.optim.Adam([param for param in model.parameters() if param.requires_grad], lr=1e-3)
+        optimizer = torch.optim.Adam([param for param in model.parameters() if param.requires_grad], lr=1e-1)
         scoring_func = get_scoring_func(scoring_func_name)
         storage = MaxRewardPriorityQueue()
 
@@ -147,7 +157,7 @@ if __name__ == "__main__":
             if step > args.warmup_steps:
                 warmup = False
 
-            statistics = train(model, optimizer, storage, vocab, tokenizer, scoring_func, args.sample_size, warmup)
+            statistics = train(model, optimizer, storage, vocab, tokenizer, scoring_func, args.num_samples, args.num_updates, args.sample_size, args.batch_size, warmup)
             print(statistics)
 
             for key, val in statistics.items():

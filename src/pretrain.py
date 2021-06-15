@@ -40,7 +40,11 @@ if __name__ == "__main__":
         description="pretrain", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     
-    parser.add_argument("--smiles_list_path", type=str, default="./data/zinc/full.txt")
+    parser.add_argument("--data_dir", type=str, default="../resource/data/")
+    parser.add_argument("--checkpoint_dir", type=str, default="../resource/checkpoint/")
+    parser.add_argument("--data_tag", type=str, default="zinc")
+    parser.add_argument("--checkpoint_tag", type=str, default="default")
+
     parser.add_argument("--max_length", type=int, default=100)
     
     parser.add_argument("--hidden_dim", type=int, default=1024)
@@ -58,7 +62,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tokenizer = SmilesTokenizer()
-    with open(args.smiles_list_path, "r") as f:
+    with open(f"{args.data_dir}/{args.data_tag}.txt", "r") as f:
         smiles_list = f.read().splitlines()
 
     vocab = create_vocabulary(smiles_list, tokenizer, args.max_length)
@@ -91,4 +95,4 @@ if __name__ == "__main__":
         if train_acc > best_train_acc:
             best_train_acc = train_acc
             state_dict = model.state_dict()
-            torch.save(state_dict, f"./checkpoint/{args.tag}.pth")
+            torch.save(state_dict, f"{args.checkpoint_dir}/{args.checkpoint_tag}.pth")

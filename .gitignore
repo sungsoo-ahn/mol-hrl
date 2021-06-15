@@ -137,5 +137,4 @@ resource/
 # neptune
 .neptune
 
-checkpoint/
-data/
+resource/
