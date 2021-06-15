@@ -15,7 +15,7 @@ from util.mutate import mutate
 from tqdm import tqdm
 import neptune.new as neptune
 
-def train(model, optimizer, loader):
+def train(model, optimizer, loader, swap):
     statistics = defaultdict(float)
     for seqs0, seqs1, lengths0, lengths1 in tqdm(loader):        
         seqs0 = seqs0.cuda()
@@ -23,7 +23,7 @@ def train(model, optimizer, loader):
         lengths0 = lengths0.cuda()
         lengths1 = lengths1.cuda()
 
-        loss, step_statistics = model.step(seqs0, seqs1, lengths0, lengths1)
+        loss, step_statistics = model.step(seqs0, seqs1, lengths0, lengths1, swap=swap)
         for key, val in step_statistics.items():
             statistics[key] += val
         
@@ -63,6 +63,8 @@ if __name__ == "__main__":
     parser.add_argument("--randomize_smiles", action="store_true")
     parser.add_argument("--mutate", action="store_true")
 
+    parser.add_argument("--swap", action="store_true")
+    
     args = parser.parse_args()
 
     tokenizer = SmilesTokenizer()
@@ -98,7 +100,7 @@ if __name__ == "__main__":
 
     best_train_acc = -10.0
     for epoch in range(args.epochs):
-        statistics = train(model, optimizer, loader)
+        statistics = train(model, optimizer, loader, args.swap)
         print(statistics)
         for key in statistics:
             run[key].log(statistics[key])

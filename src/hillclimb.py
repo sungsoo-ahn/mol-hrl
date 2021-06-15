@@ -77,7 +77,8 @@ if __name__ == "__main__":
     
     parser.add_argument("--steps", type=int, default=200)
     parser.add_argument("--warmup_steps", type=int, default=5)
-    parser.add_argument("--max_length", type=int, default=120)
+    parser.add_argument("--max_length", type=int, default=100)
+    parser.add_argument("--goal_lr", type=float, default=1e-3)
     
     parser.add_argument("--num_samples", type=int, default=8)
     parser.add_argument("--sample_size", type=int, default=1024)
@@ -148,7 +149,11 @@ if __name__ == "__main__":
             for param in model.decoder.encoder.parameters():
                 param.requires_grad = False
 
-        optimizer = torch.optim.Adam([param for param in model.parameters() if param.requires_grad], lr=1e-1)
+        optimizer = torch.optim.Adam([
+            {"params": model.decoder.parameters()},
+            {"params": [global_goal], "lr": args.goal_lr}], 
+            lr=1e-3
+            )
         scoring_func = get_scoring_func(scoring_func_name)
         storage = MaxRewardPriorityQueue()
 
