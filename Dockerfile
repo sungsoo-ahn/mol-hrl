@@ -1,5 +1,8 @@
 FROM pytorch/pytorch:1.6.0-cuda10.1-cudnn7-devel
 
+RUN apt-get update
+RUN apt-get install git
+
 RUN conda install -y tqdm
 RUN conda install -y -c conda-forge neptune-client
 RUN conda install -y -c conda-forge rdkit
