@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pad_sequence
 from vocabulary import SmilesTokenizer, create_vocabulary, seq2smiles, smiles2seq
 from dataset import SmilesDataset
 from model.rnn import RnnDecoder, RnnEncoder
-from model.vae import RnnVariationalAutoEncoder
+from model.ae import RnnAutoEncoder
 from scoring.factory import get_scoring_func
 from util.mol import randomize_smiles
 from util.priority_queue import MaxRewardPriorityQueue
@@ -21,7 +21,7 @@ import neptune.new as neptune
 def train(model, optimizer, storage, vocab, tokenizer, scoring_func, sample_size, warmup):
     for _ in range(8):
         with torch.no_grad():
-            seqs, lengths, _ = model.sample_seq(sample_size, vocab)
+            seqs, lengths, _ = model.global_sample(sample_size, vocab)
         
         strings = seq2smiles(seqs, tokenizer, vocab)
         scores = scoring_func(strings)    
@@ -37,9 +37,8 @@ def train(model, optimizer, storage, vocab, tokenizer, scoring_func, sample_size
     statistics = defaultdict(float)
     statistics["score/max"] = scores.max().item()
     statistics["score/mean"] = scores.mean().item()
-    statistics["score/123"] = (torch.topk(scores, k=100)[0].mean().item() + torch.topk(scores, k=10)[0].mean().item() + scores.max().item()) / 3
-    #statistics["ratio"] = len(set(strings)) / len(strings)
-
+    statistics["score/guacamol"] = (torch.topk(scores, k=100)[0].mean().item() + torch.topk(scores, k=10)[0].mean().item() + scores.max().item()) / 3
+    
     if not warmup:
         seqs = [smiles2seq(string, tokenizer, vocab) for string in strings]
         lengths = torch.tensor([seq.size(0) for seq in seqs])
@@ -47,7 +46,7 @@ def train(model, optimizer, storage, vocab, tokenizer, scoring_func, sample_size
 
         seqs = seqs.cuda()
         lengths = lengths.cuda()
-        loss, step_statistics = model.step(seqs, lengths)
+        loss, step_statistics = model.global_step(seqs, lengths)
         for key, val in step_statistics.items():
             statistics[key] += val
         
@@ -68,14 +67,16 @@ if __name__ == "__main__":
     
     parser.add_argument("--hidden_dim", type=int, default=1024)
     parser.add_argument("--num_layers", type=int, default=2)
-    parser.add_argument("--code_dim", type=int, default=32)
+    parser.add_argument("--goal_dim", type=int, default=32)
     parser.add_argument("--load_path", default="")
     
     parser.add_argument("--steps", type=int, default=200)
-    parser.add_argument("--warmup_steps", type=int, default=500)
-    parser.add_argument("--max_length", type=int, default=81)
+    parser.add_argument("--warmup_steps", type=int, default=5)
+    parser.add_argument("--max_length", type=int, default=120)
     parser.add_argument("--sample_size", type=int, default=1024)
     
+    parser.add_argument("--freeze_decoder", action="store_true")
+    parser.add_argument("--freeze_lstm", action="store_true")
     
     args = parser.parse_args()
 
@@ -93,15 +94,15 @@ if __name__ == "__main__":
         num_workers=8,
     )
     
-    encoder = RnnEncoder(len(vocab), args.code_dim, args.hidden_dim, args.num_layers)
-    decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.code_dim, args.num_layers)
-    model = RnnVariationalAutoEncoder(encoder=encoder, decoder=decoder, code_dim=args.code_dim).cuda()
-
+    encoder = RnnEncoder(len(vocab), args.goal_dim, args.hidden_dim, args.num_layers)
+    decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.goal_dim, args.num_layers)
+    global_goal = torch.nn.Parameter(torch.randn(args.goal_dim))
+    model = RnnAutoEncoder(encoder=encoder, decoder=decoder, global_goal=global_goal).cuda()
+    
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])
     run["parameters"] = vars(args)
     
-    for scoring_func_name in [
-        #"penalized_logp", 
+    for idx, scoring_func_name in enumerate([
         #"celecoxib", 
         #"troglitazone", 
         #"thiothixene", 
@@ -122,22 +123,34 @@ if __name__ == "__main__":
         #"valsartan_smarts", 
         #"decoration_hop", 
         #"scaffold_hop"
-        ]:
+        #"penalized_logp", 
+        ]):
         
         model.load_state_dict(torch.load(args.load_path))
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        for param in model.encoder.parameters():
+            param.requires_grad = False
+        if args.freeze_decoder:
+            for param in model.decoder.parameters():
+                param.requires_grad = False
+        if args.freeze_lstm:
+            for param in model.decoder.lstm.parameters():
+                param.requires_grad = False
+            for param in model.decoder.encoder.parameters():
+                param.requires_grad = False
+
+        optimizer = torch.optim.Adam([param for param in model.parameters() if param.requires_grad], lr=1e-3)
         scoring_func = get_scoring_func(scoring_func_name)
         storage = MaxRewardPriorityQueue()
 
         warmup = True
         for step in tqdm(range(args.steps)):
-            if step > 5:
+            if step > args.warmup_steps:
                 warmup = False
 
             statistics = train(model, optimizer, storage, vocab, tokenizer, scoring_func, args.sample_size, warmup)
             print(statistics)
 
             for key, val in statistics.items():
-                run[f"{scoring_func_name}/{key}"].log(val)
+                run[f"{idx}_{scoring_func_name}/{key}"].log(val)
     
 

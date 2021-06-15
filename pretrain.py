@@ -6,24 +6,21 @@ import torch
 from torch.optim import Adam
 
 from vocabulary import SmilesTokenizer, create_vocabulary
-from dataset import PairedSmilesDataset
+from dataset import SmilesDataset
 from model.rnn import RnnDecoder, RnnEncoder
-from model.vae import EducatedRnnVariationalAutoEncoder
+from model.ae import RnnAutoEncoder
 from util.mol import randomize_smiles
-from util.mutate import mutate
 
 from tqdm import tqdm
 import neptune.new as neptune
 
 def train(model, optimizer, loader):
     statistics = defaultdict(float)
-    for seqs0, seqs1, lengths0, lengths1 in tqdm(loader):        
-        seqs0 = seqs0.cuda()
-        lengths0 = lengths0.cuda()
-        seqs1 = seqs1.cuda()
-        lengths1 = lengths1.cuda()
+    for seqs, lengths in tqdm(loader):        
+        seqs = seqs.cuda()
+        lengths = lengths.cuda()
 
-        loss, step_statistics = model.step(seqs0, seqs1, lengths0, lengths1)
+        loss, step_statistics = model.step(seqs, lengths)
         for key, val in step_statistics.items():
             statistics[key] += val
         
@@ -43,18 +40,20 @@ if __name__ == "__main__":
         description="pretrain", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     
-    parser.add_argument("--smiles_list_path", type=str, default="./data/zinc/test.txt")
-    parser.add_argument("--max_length", type=int, default=81)
+    parser.add_argument("--smiles_list_path", type=str, default="./data/zinc/full.txt")
+    parser.add_argument("--max_length", type=int, default=100)
     
     parser.add_argument("--hidden_dim", type=int, default=1024)
-    parser.add_argument("--code_dim", type=int, default=32)
-    parser.add_argument("--num_layers", type=int, default=2)
+    parser.add_argument("--goal_dim", type=int, default=32)
+    parser.add_argument("--num_layers", type=int, default=3)
     
-    parser.add_argument("--epochs", type=int, default=300)
+    parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     
     parser.add_argument("--tag", type=str, default="default")
+
+    parser.add_argument("--randomize_smiles", action="store_true")
 
     args = parser.parse_args()
 
@@ -63,10 +62,7 @@ if __name__ == "__main__":
         smiles_list = f.read().splitlines()
 
     vocab = create_vocabulary(smiles_list, tokenizer, args.max_length)
-
-    transform = lambda smiles: randomize_smiles(mutate(smiles))
-
-    dataset = PairedSmilesDataset(smiles_list, tokenizer, vocab, transform=randomize_smiles)
+    dataset = SmilesDataset(smiles_list, tokenizer, vocab, transform=randomize_smiles)
 
     loader = torch.utils.data.DataLoader(
         dataset=dataset,
@@ -75,9 +71,10 @@ if __name__ == "__main__":
         num_workers=8,
     )
 
-    encoder = RnnEncoder(len(vocab), args.code_dim, args.hidden_dim, args.num_layers)
-    decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.code_dim, args.num_layers)
-    model = EducatedRnnVariationalAutoEncoder(encoder=encoder, decoder=decoder, code_dim=args.code_dim).cuda()
+    encoder = RnnEncoder(len(vocab), args.goal_dim, args.hidden_dim, args.num_layers)
+    decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.goal_dim, args.num_layers)
+    global_goal = torch.nn.Parameter(torch.randn(args.goal_dim))
+    model = RnnAutoEncoder(encoder=encoder, decoder=decoder, global_goal=global_goal).cuda()
     optimizer = Adam(model.parameters(), lr=1e-3)
     
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])
