@@ -21,109 +21,85 @@ def compute_rnn_ce(logits, y_seq, lengths):
 
     return loss
 
-class RnnGenerator(nn.Module):
+class RnnEncoder(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim, num_layers):
+        super(RnnEncoder, self).__init__()
+        self.hidden_dim = hidden_dim
+        
+        self.encoder = nn.Embedding(input_dim, hidden_dim)
+        self.decoder = nn.Linear(hidden_dim, output_dim)
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
+
+    def forward(self, seq, lengths):
+        out = self.encoder(seq)
+
+        out = pack_padded_sequence(out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False)
+        _, (hn, _) = self.lstm(out, None)
+        
+        #out = torch.cat([hn[-1], hn[-2]], dim=1)
+        out = hn[-1]
+        
+        out = self.decoder(out)
+        
+        return out
+
+class RnnDecoder(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim, cond_dim, num_layers):
-        super(RnnGenerator, self).__init__()
+        super(RnnDecoder, self).__init__()
         self.hidden_dim = hidden_dim
         
         self.encoder = nn.Embedding(input_dim, hidden_dim)
         self.decoder = nn.Linear(hidden_dim, output_dim)
         self.lstm = nn.LSTM(hidden_dim + cond_dim, hidden_dim, batch_first=True, num_layers=num_layers)
 
-    def forward(self, x, h, c, lengths):
-        out = self.encoder(x)
-        if c is not None:
-            c = c.unsqueeze(1).expand(c.size(0), out.size(1), c.size(1))
-            out = torch.cat([out, c], dim=2)
+    def forward(self, seq, code, lengths):
+        code = code.unsqueeze(1).expand(code.size(0), seq.size(1), code.size(1))
+        
+        out = self.encoder(seq)
+        out = torch.cat([out, code], dim=2)
 
-        out = pack_padded_sequence(out, batch_first=True, lengths=lengths, enforce_sorted=False)
-        out, h = self.lstm(out, h)
+        out = pack_padded_sequence(out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False)
+        out, hidden = self.lstm(out, None)
         out, _ = pad_packed_sequence(out, batch_first=True)
 
-        
-        out = self.decoder(out)
-        return out, h
+        logit = self.decoder(out)
+        return logit
 
-    def sample(self, c, batch_size, max_length, vocab):
-        if c is not None:
-            c = c.unsqueeze(1)
 
-        x = torch.full((batch_size, 1), vocab.get_start_id(), dtype=torch.long).cuda()
-        seq = [x]
+    def sample(self, code, vocab, mode="sample"):
+        code = code.unsqueeze(1)
 
-        h = None
+        batch_size = code.size(0)
+        seq = [torch.full((batch_size, 1), vocab.get_start_id(), dtype=torch.long).cuda()]
+
+        hidden = None
         terminated = torch.zeros(batch_size, dtype=torch.bool).cuda()
         log_prob = 0.0
-        for _ in range(max_length):
-            out = self.encoder(x)
-            if c is not None:
-                out = torch.cat([out, c], dim=2)
-            
-            out, h = self.lstm(out, h)
-            
+        lengths = torch.ones(batch_size, dtype=torch.long).cuda()
+        for _ in range(vocab.max_length):
+            out = self.encoder(seq[-1])
+            out = torch.cat([out, code], dim=2)
+            out, hidden = self.lstm(out, hidden)
             logit = self.decoder(out)
 
             prob = torch.softmax(logit, dim=2)
             distribution = Categorical(probs=prob)
-            x = distribution.sample()
-            log_prob += (~terminated).float() * distribution.log_prob(x).squeeze(1)
+            if mode == "sample":
+                seq_t = distribution.sample()
+            elif mode == "max":
+                seq_t = logit.argmax(dim=2)
+                
+            log_prob += (~terminated).float() * distribution.log_prob(seq_t).squeeze(1)
 
-            seq.append(x)
+            seq.append(seq_t)
 
-            terminated = terminated | (x.squeeze(1) == vocab.get_end_id())
-            if terminated.all():
-                break
-
-        seq = torch.cat(seq, dim=1)
-        
-        return seq, log_prob
-    
-    def max_sample(self, c, batch_size, max_length, vocab):
-        if c is not None:
-            c = c.unsqueeze(1)
-
-        x = torch.full((batch_size, 1), vocab.get_start_id(), dtype=torch.long).cuda()
-        seq = [x]
-
-        h = None
-        terminated = torch.zeros(batch_size, dtype=torch.bool).cuda()
-        for _ in range(max_length):
-            out = self.encoder(x)
-            if c is not None:
-                out = torch.cat([out, c], dim=2)
-
-            out, h = self.lstm(out, h)
-
-            logit = self.decoder(out)
-
-            x = logit.argmax(dim=2)
+            lengths[~terminated] += 1
+            terminated = terminated | (seq_t.squeeze(1) == vocab.get_end_id())
             
-            seq.append(x)
-
-            terminated = terminated | (x.squeeze(1) == vocab.get_end_id())
             if terminated.all():
                 break
 
         seq = torch.cat(seq, dim=1)
         
-        return seq
-
-    def sample_strings(self, c, batch_size, max_length, vocab, tokenizer):
-        seq, log_prob = self.sample(c, batch_size, max_length, vocab)
-
-        strings = []
-        seqs = seq.cpu().split(1, dim=0)
-        for seq in seqs:
-            strings.append(tokenizer.untokenize(vocab.decode(seq.squeeze(0).tolist())))
-        
-        return strings, log_prob
-
-    def max_sample_strings(self, c, batch_size, max_length, vocab, tokenizer):
-        seq = self.max_sample(c, batch_size, max_length, vocab)
-
-        strings = []
-        seqs = seq.cpu().split(1, dim=0)
-        for seq in seqs:
-            strings.append(tokenizer.untokenize(vocab.decode(seq.squeeze(0).tolist())))
-        
-        return strings
+        return seq, lengths, log_prob
+    

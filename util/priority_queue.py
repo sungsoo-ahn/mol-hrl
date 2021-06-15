@@ -5,8 +5,10 @@ import random
 
 @total_ordering
 class StorageElement:
-    def __init__(self, smi, score):
+    def __init__(self, smi, seq, length, score):
         self.smi = smi
+        self.seq = seq
+        self.length = length
         self.score = score
 
     def __eq__(self, other):
@@ -20,7 +22,7 @@ class StorageElement:
 
 
 def unravel_elems(elems):
-    return tuple(map(list, zip(*[(elem.smi, elem.score) for elem in elems])))
+    return tuple(map(list, zip(*[(elem.smi, elem.seq, elem.length, elem.score) for elem in elems])))
 
 
 class MaxRewardPriorityQueue:
@@ -30,8 +32,8 @@ class MaxRewardPriorityQueue:
     def __len__(self):
         return len(self.elems)
 
-    def add_list(self, smis, scores):
-        new_elems = [StorageElement(smi=smi, score=score) for smi, score in zip(smis, scores)]
+    def add_list(self, smis, seqs, lengths, scores):
+        new_elems = [StorageElement(smi=smi, seq=seq, length=length, score=score) for smi, seq, length, score in zip(smis, seqs, lengths, scores)]
         self.elems.extend(new_elems)
         self.elems = list(set(self.elems))
 

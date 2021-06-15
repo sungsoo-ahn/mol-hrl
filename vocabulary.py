@@ -4,6 +4,7 @@ Vocabulary helper class
 
 import re
 import numpy as np
+import torch
 
 START_TOKEN = "<SOS>"
 END_TOKEN = "<EOS>"
@@ -13,9 +14,10 @@ PAD_TOKEN = "<PAD>"
 class Vocabulary:
     """Stores the tokens and their conversion to vocabulary indexes."""
 
-    def __init__(self):
+    def __init__(self, max_length):
         self._tokens = dict()
         self._current_id = 0
+        self.max_length = max_length
         self.update([PAD_TOKEN, END_TOKEN, START_TOKEN])
 
     def __getitem__(self, token_or_id):
@@ -105,15 +107,26 @@ class SmilesTokenizer:
 
         return "".join(tokens[1:-1])
 
-def create_vocabulary(smiles_list, tokenizer):
+def create_vocabulary(smiles_list, tokenizer, max_length):
     """Creates a vocabulary for the Smiles syntax."""
     tokens = set()
     for smi in smiles_list:
         tokens.update(tokenizer.tokenize(smi))
 
-    vocabulary = Vocabulary()
+    vocabulary = Vocabulary(max_length)
     vocabulary.update(sorted(tokens))
     return vocabulary
+
+def smiles2seq(smiles, tokenizer, vocabulary):
+    return torch.tensor(vocabulary.encode(tokenizer.tokenize(smiles)))
+
+def seq2smiles(seq, tokenizer, vocabulary):
+    strings = []
+    seqs = seq.cpu().split(1, dim=0)
+    for seq in seqs:
+        strings.append(tokenizer.untokenize(vocabulary.decode(seq.squeeze(0).tolist())))
+    
+    return strings
 
 if __name__ == "__main__":
     tokenizer = SmilesTokenizer()

@@ -6,21 +6,24 @@ import torch
 from torch.optim import Adam
 
 from vocabulary import SmilesTokenizer, create_vocabulary
-from dataset import SmilesDataset
+from dataset import PairedSmilesDataset
 from model.rnn import RnnDecoder, RnnEncoder
-from model.vae import RnnVariationalAutoEncoder
+from model.vae import EducatedRnnVariationalAutoEncoder
 from util.mol import randomize_smiles
+from util.mutate import mutate
 
 from tqdm import tqdm
 import neptune.new as neptune
 
 def train(model, optimizer, loader):
     statistics = defaultdict(float)
-    for seqs, lengths in tqdm(loader):        
-        seqs = seqs.cuda()
-        lengths = lengths.cuda()
+    for seqs0, seqs1, lengths0, lengths1 in tqdm(loader):        
+        seqs0 = seqs0.cuda()
+        lengths0 = lengths0.cuda()
+        seqs1 = seqs1.cuda()
+        lengths1 = lengths1.cuda()
 
-        loss, step_statistics = model.step(seqs, lengths)
+        loss, step_statistics = model.step(seqs0, seqs1, lengths0, lengths1)
         for key, val in step_statistics.items():
             statistics[key] += val
         
@@ -47,13 +50,11 @@ if __name__ == "__main__":
     parser.add_argument("--code_dim", type=int, default=32)
     parser.add_argument("--num_layers", type=int, default=2)
     
-    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     
     parser.add_argument("--tag", type=str, default="default")
-
-    parser.add_argument("--randomize_smiles", action="store_true")
 
     args = parser.parse_args()
 
@@ -62,7 +63,10 @@ if __name__ == "__main__":
         smiles_list = f.read().splitlines()
 
     vocab = create_vocabulary(smiles_list, tokenizer, args.max_length)
-    dataset = SmilesDataset(smiles_list, tokenizer, vocab, transform=randomize_smiles)
+
+    transform = lambda smiles: randomize_smiles(mutate(smiles))
+
+    dataset = PairedSmilesDataset(smiles_list, tokenizer, vocab, transform=randomize_smiles)
 
     loader = torch.utils.data.DataLoader(
         dataset=dataset,
@@ -73,7 +77,7 @@ if __name__ == "__main__":
 
     encoder = RnnEncoder(len(vocab), args.code_dim, args.hidden_dim, args.num_layers)
     decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.code_dim, args.num_layers)
-    model = RnnVariationalAutoEncoder(encoder=encoder, decoder=decoder, code_dim=args.code_dim).cuda()
+    model = EducatedRnnVariationalAutoEncoder(encoder=encoder, decoder=decoder, code_dim=args.code_dim).cuda()
     optimizer = Adam(model.parameters(), lr=1e-3)
     
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])

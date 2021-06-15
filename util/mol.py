@@ -22,10 +22,8 @@ def smiles2graph_pyg(smiles):
 
     return graph_pyg
 
-def smiles2seq(smiles, tokenizer, vocabulary):
-    return torch.tensor(vocabulary.encode(tokenizer.tokenize(smiles)))
-
 def randomize_smiles(smiles):
     mol = Chem.MolFromSmiles(smiles)
     smiles = Chem.MolToSmiles(mol, canonical=False, doRandom=True, isomericSmiles=False)
     return smiles
+

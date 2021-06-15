@@ -94,6 +94,7 @@ def add_ring():
     return np.random.choice(choices, p=p)
 
 RXN_SMARTS_LIST = []
+RXN_SMARTS_LIST.append(None)
 RXN_SMARTS_LIST.append(insert_atom())
 RXN_SMARTS_LIST.append(change_bond_order())
 RXN_SMARTS_LIST.append(delete_cyclic_bond())
@@ -147,27 +148,28 @@ def mol_ok(mol):
 
 def mutate(smiles):
     mol = Chem.MolFromSmiles(smiles)
-    try:
-        Chem.Kekulize(mol, clearAromaticFlags=True)
-    except ValueError:
+    #try:
+    #    Chem.Kekulize(mol, clearAromaticFlags=True)
+    #except ValueError:
+    #    return smiles
+
+    rxn_smarts = np.random.choice(RXN_SMARTS_LIST)
+    if rxn_smarts is None:
         return smiles
+    
+    rxn = AllChem.ReactionFromSmarts(rxn_smarts)
 
-    for i in range(1):
-        rxn_smarts = np.random.choice(RXN_SMARTS_LIST)
+    new_mol_trial = rxn.RunReactants((mol,))
 
-        rxn = AllChem.ReactionFromSmarts(rxn_smarts)
+    new_mols = []
+    for m in new_mol_trial:
+        m = m[0]
+        # print Chem.MolToSmiles(mol),mol_ok(mol)
+        if mol_ok(m) and ring_OK(m):
+            new_mols.append(m)
 
-        new_mol_trial = rxn.RunReactants((mol,))
-
-        new_mols = []
-        for m in new_mol_trial:
-            m = m[0]
-            # print Chem.MolToSmiles(mol),mol_ok(mol)
-            if mol_ok(m) and ring_OK(m):
-                new_mols.append(m)
-
-        if len(new_mols) > 0:
-            return Chem.MolToSmiles(random.choice(new_mols))
+    if len(new_mols) > 0:
+        return Chem.MolToSmiles(random.choice(new_mols))
 
     return smiles
 
