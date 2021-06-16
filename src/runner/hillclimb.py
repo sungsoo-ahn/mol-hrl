@@ -110,9 +110,8 @@ class HillClimber:
                 lengths = torch.tensor([seq.size(0) for seq in seqs])
                 seqs = pad_sequence(seqs, batch_first=True, padding_value=0)
 
-                seqs = seqs.cuda()
-                lengths = lengths.cuda()
-                loss, step_statistics = model.hillclimb_step(seqs, lengths)
+                batched_data = (seqs, lengths)
+                loss, step_statistics = model.hillclimb_step(batched_data)
                 for key, val in step_statistics.items():
                     statistics[key] += val / self.num_updates_per_step
 
