@@ -5,4 +5,5 @@ python run_base.py \
 --pretrain_tag base \
 --data_aug_randomize_smiles \
 --data_aug_mutate \
---data_tag zinc
+--hillclimb_steps 100 \
+--data_tag zinc_small

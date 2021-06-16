@@ -28,7 +28,7 @@ class Pretrainer:
             statistics = self.run_epoch(model, optimizer, loader)
             logger.log(statistics)
 
-            perf = statistics["loss"]
+            perf = statistics["loss/sum"]
             if epoch == 0 or perf > best_perf:
                 best_perf = perf
                 state_dict = model.state_dict()

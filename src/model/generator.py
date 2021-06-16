@@ -51,7 +51,7 @@ class BaseGenerator(torch.nn.Module):
 
         loss = compute_cross_entropy(logits, seqs[:, 1:], lengths, self.pad_id)
 
-        statistics = {"base_generator/loss": loss.item()}
+        statistics = {"loss/sum": loss.item()}
 
         return loss, statistics
 
@@ -108,7 +108,7 @@ class GoalBasedGenerator(torch.nn.Module):
         loss = global_recon_loss + recon_loss
 
         statistics = {
-            "loss": loss.item(),
+            "loss/sum": loss.item(),
             "loss/global_recon": global_recon_loss.item(),
             "loss/recon": recon_loss.item(),
             "acc/recon/elem": elem_acc.item(),
@@ -131,7 +131,7 @@ class GoalBasedGenerator(torch.nn.Module):
         loss = global_recon_loss
 
         statistics = {
-            "loss": loss.item(),
+            "loss/sum": loss.item(),
             "loss/global_recon": global_recon_loss.item(),
         }
 
@@ -180,7 +180,7 @@ class EducatedGoalBasedGenerator(GoalBasedGenerator):
         loss = global_recon_loss + recon_loss
 
         statistics = {
-            "loss": loss.item(),
+            "loss/sum": loss.item(),
             "loss/global_recon": global_recon_loss.item(),
             "loss/recon": recon_loss.item(),
             "acc/recon/elem": elem_acc.item(),
