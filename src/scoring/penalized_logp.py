@@ -48,18 +48,18 @@ CYCLESCORE_MEAN = 0.048152237188108474
 CYCLESCORE_STD = 0.2860582871837183
 
 
-def _penalized_logp_cyclebasis(mol: Mol):    
+def _penalized_logp_cyclebasis(mol: Mol):
     log_p = Descriptors.MolLogP(mol)
     sa_score = sascorer.calculateScore(mol)
 
     cycle_list = nx.cycle_basis(nx.Graph(Chem.rdmolops.GetAdjacencyMatrix(mol)))
     largest_ring_size = max([len(j) for j in cycle_list]) if cycle_list else 0
     cycle_score = max(largest_ring_size - 6, 0)
-    
+
     log_p = (log_p - LOGP_MEAN) / LOGP_STD
     sa_score = (sa_score - SASCORE_MEAN) / SASCORE_STD
     cycle_score = (cycle_score - CYCLESCORE_MEAN) / CYCLESCORE_STD
-    
+
     return log_p - sa_score - cycle_score
 
 

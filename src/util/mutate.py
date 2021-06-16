@@ -4,8 +4,9 @@ import numpy as np
 from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem
 
-#rdBase.DisableLog("rdApp.error")
-RDLogger.DisableLog('rdApp.*')
+# rdBase.DisableLog("rdApp.error")
+RDLogger.DisableLog("rdApp.*")
+
 
 def delete_atom():
     choices = [
@@ -93,6 +94,7 @@ def add_ring():
 
     return np.random.choice(choices, p=p)
 
+
 RXN_SMARTS_LIST = []
 RXN_SMARTS_LIST.append(None)
 RXN_SMARTS_LIST.append(insert_atom())
@@ -101,7 +103,7 @@ RXN_SMARTS_LIST.append(delete_cyclic_bond())
 RXN_SMARTS_LIST.append(add_ring())
 RXN_SMARTS_LIST.append(delete_atom())
 RXN_SMARTS_LIST.append(append_atom())
-        
+
 
 def change_atom(mol):
     choices = ["#6", "#7", "#8", "#9", "#16", "#17", "#35"]
@@ -115,6 +117,7 @@ def change_atom(mol):
         Y = np.random.choice(choices, p=p)
 
     return "[X:1]>>[Y:1]".replace("X", X).replace("Y", Y)
+
 
 def ring_OK(mol):
     if not mol.HasSubstructMatch(Chem.MolFromSmarts("[R]")):
@@ -135,6 +138,7 @@ def ring_OK(mol):
 average_size = 39.15
 size_stdev = 3.50
 
+
 def mol_ok(mol):
     try:
         Chem.SanitizeMol(mol)
@@ -146,17 +150,18 @@ def mol_ok(mol):
     except:
         return False
 
+
 def mutate(smiles):
     mol = Chem.MolFromSmiles(smiles)
-    #try:
+    # try:
     #    Chem.Kekulize(mol, clearAromaticFlags=True)
-    #except ValueError:
+    # except ValueError:
     #    return smiles
 
     rxn_smarts = np.random.choice(RXN_SMARTS_LIST)
     if rxn_smarts is None:
         return smiles
-    
+
     rxn = AllChem.ReactionFromSmarts(rxn_smarts)
 
     new_mol_trial = rxn.RunReactants((mol,))
@@ -172,6 +177,7 @@ def mutate(smiles):
         return Chem.MolToSmiles(random.choice(new_mols))
 
     return smiles
+
 
 if __name__ == "__main__":
     print(mutate("CCCCCCCCCC"))

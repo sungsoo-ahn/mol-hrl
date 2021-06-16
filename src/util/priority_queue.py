@@ -33,7 +33,10 @@ class MaxRewardPriorityQueue:
         return len(self.elems)
 
     def add_list(self, smis, seqs, lengths, scores):
-        new_elems = [StorageElement(smi=smi, seq=seq, length=length, score=score) for smi, seq, length, score in zip(smis, seqs, lengths, scores)]
+        new_elems = [
+            StorageElement(smi=smi, seq=seq, length=length, score=score)
+            for smi, seq, length, score in zip(smis, seqs, lengths, scores)
+        ]
         self.elems.extend(new_elems)
         self.elems = list(set(self.elems))
 
