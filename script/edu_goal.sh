@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python run_base.py \
+python run_edu_goal.py \
 --logger_use_neptune \
---pretrain_tag base \
+--pretrain_tag edu_goal \
 --data_tag zinc_small

@@ -13,4 +13,4 @@ srun \
   --no-container-mount-home \
   --container-mounts="/nfs/projects/mbzuai/peterahn/workspace/mol-hrl:/mol-hrl" \
   --container-workdir="/mol-hrl/src" \
-  bash ../script/${1}.sh
+  bash ../script/${1}
