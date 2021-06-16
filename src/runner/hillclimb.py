@@ -112,7 +112,7 @@ class HillClimber:
 
                 seqs = seqs.cuda()
                 lengths = lengths.cuda()
-                loss, step_statistics = model.global_step(seqs, lengths)
+                loss, step_statistics = model.hillclimb_step(seqs, lengths)
                 for key, val in step_statistics.items():
                     statistics[key] += val / self.num_updates_per_step
 
