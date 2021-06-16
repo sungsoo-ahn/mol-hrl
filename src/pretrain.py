@@ -7,7 +7,7 @@ from torch.optim import Adam
 
 from vocabulary import SmilesTokenizer, create_vocabulary
 from dataset import SmilesDataset
-from model.rnn import RnnDecoder, RnnEncoder
+from model.rnn import RnnDecoder, RnnEncoder, RnnGenerator
 from model.ae import RnnAutoEncoder
 from util.mol import randomize_smiles
 
@@ -42,8 +42,10 @@ if __name__ == "__main__":
     
     parser.add_argument("--data_dir", type=str, default="../resource/data/")
     parser.add_argument("--checkpoint_dir", type=str, default="../resource/checkpoint/")
-    parser.add_argument("--data_tag", type=str, default="zinc")
+    parser.add_argument("--data_tag", type=str, default="guacamol")
     parser.add_argument("--checkpoint_tag", type=str, default="default")
+    
+    parser.add_argument("--model_tag", type=str, default="ae")
 
     parser.add_argument("--max_length", type=int, default=100)
     
@@ -75,10 +77,14 @@ if __name__ == "__main__":
         num_workers=8,
     )
 
-    encoder = RnnEncoder(len(vocab), args.goal_dim, args.hidden_dim, args.num_layers)
-    decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.goal_dim, args.num_layers)
-    global_goal = torch.nn.Parameter(torch.randn(args.goal_dim))
-    model = RnnAutoEncoder(encoder=encoder, decoder=decoder, global_goal=global_goal).cuda()
+    if args.model_tag == "ae":
+        encoder = RnnEncoder(len(vocab), args.goal_dim, args.hidden_dim, args.num_layers)
+        decoder = RnnDecoder(len(vocab), len(vocab), args.hidden_dim, args.goal_dim, args.num_layers)
+        global_goal = torch.nn.Parameter(torch.randn(args.goal_dim))
+        model = RnnAutoEncoder(encoder=encoder, decoder=decoder, global_goal=global_goal).cuda()
+    elif args.model_tag == "gen":
+        model = RnnGenerator(len(vocab), args.hidden_dim, args.num_layers).cuda()
+
     optimizer = Adam(model.parameters(), lr=1e-3)
     
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])

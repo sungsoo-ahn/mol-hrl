@@ -106,3 +106,76 @@ class RnnDecoder(nn.Module):
         
         return seq, lengths, log_prob
     
+class RnnGenerator(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim, num_layers):
+        super(RnnGenerator, self).__init__()
+        self.hidden_dim = hidden_dim
+        
+        self.encoder = nn.Embedding(input_dim, hidden_dim)
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
+        self.decoder = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+        )
+        
+    def forward(self, seq, lengths):
+        out = self.encoder(seq)
+        
+        out = pack_padded_sequence(out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False)
+        out, _ = self.lstm(out, None)
+        out, _ = pad_packed_sequence(out, batch_first=True)
+
+        logit = self.decoder(out)
+
+        return logit
+
+    def step(self, x_seq, lengths):
+        batch_size = x_seq.size(0)        
+        logits, = self.decoder(x_seq[:, :-1], lengths=lengths-1)
+        
+        recon_loss = compute_rnn_ce(logits, x_seq[:, 1:], lengths)
+        
+        loss = recon_loss
+
+        statistics = {
+            "loss/total": loss.item(),
+            "loss/global_recon": recon_loss.item(),
+        }
+
+        return loss, statistics
+    
+    def global_step(self, x_seq, lengths):
+        return self.step(x_seq, lengths)
+    
+
+    def sample(self, sample_size, vocab):
+        seq = [torch.full((sample_size, 1), vocab.get_start_id(), dtype=torch.long).cuda()]
+
+        hidden = None
+        terminated = torch.zeros(sample_size, dtype=torch.bool).cuda()
+        log_prob = 0.0
+        lengths = torch.ones(sample_size, dtype=torch.long).cuda()
+        for _ in range(vocab.max_length):
+            out = self.encoder(seq[-1])
+            out, hidden = self.lstm(out, hidden)
+            logit = self.decoder(out)
+
+            prob = torch.softmax(logit, dim=2)
+            distribution = Categorical(probs=prob)
+            seq_t = distribution.sample()
+                
+            log_prob += (~terminated).float() * distribution.log_prob(seq_t).squeeze(1)
+
+            seq.append(seq_t)
+
+            lengths[~terminated] += 1
+            terminated = terminated | (seq_t.squeeze(1) == vocab.get_end_id())
+            
+            if terminated.all():
+                break
+
+        seq = torch.cat(seq, dim=1)
+        
+        return seq, lengths, log_prob
+    

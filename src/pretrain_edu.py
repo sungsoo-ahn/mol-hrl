@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--goal_dim", type=int, default=32)
     parser.add_argument("--num_layers", type=int, default=3)
     
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     
@@ -98,15 +98,28 @@ if __name__ == "__main__":
     run = neptune.init(project='sungsahn0215/mol-hrl', source_files=["*.py", "**/*.py"])
     run["parameters"] = vars(args)
 
+    os.makedirs(f"{args.checkpoint_dir}/{args.checkpoint_tag}", exist_ok=True)
+
     best_train_acc = -10.0
-    for epoch in range(args.epochs):
+    start_epoch = 0
+    for epoch in range(start_epoch, args.epochs):
         statistics = train(model, optimizer, loader, args.swap)
         print(statistics)
         for key in statistics:
             run[key].log(statistics[key])
 
         train_acc = statistics["acc/recon/seq"]
+            
+        state_dict = {
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "epoch": epoch,
+        }
+        torch.save(state_dict, f"{args.checkpoint_dir}/{args.checkpoint_tag}/{epoch:02d}.pth")
+
         if train_acc > best_train_acc:
             best_train_acc = train_acc
-            state_dict = model.state_dict()
             torch.save(state_dict, f"{args.checkpoint_dir}/{args.checkpoint_tag}.pth")
+    
+        
+        
