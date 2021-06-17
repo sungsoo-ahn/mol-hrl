@@ -7,8 +7,18 @@ from scoring.factory import get_scoring_func
 from vocabulary import seq2smiles, smiles2seq
 from torch.nn.utils.rnn import pad_sequence
 
+
 class HillClimber:
-    def __init__(self, steps, warmup_steps, num_samplings_per_step, num_updates_per_step, sample_size, batch_size, queue_size):
+    def __init__(
+        self,
+        steps,
+        warmup_steps,
+        num_samplings_per_step,
+        num_updates_per_step,
+        sample_size,
+        batch_size,
+        queue_size,
+    ):
         self.steps = steps
         self.warmup_steps = warmup_steps
         self.num_samplings_per_step = num_samplings_per_step
@@ -25,24 +35,23 @@ class HillClimber:
         group.add_argument("--hillclimb_num_samplings_per_step", type=int, default=8)
         group.add_argument("--hillclimb_num_updates_per_step", type=int, default=8)
         group.add_argument("--hillclimb_sample_size", type=int, default=1024)
-        group.add_argument("--hillclimb_batch_size", type=int, default=256)        
+        group.add_argument("--hillclimb_batch_size", type=int, default=256)
         group.add_argument("--hillclimb_queue_size", type=int, default=1024)
         return parser
-    
 
-    def run(self, dataset, model, optimizer, storage,logger):
+    def run(self, dataset, model, optimizer, storage, logger):
         model_state_dict = model.state_dict()
         optimizer_state_dict = optimizer.state_dict()
 
         for idx, scoring_func_name in [
-            #(1, "celecoxib"),
-            #(2, "troglitazone"),
-            #(3, "thiothixene"),
-            #(4, "aripiprazole"),
-            #(5, "albuterol"),
-            #(6, "mestranol"),
-            #(7, "c11h24"),
-            #(8, "c9h10n2o2pf2cl"),
+            # (1, "celecoxib"),
+            # (2, "troglitazone"),
+            # (3, "thiothixene"),
+            # (4, "aripiprazole"),
+            # (5, "albuterol"),
+            # (6, "mestranol"),
+            # (7, "c11h24"),
+            # (8, "c9h10n2o2pf2cl"),
             (9, "camphor_menthol"),
             (10, "tadalafil_sildenafil"),
             (11, "osimertinib"),
@@ -53,9 +62,9 @@ class HillClimber:
             (16, "sitagliptin"),
             (17, "zaleplon"),
             (18, "valsartan_smarts"),
-            #(19, "decoration_hop"),
-            #(20, "scaffold_hop"),
-            #(21, "penalized_logp"),
+            # (19, "decoration_hop"),
+            # (20, "scaffold_hop"),
+            # (21, "penalized_logp"),
         ]:
             scoring_func = get_scoring_func(scoring_func_name)
             storage.elems = []
@@ -68,15 +77,10 @@ class HillClimber:
                     warmup = False
 
                 statistics = self.run_step(
-                    dataset, 
-                    model,
-                    optimizer,
-                    storage,
-                    scoring_func,
-                    warmup,
+                    dataset, model, optimizer, storage, scoring_func, warmup,
                 )
                 logger.log(statistics, prefix=f"{idx}_{scoring_func_name}")
-    
+
     def run_step(self, dataset, model, optimizer, storage, scoring_func, warmup):
         for _ in range(self.num_samplings_per_step):
             with torch.no_grad():
@@ -106,7 +110,10 @@ class HillClimber:
             for _ in range(self.num_updates_per_step):
                 strings, seqs, lengths, scores = storage.sample_batch(self.batch_size)
 
-                seqs = [smiles2seq(string, dataset.tokenizer, dataset.vocab) for string in strings]
+                seqs = [
+                    smiles2seq(string, dataset.tokenizer, dataset.vocab)
+                    for string in strings
+                ]
                 lengths = torch.tensor([seq.size(0) for seq in seqs])
                 seqs = pad_sequence(seqs, batch_first=True, padding_value=0)
 

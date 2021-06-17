@@ -16,8 +16,12 @@ from chemprop.data.utils import get_data, get_data_from_smiles
 from chemprop.utils import load_args, load_checkpoint, load_scalers
 
 
-GSK3_PATH = "/home/peterahn/Dropbox/ML4DD/molecule-pretraining-data/score_model/gsk3.pkl"
-JNK3_PATH = "/home/peterahn/Dropbox/ML4DD/molecule-pretraining-data/score_model/jnk3.pkl"
+GSK3_PATH = (
+    "/home/peterahn/Dropbox/ML4DD/molecule-pretraining-data/score_model/gsk3.pkl"
+)
+JNK3_PATH = (
+    "/home/peterahn/Dropbox/ML4DD/molecule-pretraining-data/score_model/jnk3.pkl"
+)
 
 
 class gsk3_model:

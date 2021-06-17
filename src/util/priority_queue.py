@@ -22,7 +22,12 @@ class StorageElement:
 
 
 def unravel_elems(elems):
-    return tuple(map(list, zip(*[(elem.smi, elem.seq, elem.length, elem.score) for elem in elems])))
+    return tuple(
+        map(
+            list,
+            zip(*[(elem.smi, elem.seq, elem.length, elem.score) for elem in elems]),
+        )
+    )
 
 
 class MaxRewardPriorityQueue:
@@ -50,7 +55,10 @@ class MaxRewardPriorityQueue:
 
     def squeeze_by_thr(self, thr):
         self.elems = sorted(self.elems, reverse=True)
-        k = next((i for i, elem in enumerate(self.elems) if elem.score < thr), len(self.elems))
+        k = next(
+            (i for i, elem in enumerate(self.elems) if elem.score < thr),
+            len(self.elems),
+        )
 
         self.elems = self.elems[:k]
         return unravel_elems(self.elems)

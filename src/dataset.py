@@ -7,10 +7,11 @@ from util.mutate import mutate
 
 PADDING_VALUE = 0
 
+
 class SmilesDataset(torch.utils.data.Dataset):
     def __init__(self, dir, tag, aug_randomize_smiles, aug_mutate):
         with open(f"{dir}/{tag}.txt", "r") as f:
-            self.smiles_list =  f.read().splitlines()
+            self.smiles_list = f.read().splitlines()
 
         self.tokenizer = SmilesTokenizer()
         self.vocab = create_vocabulary(self.smiles_list, self.tokenizer)
@@ -24,7 +25,7 @@ class SmilesDataset(torch.utils.data.Dataset):
             return smiles
 
         self.transform = transform
-    
+
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group("dataset")
@@ -48,7 +49,9 @@ class SmilesDataset(torch.utils.data.Dataset):
 
     def collate_fn(self, seqs):
         lengths = torch.tensor([seq.size(0) for seq in seqs])
-        seqs = pad_sequence(seqs, batch_first=True, padding_value=self.vocab.get_pad_id())
+        seqs = pad_sequence(
+            seqs, batch_first=True, padding_value=self.vocab.get_pad_id()
+        )
 
         return seqs, lengths
 
@@ -65,12 +68,15 @@ class PairedSmilesDataset(SmilesDataset):
 
         return seq0, seq1
 
-
     def collate_fn(self, seqs01):
         seqs0, seqs1 = zip(*seqs01)
         lengths0 = torch.tensor([seq.size(0) for seq in seqs0])
         lengths1 = torch.tensor([seq.size(0) for seq in seqs1])
-        seqs0 = pad_sequence(seqs0, batch_first=True, padding_value=self.vocab.get_pad_id())
-        seqs1 = pad_sequence(seqs1, batch_first=True, padding_value=self.vocab.get_pad_id())
+        seqs0 = pad_sequence(
+            seqs0, batch_first=True, padding_value=self.vocab.get_pad_id()
+        )
+        seqs1 = pad_sequence(
+            seqs1, batch_first=True, padding_value=self.vocab.get_pad_id()
+        )
 
         return (seqs0, lengths0), (seqs1, lengths1)

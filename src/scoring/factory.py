@@ -171,7 +171,9 @@ def get_guacamol_scoring_func(name):
                 scores.append(elem_scoring_func(smiles))
 
         else:
-            scores = Parallel(jobs)(delayed(elem_scoring_func)(smiles) for smiles in smiles_list)
+            scores = Parallel(jobs)(
+                delayed(elem_scoring_func)(smiles) for smiles in smiles_list
+            )
 
         return scores
 

@@ -10,9 +10,13 @@ class Rnn(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.encoder = nn.Embedding(input_dim, hidden_dim)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
+        self.lstm = nn.LSTM(
+            hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers
+        )
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, output_dim),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
         )
 
     def forward(self, seqs, lengths):
@@ -44,7 +48,9 @@ class Rnn(nn.Module):
             distribution = Categorical(probs=prob)
             tth_seqs = distribution.sample()
 
-            log_probs += (~terminated).float() * distribution.log_prob(tth_seqs).squeeze(1)
+            log_probs += (~terminated).float() * distribution.log_prob(
+                tth_seqs
+            ).squeeze(1)
 
             seqs.append(tth_seqs)
 
@@ -58,6 +64,7 @@ class Rnn(nn.Module):
 
         return seqs, lengths, log_probs
 
+
 class GoalEncoderRnn(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim, num_layers):
         super(GoalEncoderRnn, self).__init__()
@@ -65,7 +72,9 @@ class GoalEncoderRnn(nn.Module):
 
         self.encoder = nn.Embedding(input_dim, hidden_dim)
         self.decoder = nn.Linear(2 * hidden_dim, output_dim)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
+        self.lstm = nn.LSTM(
+            hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers
+        )
 
     def forward(self, seqs, lengths):
         out = self.encoder(seqs)
@@ -88,7 +97,9 @@ class GoalDecoderRnn(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.encoder = nn.Embedding(input_dim, hidden_dim)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
+        self.lstm = nn.LSTM(
+            hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers
+        )
         self.decoder = nn.Sequential(
             nn.Linear(hidden_dim + goal_dim, hidden_dim),
             nn.ReLU(),
@@ -133,7 +144,9 @@ class GoalDecoderRnn(nn.Module):
             distribution = Categorical(probs=prob)
             tth_seqs = distribution.sample()
 
-            log_probs += (~terminated).float() * distribution.log_prob(tth_seqs).squeeze(1)
+            log_probs += (~terminated).float() * distribution.log_prob(
+                tth_seqs
+            ).squeeze(1)
 
             seqs.append(tth_seqs)
 

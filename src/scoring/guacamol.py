@@ -66,7 +66,9 @@ def isomers_c7h8n2o2(mean_function="geometric") -> GoalDirectedBenchmark:
     )
 
 
-def isomers_c9h10n2o2pf2cl(mean_function="geometric", n_samples=250) -> GoalDirectedBenchmark:
+def isomers_c9h10n2o2pf2cl(
+    mean_function="geometric", n_samples=250
+) -> GoalDirectedBenchmark:
     """
     Benchmark to try and get 100 isomers for C9H10N2O2PF2Cl.
     Args:
@@ -92,7 +94,8 @@ def hard_cobimetinib(max_logP=5.0) -> GoalDirectedBenchmark:
     )
 
     rot_b = RdkitScoringFunction(
-        descriptor=num_rotatable_bonds, score_modifier=MinGaussianModifier(mu=3, sigma=1)
+        descriptor=num_rotatable_bonds,
+        score_modifier=MinGaussianModifier(mu=3, sigma=1),
     )
 
     rings = RdkitScoringFunction(
@@ -106,7 +109,9 @@ def hard_cobimetinib(max_logP=5.0) -> GoalDirectedBenchmark:
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name="Cobimetinib MPO", objective=t_cns, contribution_specification=specification
+        name="Cobimetinib MPO",
+        objective=t_cns,
+        contribution_specification=specification,
     )
 
 
@@ -151,7 +156,9 @@ def hard_fexofenadine(mean_cls=GeometricMeanScoringFunction) -> GoalDirectedBenc
     smiles = "CC(C)(C(=O)O)c1ccc(cc1)C(O)CCCN2CCC(CC2)C(O)(c3ccccc3)c4ccccc4"
 
     modifier = ClippedScoreModifier(upper_x=0.8)
-    similar_to_fexofenadine = TanimotoScoringFunction(smiles, fp_type="AP", score_modifier=modifier)
+    similar_to_fexofenadine = TanimotoScoringFunction(
+        smiles, fp_type="AP", score_modifier=modifier
+    )
 
     tpsa_over_90 = RdkitScoringFunction(
         descriptor=tpsa, score_modifier=MaxGaussianModifier(mu=90, sigma=10)
@@ -161,7 +168,9 @@ def hard_fexofenadine(mean_cls=GeometricMeanScoringFunction) -> GoalDirectedBenc
         descriptor=logP, score_modifier=MinGaussianModifier(mu=4, sigma=1)
     )
 
-    optimize_fexofenadine = mean_cls([similar_to_fexofenadine, tpsa_over_90, logP_under_4])
+    optimize_fexofenadine = mean_cls(
+        [similar_to_fexofenadine, tpsa_over_90, logP_under_4]
+    )
 
     specification = uniform_specification(1, 10, 100)
 
@@ -223,12 +232,16 @@ def weird_physchem() -> GoalDirectedBenchmark:
         descriptor=AtomCounter("F"), score_modifier=GaussianModifier(mu=6, sigma=1.0)
     )
 
-    opt_weird = ArithmeticMeanScoringFunction([min_bertz, mol_under_400, aroma, fluorine])
+    opt_weird = ArithmeticMeanScoringFunction(
+        [min_bertz, mol_under_400, aroma, fluorine]
+    )
 
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name="Physchem MPO", objective=opt_weird, contribution_specification=specification
+        name="Physchem MPO",
+        objective=opt_weird,
+        contribution_specification=specification,
     )
 
 
@@ -271,7 +284,9 @@ def similarity(
         specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name=benchmark_name, objective=scoring_function, contribution_specification=specification
+        name=benchmark_name,
+        objective=scoring_function,
+        contribution_specification=specification,
     )
 
 
@@ -284,7 +299,9 @@ def logP_benchmark(target: float) -> GoalDirectedBenchmark:
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name=benchmark_name, objective=objective, contribution_specification=specification
+        name=benchmark_name,
+        objective=objective,
+        contribution_specification=specification,
     )
 
 
@@ -297,7 +314,9 @@ def tpsa_benchmark(target: float) -> GoalDirectedBenchmark:
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name=benchmark_name, objective=objective, contribution_specification=specification
+        name=benchmark_name,
+        objective=objective,
+        contribution_specification=specification,
     )
 
 
@@ -319,7 +338,9 @@ def qed_benchmark() -> GoalDirectedBenchmark:
     )
 
 
-def median_camphor_menthol(mean_cls=GeometricMeanScoringFunction) -> GoalDirectedBenchmark:
+def median_camphor_menthol(
+    mean_cls=GeometricMeanScoringFunction,
+) -> GoalDirectedBenchmark:
     t_camphor = TanimotoScoringFunction("CC1(C)C2CCC1(C)C(=O)C2", fp_type="ECFP4")
     t_menthol = TanimotoScoringFunction("CC(C)C1CCC(C)CC1O", fp_type="ECFP4")
     median = mean_cls([t_menthol, t_camphor])
@@ -327,7 +348,9 @@ def median_camphor_menthol(mean_cls=GeometricMeanScoringFunction) -> GoalDirecte
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name="Median molecules 1", objective=median, contribution_specification=specification
+        name="Median molecules 1",
+        objective=median,
+        contribution_specification=specification,
     )
 
 
@@ -448,14 +471,17 @@ def median_tadalafil_sildenafil() -> GoalDirectedBenchmark:
         "O=C1N(CC(N2C1CC3=C(C2C4=CC5=C(OCO5)C=C4)NC6=C3C=CC=C6)=O)C", fp_type="ECFP6"
     )
     m2 = TanimotoScoringFunction(
-        "CCCC1=NN(C2=C1N=C(NC2=O)C3=C(C=CC(=C3)S(=O)(=O)N4CCN(CC4)C)OCC)C", fp_type="ECFP6"
+        "CCCC1=NN(C2=C1N=C(NC2=O)C3=C(C=CC(=C3)S(=O)(=O)N4CCN(CC4)C)OCC)C",
+        fp_type="ECFP6",
     )
     median = GeometricMeanScoringFunction([m1, m2])
 
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name="Median molecules 2", objective=median, contribution_specification=specification
+        name="Median molecules 2",
+        objective=median,
+        contribution_specification=specification,
     )
 
 
@@ -499,12 +525,16 @@ def decoration_hop() -> GoalDirectedBenchmark:
         "[#7]-c1n[c;h1]nc2[c;h1]c(-[#8])[c;h0][c;h1]c12", inverse=False
     )
 
-    deco_hop1_fn = ArithmeticMeanScoringFunction([pharmacophor_sim, deco1, deco2, scaffold])
+    deco_hop1_fn = ArithmeticMeanScoringFunction(
+        [pharmacophor_sim, deco1, deco2, scaffold]
+    )
 
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name="Deco Hop", objective=deco_hop1_fn, contribution_specification=specification
+        name="Deco Hop",
+        objective=deco_hop1_fn,
+        contribution_specification=specification,
     )
 
 
@@ -524,14 +554,18 @@ def scaffold_hop() -> GoalDirectedBenchmark:
     )
 
     # anti scaffold
-    scaffold = SMARTSScoringFunction("[#7]-c1n[c;h1]nc2[c;h1]c(-[#8])[c;h0][c;h1]c12", inverse=True)
+    scaffold = SMARTSScoringFunction(
+        "[#7]-c1n[c;h1]nc2[c;h1]c(-[#8])[c;h0][c;h1]c12", inverse=True
+    )
 
     scaffold_hop_obj = ArithmeticMeanScoringFunction([pharmacophor_sim, deco, scaffold])
 
     specification = uniform_specification(1, 10, 100)
 
     return GoalDirectedBenchmark(
-        name="Scaffold Hop", objective=scaffold_hop_obj, contribution_specification=specification
+        name="Scaffold Hop",
+        objective=scaffold_hop_obj,
+        contribution_specification=specification,
     )
 
 

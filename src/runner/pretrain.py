@@ -3,13 +3,14 @@ from collections import defaultdict
 import torch
 from tqdm import tqdm
 
+
 class Pretrainer:
     def __init__(self, epochs, batch_size, dir, tag):
         self.epochs = epochs
         self.batch_size = batch_size
         self.dir = dir
         self.tag = tag
-    
+
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group("pretrain")
@@ -21,7 +22,10 @@ class Pretrainer:
 
     def run(self, dataset, model, optimizer, logger):
         loader = torch.utils.data.DataLoader(
-            dataset=dataset, batch_size=self.batch_size, collate_fn=dataset.collate_fn, num_workers=8,
+            dataset=dataset,
+            batch_size=self.batch_size,
+            collate_fn=dataset.collate_fn,
+            num_workers=8,
         )
 
         for epoch in range(self.epochs):
