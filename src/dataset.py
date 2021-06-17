@@ -4,6 +4,9 @@ from torch.nn.utils.rnn import pad_sequence
 from vocabulary import PAD_TOKEN, smiles2seq, SmilesTokenizer, create_vocabulary
 from util.mol import randomize_smiles
 from util.mutate import mutate
+from scoring.featurizer import compute_feature
+
+import numpy as np
 
 PADDING_VALUE = 0
 
@@ -55,6 +58,29 @@ class SmilesDataset(torch.utils.data.Dataset):
 
         return seqs, lengths
 
+class FeaturizedSmilesDataset(SmilesDataset):
+    def __getitem__(self, idx):
+        smiles = self.smiles_list[idx]
+        if self.transform is not None:
+            smiles = self.transform(smiles)
+
+        seq = smiles2seq(smiles, self.tokenizer, self.vocab)
+
+        feature = compute_feature(smiles)
+        feature = torch.FloatTensor(np.concatenate([feature["int"], feature["float"], feature["fp"]], axis=0))
+
+        return seq, feature
+
+    def collate_fn(self, seqs_and_features):
+        seqs, features = zip(*seqs_and_features)
+
+        lengths = torch.tensor([seq.size(0) for seq in seqs])
+        seqs = pad_sequence(
+            seqs, batch_first=True, padding_value=self.vocab.get_pad_id()
+        )
+        features = torch.stack(features, dim=0)
+
+        return (seqs, lengths), features
 
 class PairedSmilesDataset(SmilesDataset):
     def __getitem__(self, idx):

@@ -65,9 +65,9 @@ class Rnn(nn.Module):
         return seqs, lengths, log_probs
 
 
-class GoalEncoderRnn(nn.Module):
+class EncoderRnn(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim, num_layers):
-        super(GoalEncoderRnn, self).__init__()
+        super(EncoderRnn, self).__init__()
         self.hidden_dim = hidden_dim
 
         self.encoder = nn.Embedding(input_dim, hidden_dim)
@@ -91,9 +91,9 @@ class GoalEncoderRnn(nn.Module):
         return out
 
 
-class GoalDecoderRnn(nn.Module):
+class DecoderRnn(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim, goal_dim, num_layers):
-        super(GoalDecoderRnn, self).__init__()
+        super(DecoderRnn, self).__init__()
         self.hidden_dim = hidden_dim
 
         self.encoder = nn.Embedding(input_dim, hidden_dim)
@@ -119,6 +119,7 @@ class GoalDecoderRnn(nn.Module):
         for goal in goals:
             goal = goal.unsqueeze(1).expand(-1, seqs.size(1), -1)
             out_ = torch.cat([out, goal], dim=2)
+
             goal_logit = self.decoder(out_)
             logit_list.append(goal_logit)
 
