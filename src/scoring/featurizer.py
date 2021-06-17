@@ -66,7 +66,6 @@ INT_FEATURE_STDS = [
     0.78181578,
 ]
 
-
 def compute_feature(smiles):
     mol = MolFromSmiles(smiles)
 
@@ -93,10 +92,11 @@ def compute_feature(smiles):
         ConvertToNumpyArray(feature, array)
         features["fp"].append(array)
 
-    features["fp"] = np.concatenate(features["fp"], axis=0)
+    features["binary"] = np.concatenate(features["binary"], axis=0)
 
     return features
 
+"""
 import networkx as nx
 from rdkit.Chem import Descriptors
 from rdkit import Chem
@@ -115,3 +115,4 @@ def compute_penalized_logp_feature(smiles):
 
     features = [log_p, sa_score, largest_ring_size]
     return features
+"""

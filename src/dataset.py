@@ -71,8 +71,8 @@ class FeaturizedSmilesDataset(SmilesDataset):
 
         return seq, feature
 
-    def collate_fn(self, seqs_and_features):
-        seqs, features = zip(*seqs_and_features)
+    def collate_fn(self, seqs_and_graphs_features):
+        seqs, graphs, features = zip(*seqs_and_graphs_features)
 
         lengths = torch.tensor([seq.size(0) for seq in seqs])
         seqs = pad_sequence(
@@ -81,28 +81,3 @@ class FeaturizedSmilesDataset(SmilesDataset):
         features = torch.stack(features, dim=0)
 
         return (seqs, lengths), features
-
-class PairedSmilesDataset(SmilesDataset):
-    def __getitem__(self, idx):
-        smiles0 = smiles1 = self.smiles_list[idx]
-        if self.transform is not None:
-            smiles0 = self.transform(smiles0)
-            smiles1 = self.transform(smiles1)
-
-        seq0 = smiles2seq(smiles0, self.tokenizer, self.vocab)
-        seq1 = smiles2seq(smiles1, self.tokenizer, self.vocab)
-
-        return seq0, seq1
-
-    def collate_fn(self, seqs01):
-        seqs0, seqs1 = zip(*seqs01)
-        lengths0 = torch.tensor([seq.size(0) for seq in seqs0])
-        lengths1 = torch.tensor([seq.size(0) for seq in seqs1])
-        seqs0 = pad_sequence(
-            seqs0, batch_first=True, padding_value=self.vocab.get_pad_id()
-        )
-        seqs1 = pad_sequence(
-            seqs1, batch_first=True, padding_value=self.vocab.get_pad_id()
-        )
-
-        return (seqs0, lengths0), (seqs1, lengths1)
