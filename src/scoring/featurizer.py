@@ -96,7 +96,7 @@ def compute_feature(smiles):
 
     return features
 
-"""
+
 import networkx as nx
 from rdkit.Chem import Descriptors
 from rdkit import Chem
@@ -115,4 +115,3 @@ def compute_penalized_logp_feature(smiles):
 
     features = [log_p, sa_score, largest_ring_size]
     return features
-"""
