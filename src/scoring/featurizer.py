@@ -96,3 +96,22 @@ def compute_feature(smiles):
     features["fp"] = np.concatenate(features["fp"], axis=0)
 
     return features
+
+import networkx as nx
+from rdkit.Chem import Descriptors
+from rdkit import Chem
+import sys
+sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
+import sascorer
+
+def compute_penalized_logp_feature(smiles):
+    mol = MolFromSmiles(smiles)
+    
+    log_p = Descriptors.MolLogP(mol)
+    sa_score = sascorer.calculateScore(mol)
+
+    cycle_list = nx.cycle_basis(nx.Graph(Chem.rdmolops.GetAdjacencyMatrix(mol)))
+    largest_ring_size = max([len(j) for j in cycle_list]) if cycle_list else 0
+
+    features = [log_p, sa_score, largest_ring_size]
+    return features
