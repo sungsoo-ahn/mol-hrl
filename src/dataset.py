@@ -2,7 +2,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 
 from vocabulary import PAD_TOKEN, smiles2seq, SmilesTokenizer, create_vocabulary
-from util.mol import randomize_smiles
+from util.mol import randomize_smiles, smiles2graph
 from util.mutate import mutate
 from scoring.featurizer import compute_feature
 
@@ -10,6 +10,26 @@ import numpy as np
 
 PADDING_VALUE = 0
 
+def pyg_collate(batch):
+    elem = batch[0]
+    if isinstance(elem, Data):
+        return Batch.from_data_list(batch, [], [])
+    elif isinstance(elem, torch.Tensor):
+        return default_collate(batch)
+    elif isinstance(elem, float):
+        return torch.tensor(batch, dtype=torch.float)
+    elif isinstance(elem, int_classes):
+        return torch.tensor(batch)
+    elif isinstance(elem, string_classes):
+        return batch
+    elif isinstance(elem, container_abcs.Mapping):
+        return {key: pyg_collate([d[key] for d in batch]) for key in elem}
+    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):
+        return type(elem)(*(pyg_collate(s) for s in zip(*batch)))
+    elif isinstance(elem, container_abcs.Sequence):
+        return [pyg_collate(s) for s in zip(*batch)]
+
+    raise TypeError('DataLoader found invalid type: {}'.format(type(elem)))
 
 class SmilesDataset(torch.utils.data.Dataset):
     def __init__(self, dir, tag, aug_randomize_smiles, aug_mutate):
