@@ -28,6 +28,7 @@ get_ecfp6 = lambda mol: AllChem.GetMorganFingerprintAsBitVect(mol, 3)
 # get_ap = lambda mol: AllChem.GetAtomPairFingerprint(mol, maxLength=10)
 
 FEATURE_DIM = 5 + 7 + 2 * 2048
+PENALIZED_LOGP_FEATURE_DIM = 3
 
 FLOAT_FEATURIZERS = [logP, qed, tpsa, bertz, mol_weight]
 FLOAT_FEATURE_MEANS = [2.45712358, 0.73184226, 64.8209853, 710.94792876, 332.13967946]
@@ -98,9 +99,10 @@ def compute_feature(smiles):
 
 
 import networkx as nx
-from rdkit.Chem import Descriptors
+from rdkit.Chem import Descriptors, RDConfig
 from rdkit import Chem
 import sys
+import os
 sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
 import sascorer
 

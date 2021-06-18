@@ -1,8 +1,9 @@
 import torch
 
-from model.rnn import Rnn, EncoderRnn, DecoderRnn
-from scoring.featurizer import FEATURE_DIM
-
+from model.rnn import Rnn, ConditionalRnn
+from scoring.featurizer import PENALIZED_LOGP_FEATURE_DIM, compute_penalized_logp_feature
+from vocabulary import seq2smiles
+from util.mol import is_valid_smiles
 
 def compute_accuracy(logits, y, batch_size, pad_id):
     y_pred = torch.argmax(logits, dim=-1)
@@ -69,13 +70,14 @@ class BaseGenerator(torch.nn.Module):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
 
-class FeatureBasedGenerator(torch.nn.Module):
-    def __init__(self, hidden_dim, num_layers, vocab):
-        super(FeatureBasedGenerator, self).__init__()
-        self.decoder = DecoderRnn(
-            len(vocab), len(vocab), hidden_dim, FEATURE_DIM, num_layers
+class PenalizedLogPFeatureBasedGenerator(torch.nn.Module):
+    def __init__(self, hidden_dim, num_layers, vocab, tokenizer):
+        super(PenalizedLogPFeatureBasedGenerator, self).__init__()
+        self.decoder = ConditionalRnn(
+            len(vocab), len(vocab), hidden_dim, PENALIZED_LOGP_FEATURE_DIM, num_layers
         )
-        self.global_feature = torch.nn.Parameter(torch.randn(FEATURE_DIM))
+        self.vocab = vocab
+        self.tokenizer = tokenizer
         self.start_id = vocab.get_start_id()
         self.end_id = vocab.get_end_id()
         self.pad_id = vocab.get_pad_id()
@@ -88,209 +90,54 @@ class FeatureBasedGenerator(torch.nn.Module):
         group.add_argument("--generator_num_layers", type=int, default=3)
         return parser
 
-    def pretrain_step(self, batched_data):
+    def step(self, batched_data):
         (seqs, lengths), features = batched_data
         seqs = seqs.cuda()
         lengths = lengths.cuda()
         features = features.cuda()
 
-        batch_size = seqs.size(0)
-        global_feature = self.global_feature.unsqueeze(0).expand(batch_size, -1)
-        global_logits, logits = self.decoder(
-            seqs[:, :-1], goals=[global_feature, features], lengths=lengths - 1
-        )
-
-        global_recon_loss = compute_cross_entropy(
-            global_logits, seqs[:, 1:], lengths, self.pad_id
-        )
-        recon_loss = compute_cross_entropy(logits, seqs[:, 1:], lengths, self.pad_id)
-        elem_acc, seq_acc = compute_accuracy(
-            logits, seqs[:, 1:], batch_size, self.pad_id
-        )
-
-        loss = global_recon_loss + recon_loss
-
-        statistics = {
-            "loss/sum": loss.item(),
-            "loss/global_recon": global_recon_loss.item(),
-            "loss/recon": recon_loss.item(),
-            "acc/recon/elem": elem_acc.item(),
-            "acc/recon/seq": seq_acc.item(),
-        }
+        logits = self.decoder(seqs[:, :-1], features, lengths - 1)
+        loss = compute_cross_entropy(logits, seqs[:, 1:], lengths, self.pad_id)
+        
+        statistics = {"loss": loss.item()}
 
         return loss, statistics
 
-    def hillclimb_step(self, batched_data):
-        seqs, lengths = batched_data
-        seqs = seqs.cuda()
-        lengths = lengths.cuda()
+    def eval(self, batched_data):
+        _, features = batched_data
+        features = features.cuda()
 
-        batch_size = seqs.size(0)
-        global_feature = self.global_feature.unsqueeze(0).expand(batch_size, -1)
-        (global_logits,) = self.decoder(
-            seqs[:, :-1], goals=[global_feature], lengths=lengths - 1
+        seqs, _, _ = self.decoder.sample(
+            features.size(0), features.unsqueeze(1), self.start_id, self.end_id, self.max_length
         )
 
-        global_recon_loss = compute_cross_entropy(
-            global_logits, seqs[:, 1:], lengths, self.pad_id
-        )
+        smiles_list = seq2smiles(seqs, self.tokenizer, self.vocab)
+        valid_idxs = [idx for idx, smiles in enumerate(smiles_list) if is_valid_smiles(smiles)]
+        valid_ratio = float(len(valid_idxs)) / len(smiles_list)
 
-        loss = global_recon_loss
+        statistics = {"valid_ratio": valid_ratio}
+        if len(valid_idxs) > 0: 
+            valid_smiles_list = [smiles_list[idx] for idx in valid_idxs]
+            valid_features = features[valid_idxs]
 
-        statistics = {
-            "loss/sum": loss.item(),
-            "loss/global_recon": global_recon_loss.item(),
-        }
+            for smiles in valid_smiles_list:
+                try:
+                    compute_penalized_logp_feature(smiles)
+                except:
+                    print(smiles)
+                    print(is_valid_smiles(smiles))
+                    import rdkit
+                    print(rdkit.Chem.MolFromSmiles(smiles))
+                    assert False
+                
+            recon_valid_features = torch.stack(
+                [torch.tensor(compute_penalized_logp_feature(smiles)) for smiles in valid_smiles_list], dim=0
+            ).cuda()
 
-        return loss, statistics
+            error = torch.nn.functional.mse_loss(valid_features, recon_valid_features)
+            statistics["error"] = error.item()
 
-    def goal_based_sample(self, sample_size, goal):
-        return self.decoder.sample(
-            sample_size, goal, self.start_id, self.end_id, self.max_length
-        )
+        return statistics
 
-    def sample(self, sample_size):
-        global_feature = self.global_feature.unsqueeze(0).expand(sample_size, -1)
-        seqs, lengths, log_prob = self.decoder.sample(
-            sample_size, global_feature, self.start_id, self.end_id, self.max_length
-        )
-        return seqs, lengths, log_prob
-
-    def get_pretrain_optimizer(self):
+    def get_optimizer(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-    def get_hillclimb_optimizer(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-
-class GoalBasedGenerator(torch.nn.Module):
-    def __init__(self, hidden_dim, goal_dim, num_layers, vocab):
-        super(GoalBasedGenerator, self).__init__()
-        self.encoder = EncoderRnn(len(vocab), goal_dim, hidden_dim, num_layers)
-        self.decoder = DecoderRnn(
-            len(vocab), len(vocab), hidden_dim, goal_dim, num_layers
-        )
-        self.global_goal = torch.nn.Parameter(torch.randn(goal_dim))
-        self.start_id = vocab.get_start_id()
-        self.end_id = vocab.get_end_id()
-        self.pad_id = vocab.get_pad_id()
-        self.max_length = vocab.get_max_length()
-
-    @staticmethod
-    def add_args(parser):
-        group = parser.add_argument_group("generator")
-        group.add_argument("--generator_hidden_dim", type=int, default=1024)
-        group.add_argument("--generator_goal_dim", type=int, default=32)
-        group.add_argument("--generator_num_layers", type=int, default=3)
-        return parser
-
-    def pretrain_step(self, batched_data):
-        seqs, lengths = batched_data
-        seqs = seqs.cuda()
-        lengths = lengths.cuda()
-
-        batch_size = seqs.size(0)
-        global_goal = self.global_goal.unsqueeze(0).expand(batch_size, -1)
-        goal = self.encoder(seqs, lengths)
-        global_logits, logits = self.decoder(
-            seqs[:, :-1], goals=[global_goal, goal], lengths=lengths - 1
-        )
-
-        global_recon_loss = compute_cross_entropy(
-            global_logits, seqs[:, 1:], lengths, self.pad_id
-        )
-        recon_loss = compute_cross_entropy(logits, seqs[:, 1:], lengths, self.pad_id)
-        elem_acc, seq_acc = compute_accuracy(
-            logits, seqs[:, 1:], batch_size, self.pad_id
-        )
-
-        loss = global_recon_loss + recon_loss
-
-        statistics = {
-            "loss/sum": loss.item(),
-            "loss/global_recon": global_recon_loss.item(),
-            "loss/recon": recon_loss.item(),
-            "acc/recon/elem": elem_acc.item(),
-            "acc/recon/seq": seq_acc.item(),
-        }
-
-        return loss, statistics
-
-    def hillclimb_step(self, batched_data):
-        seqs, lengths = batched_data
-        seqs = seqs.cuda()
-        lengths = lengths.cuda()
-
-        batch_size = seqs.size(0)
-        global_goal = self.global_goal.unsqueeze(0).expand(batch_size, -1)
-        (global_logits,) = self.decoder(
-            seqs[:, :-1], goals=[global_goal], lengths=lengths - 1
-        )
-
-        global_recon_loss = compute_cross_entropy(
-            global_logits, seqs[:, 1:], lengths, self.pad_id
-        )
-
-        loss = global_recon_loss
-
-        statistics = {
-            "loss/sum": loss.item(),
-            "loss/global_recon": global_recon_loss.item(),
-        }
-
-        return loss, statistics
-
-    def goal_based_sample(self, sample_size, goal):
-        return self.decoder.sample(
-            sample_size, goal, self.start_id, self.end_id, self.max_length
-        )
-
-    def sample(self, sample_size):
-        global_goal = self.global_goal.unsqueeze(0).expand(sample_size, -1)
-        seqs, lengths, log_prob = self.decoder.sample(
-            sample_size, global_goal, self.start_id, self.end_id, self.max_length
-        )
-        return seqs, lengths, log_prob
-
-    def get_pretrain_optimizer(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
-    
-    def get_hillclimb_optimizer(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-
-class EducatedGoalBasedGenerator(GoalBasedGenerator):
-    def pretrain_step(self, batched_data):
-        (seqs0, lengths0), (seqs1, lengths1) = batched_data
-        seqs0 = seqs0.cuda()
-        lengths0 = lengths0.cuda()
-        seqs1 = seqs1.cuda()
-        lengths1 = lengths1.cuda()
-
-        batch_size = seqs0.size(0)
-        global_goal = self.global_goal.unsqueeze(0).expand(batch_size, -1)
-        goal = self.encoder(seqs0, lengths0)
-
-        global_logits, logits = self.decoder(
-            seqs1[:, :-1], goals=[global_goal, goal], lengths=lengths1 - 1
-        )
-
-        global_recon_loss = compute_cross_entropy(
-            global_logits, seqs1[:, 1:], lengths1, self.pad_id
-        )
-        recon_loss = compute_cross_entropy(logits, seqs1[:, 1:], lengths1, self.pad_id)
-        elem_acc, seq_acc = compute_accuracy(
-            logits, seqs1[:, 1:], batch_size, self.pad_id
-        )
-
-        loss = global_recon_loss + recon_loss
-
-        statistics = {
-            "loss/sum": loss.item(),
-            "loss/global_recon": global_recon_loss.item(),
-            "loss/recon": recon_loss.item(),
-            "acc/recon/elem": elem_acc.item(),
-            "acc/recon/seq": seq_acc.item(),
-        }
-
-        return loss, statistics
