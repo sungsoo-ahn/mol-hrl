@@ -129,9 +129,7 @@ def ring_OK(mol):
     max_cycle_length = max([len(j) for j in cycle_list])
     macro_cycle = max_cycle_length > 6
 
-    double_bond_in_small_ring = mol.HasSubstructMatch(
-        Chem.MolFromSmarts("[r3,r4]=[r3,r4]")
-    )
+    double_bond_in_small_ring = mol.HasSubstructMatch(Chem.MolFromSmarts("[r3,r4]=[r3,r4]"))
 
     return not ring_allene and not macro_cycle and not double_bond_in_small_ring
 
@@ -144,9 +142,7 @@ size_stdev = 3.50
 def mol_ok(mol):
     try:
         Chem.SanitizeMol(mol)
-        target_size = (
-            size_stdev * np.random.randn() + average_size
-        )  # parameters set in GA_mol
+        target_size = size_stdev * np.random.randn() + average_size  # parameters set in GA_mol
         if mol.GetNumAtoms() > 5 and mol.GetNumAtoms() < target_size:
             return True
         else:

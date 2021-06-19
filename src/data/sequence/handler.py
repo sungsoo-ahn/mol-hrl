@@ -105,32 +105,34 @@ class SmilesTokenizer:
         return "".join(tokens[1:-1])
 
 
-def create_vocabulary(smiles_list, tokenizer):
-    tokens = set()
-    max_length = 0
-    for smi in smiles_list:
-        cur_tokens = tokenizer.tokenize(smi)
-        max_length = max(max_length, len(cur_tokens))
-        tokens.update(cur_tokens)
-
-    vocabulary = Vocabulary(max_length)
-    vocabulary.update(sorted(tokens))
-    return vocabulary
-
-
-def smiles2seq(smiles, tokenizer, vocabulary):
-    return torch.tensor(vocabulary.encode(tokenizer.tokenize(smiles)))
-
-
-def seq2smiles(seq, tokenizer, vocabulary):
-    strings = []
-    seqs = seq.cpu().split(1, dim=0)
-    for seq in seqs:
-        strings.append(tokenizer.untokenize(vocabulary.decode(seq.squeeze(0).tolist())))
-
-    return strings
-
-
-if __name__ == "__main__":
+class SequenceHandler:
     tokenizer = SmilesTokenizer()
-    vocab = create_vocabulary(["CCCCBBrB", "NNNN"], tokenizer)
+
+    def __init__(self, smiles_list):
+        self.vocabulary = self.create_vocabulary(smiles_list)
+
+    def create_vocabulary(self, smiles_list):
+        tokens = set()
+        max_length = 0
+        for smi in smiles_list:
+            cur_tokens = self.tokenizer.tokenize(smi)
+            max_length = max(max_length, len(cur_tokens))
+            tokens.update(cur_tokens)
+
+        vocabulary = Vocabulary(max_length)
+        vocabulary.update(sorted(tokens))
+        return vocabulary
+
+    def sequence_from_string(self, string):
+        return torch.tensor(self.vocabulary.encode(self.tokenizer.tokenize(string)))
+
+    def string_from_sequence(self, sequence):
+        return self.tokenizer.untokenize(self.vocabulary.decode(sequence.squeeze(0).tolist()))
+
+    def sequences_from_strings(self, strings):
+        return [self.sequence_from_string(string) for string in strings]
+
+    def strings_from_sequences(self, sequences):
+        sequences = sequences.cpu().split(1, dim=0)
+        strings = [self.string_from_sequence(sequence) for sequence in sequences]
+        return strings
