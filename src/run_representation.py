@@ -6,26 +6,20 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
-from model.imitation import ImitationLearningModel, SmilesDataModule
+from model.representation import RepresentationLearningModel, RepresentationDataModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    SmilesDataModule.add_args(parser)
-    ImitationLearningModel.add_args(parser)
-    parser.add_argument("--encoder_save_path", type=str, default="")
+    RepresentationDataModule.add_args(parser)
+    RepresentationLearningModel.add_args(parser)
     parser.add_argument("--decoder_save_path", type=str, default="")
     args = parser.parse_args()
 
-    datamodule = SmilesDataModule(args.data_dir, args.batch_size, args.num_workers)
-    model = ImitationLearningModel(
+    datamodule = RepresentationDataModule(args.data_dir, args.batch_size, args.num_workers)
+    model = RepresentationLearningModel(
         args.encoder_num_layer,
         args.encoder_emb_dim,
-        args.encoder_load_path,
-        args.encoder_optimize,
-        args.decoder_num_layers,
-        args.decoder_hidden_dim,
-        args.decoder_code_dim,
-        args.data_dir
+        args.code_dim
     )
 
     neptune_logger = NeptuneLogger(
@@ -38,6 +32,7 @@ if __name__ == "__main__":
         monitor='train/loss/total',
         save_top_k=1,
         )
+
     trainer = pl.Trainer(
         gpus=1,
         logger=neptune_logger,
@@ -49,8 +44,5 @@ if __name__ == "__main__":
     
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
 
-    if args.encoder_save_path != "":
-        torch.save(model.encoder.state_dict(), args.encoder_save_path)
-    
     if args.decoder_save_path != "":
         torch.save(model.decoder.state_dict(), args.decoder_save_path)

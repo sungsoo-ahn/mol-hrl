@@ -98,6 +98,8 @@ class GnnEncoder(torch.nn.Module):
         for layer in range(num_layer):
             self.batch_norms.append(torch.nn.BatchNorm1d(emb_dim))
 
+        #self.linear = torch.nn.Linear(emb_dim, code_dim)
+
     # def forward(self, x, edge_index, edge_attr):
     def forward(self, batched_data):
         x, edge_index, edge_attr = batched_data.x, batched_data.edge_index, batched_data.edge_attr
@@ -119,5 +121,6 @@ class GnnEncoder(torch.nn.Module):
         ### Different implementations of Jk-concat
         node_representation = h_list[-1]
         graph_representation = global_mean_pool(node_representation, batched_data.batch)
-
+        #graph_representation = self.linear(graph_representation)
+        #graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
         return graph_representation

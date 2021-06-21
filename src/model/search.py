@@ -70,6 +70,7 @@ class SearchModel(pl.LightningModule):
         if not self.encoder_optimize:
             for param in self.encoder.parameters():
                 param.requires_grad = False
+            self.encoder.eval()
 
         # Decoder
         self.sequence_handler = SequenceHandler(data_dir)
@@ -87,9 +88,11 @@ class SearchModel(pl.LightningModule):
         if not self.decoder_optimize:
             for param in self.decoder.parameters():
                 param.requires_grad = False
-        
+            self.decoder.eval()
+            
         # Code
         self.target_code = torch.nn.Parameter(torch.randn(decoder_code_dim))
+        self.pred_bias = torch.nn.Parameter(torch.tensor(0.0))
 
         # Buffer and dataloading
         self.buffer = Buffer(buffer_capacity)
@@ -111,6 +114,8 @@ class SearchModel(pl.LightningModule):
         self.num_warmup_samples = num_warmup_samples
         self.data_dir = data_dir
         
+        self.linear = torch.nn.Linear(decoder_code_dim, 1)
+
         self.save_hyperparameters()
 
     @staticmethod
@@ -140,7 +145,7 @@ class SearchModel(pl.LightningModule):
         group.add_argument("--scoring_name", type=str, default="penalized_logp")
                 
         # sampling parameters
-        group.add_argument("--queries_per_epoch", type=int, default=32)
+        group.add_argument("--queries_per_epoch", type=int, default=1024)
         group.add_argument("--sample_batch_size", type=int, default=1024)
         
         # optimizing parameters
@@ -197,12 +202,12 @@ class SearchModel(pl.LightningModule):
 
     def sample_queries(self):
         #print("Sampling and evaluating queries...")
-        seen_smiles_list = set()
         smiles_list, sequence_data_list, pyg_data_list, scores = [], [], [], []
         target_code = self.target_code.unsqueeze(0).expand(self.sample_batch_size, -1)
         target_code = torch.nn.functional.normalize(target_code, p=2, dim=1)
 
         num_samples = 0
+
         while len(scores) < self.queries_per_epoch:
             num_samples += self.sample_batch_size
             with torch.no_grad():
@@ -213,8 +218,6 @@ class SearchModel(pl.LightningModule):
                     self.sequence_handler.vocabulary.get_max_length()
                     )
             batch_smiles_list = self.sequence_handler.strings_from_sequences(sequences, lengths)
-            batch_smiles_list = [smiles for smiles in set(batch_smiles_list) if smiles not in seen_smiles_list]
-            seen_smiles_list = seen_smiles_list.union(batch_smiles_list)
 
             num_unique_samples = len(batch_smiles_list)
             
@@ -240,18 +243,17 @@ class SearchModel(pl.LightningModule):
             print("unique_ratio", num_unique_samples / num_samples)
             print("valid_and_unique_ratio", num_valid_and_unique_samples / num_samples)
 
+            assert False
+
         return sequence_data_list, pyg_data_list, scores
     
     def training_step(self, batched_data, batch_idx):
         batched_sequence_data, batched_pyg_data, scores = batched_data
         codes = self.encoder(batched_pyg_data)
         codes = torch.nn.functional.normalize(codes, p=2, dim=1)
-        pred = torch.mm(codes, self.target_code.unsqueeze(1)).squeeze(1)
+        pred = torch.mm(codes, self.target_code.unsqueeze(1)).squeeze(1) + self.pred_bias
         loss = code_loss = torch.nn.functional.mse_loss(pred, scores)
         
-        with torch.no_grad():
-            self.target_code.copy_(codes[0])
-
         if self.decoder_optimize:
             logits = self.decoder(batched_sequence_data, codes)
             decoder_loss = compute_sequence_cross_entropy(
@@ -259,14 +261,14 @@ class SearchModel(pl.LightningModule):
             )
             loss = loss + decoder_loss
 
-        return None
+        return loss
 
     def configure_optimizers(self):
-        params = [self.target_code]
+        params = [self.target_code, self.pred_bias]
         if self.decoder_optimize:
             params += list(self.decoder.parameters())
         if self.encoder_optimize:
             params += list(self.encoder.parameters())
 
-        optimizer = torch.optim.Adam(params, lr=1e-1)
+        optimizer = torch.optim.Adam(params, lr=1e-2)
         return [optimizer]
