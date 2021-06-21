@@ -14,15 +14,6 @@ class RnnDecoder(nn.Module):
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
         self.decoder = nn.Linear(hidden_dim, output_dim)
 
-    @staticmethod
-    def add_args(parser):
-        group = parser.add_argument_group("gnn")
-        group.add_argument("--decoder_num_layers", type=int, default=3)
-        group.add_argument("--decoder_hidden_dim", type=int, default=1024)
-        group.add_argument("--decoder_code_dim", type=int, default=300)
-        group.add_argument("--decoder_load_path", type=str, default="")
-        return parser
-
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
         codes = codes.unsqueeze(1).expand(-1, sequences.size(1), -1)
@@ -52,10 +43,10 @@ class RnnDecoder(nn.Module):
 
         for _ in range(max_length):
             out = self.encoder(sequences[-1])
-            out = out + self.code_encoder(codes)
+            out = out + self.code_encoder(codes).unsqueeze(1)
             out, hidden = self.lstm(out, hidden)
             logit = self.decoder(out)
-
+            
             prob = torch.softmax(logit, dim=2)
             distribution = Categorical(probs=prob)
             tth_sequences = distribution.sample()
@@ -73,3 +64,22 @@ class RnnDecoder(nn.Module):
         sequences = torch.cat(sequences, dim=1)
 
         return sequences, lengths, log_probs
+
+def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, batch_size):
+    num_sampling = sample_size // batch_size
+    sequences = []
+    lengths = []
+    log_probs = []
+    for _ in range(num_sampling):
+        batch_sequences, batch_lengths, batch_log_probs = model.sample(codes, start_id, end_id, max_length)
+        sequences.append(batch_sequences)
+        lengths.append(batch_lengths)
+        log_probs.append(batch_log_probs)
+
+    sequences = torch.cat(sequences, dim=0)
+    lengths = torch.cat(lengths, dim=0)
+    log_probs = torch.cat(log_probs, dim=0)
+
+    return sequences, lengths, log_probs
+
+

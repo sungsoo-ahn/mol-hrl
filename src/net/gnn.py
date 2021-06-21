@@ -98,14 +98,6 @@ class GnnEncoder(torch.nn.Module):
         for layer in range(num_layer):
             self.batch_norms.append(torch.nn.BatchNorm1d(emb_dim))
 
-    @staticmethod
-    def add_args(parser):
-        group = parser.add_argument_group("encoder")
-        group.add_argument("--encoder_num_layer", type=int, default=5)
-        group.add_argument("--encoder_emb_dim", type=int, default=300)
-        group.add_argument("--encoder_load_path", type=str, default="")
-        return parser
-
     # def forward(self, x, edge_index, edge_attr):
     def forward(self, batched_data):
         x, edge_index, edge_attr = batched_data.x, batched_data.edge_index, batched_data.edge_attr

@@ -4,7 +4,7 @@ from rdkit import rdBase
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 import rdkit.Chem.QED as QED
-import scoring.sascorer as sascorer
+import util.molecule.scoring.sascorer as sascorer
 import os
 import pickle
 

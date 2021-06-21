@@ -1,10 +1,11 @@
+from data.sequence.handler import SequenceHandler
 import torch
 import pytorch_lightning as pl
 
-from model.gnn import GnnEncoder
-from model.rnn import RnnDecoder
+from net.gnn import GnnEncoder
+from net.rnn import RnnDecoder
+from data.sequence.handler import SequenceHandler
 from util.sequence import compute_sequence_accuracy, compute_sequence_cross_entropy
-
 
 class ImitationLearningModel(pl.LightningModule):
     def __init__(
@@ -16,12 +17,11 @@ class ImitationLearningModel(pl.LightningModule):
         decoder_num_layers,
         decoder_hidden_dim,
         decoder_code_dim,
-        sequence_handler,
+        data_dir,
     ):
         super(ImitationLearningModel, self).__init__()
         self.encoder = GnnEncoder(num_layer=encoder_num_layer, emb_dim=encoder_emb_dim)
         self.encoder_optimize = encoder_optimize
-
         if encoder_load_path != "":
             self.encoder.load_state_dict(torch.load(encoder_load_path))
 
@@ -29,7 +29,8 @@ class ImitationLearningModel(pl.LightningModule):
             for param in self.encoder.parameters():
                 param.requires_grad = False
 
-        num_vocabs = len(sequence_handler.vocabulary)
+        self.sequence_handler = SequenceHandler(data_dir)
+        num_vocabs = len(self.sequence_handler.vocabulary)
         self.decoder = RnnDecoder(
             num_layers=decoder_num_layers,
             input_dim=num_vocabs,
@@ -37,24 +38,26 @@ class ImitationLearningModel(pl.LightningModule):
             hidden_dim=decoder_hidden_dim,
             code_dim=decoder_code_dim,
         )
-        self.sequence_handler = sequence_handler
-
+        
         self.save_hyperparameters()
 
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group("imitation")
         group.add_argument("--encoder_optimize", action="store_true")
-
-        GnnEncoder.add_args(parser)
-        RnnDecoder.add_args(parser)
-
+        group.add_argument("--encoder_num_layer", type=int, default=5)
+        group.add_argument("--encoder_emb_dim", type=int, default=300)
+        group.add_argument("--encoder_load_path", type=str, default="")
+        group.add_argument("--decoder_num_layers", type=int, default=3)
+        group.add_argument("--decoder_hidden_dim", type=int, default=1024)
+        group.add_argument("--decoder_code_dim", type=int, default=300)
         return parser
 
     def training_step(self, batched_data, batch_idx):
         batched_sequence_data, batched_pyg_data = batched_data
         with torch.no_grad():
             codes = self.encoder(batched_pyg_data)
+            codes = torch.nn.functional.normalize(codes, p=2, dim=1)
 
         logits = self.decoder(batched_sequence_data, codes)
         loss = compute_sequence_cross_entropy(
@@ -64,7 +67,7 @@ class ImitationLearningModel(pl.LightningModule):
             logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
         )
 
-        self.log("train/loss/main", loss, on_step=True, logger=True)
+        self.log("train/loss/total", loss, on_step=True, logger=True)
         self.log("train/acc/element", elem_acc, on_step=True, logger=True)
         self.log("train/acc/sequence", sequence_acc, on_step=True, logger=True)
 
@@ -83,7 +86,7 @@ class ImitationLearningModel(pl.LightningModule):
             logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
         )
 
-        self.log("validation/loss/main", loss, logger=True)
+        self.log("validation/loss/total", loss, logger=True)
         self.log("validation/acc/element", elem_acc, logger=True)
         self.log("validation/acc/sequence", sequence_acc, logger=True)
 

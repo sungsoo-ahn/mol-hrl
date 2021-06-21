@@ -2,6 +2,7 @@
 Vocabulary helper class
 """
 
+from data.util import load_smiles_list
 import re
 import numpy as np
 import torch
@@ -108,7 +109,8 @@ class SmilesTokenizer:
 class SequenceHandler:
     tokenizer = SmilesTokenizer()
 
-    def __init__(self, smiles_list):
+    def __init__(self, dir):
+        smiles_list = load_smiles_list(dir)
         self.vocabulary = self.create_vocabulary(smiles_list)
 
     def create_vocabulary(self, smiles_list):
@@ -132,7 +134,10 @@ class SequenceHandler:
     def sequences_from_strings(self, strings):
         return [self.sequence_from_string(string) for string in strings]
 
-    def strings_from_sequences(self, sequences):
+    def strings_from_sequences(self, sequences, lengths):
         sequences = sequences.cpu().split(1, dim=0)
-        strings = [self.string_from_sequence(sequence) for sequence in sequences]
+        lengths = lengths.cpu().tolist()
+        strings = [
+            self.string_from_sequence(sequence[:length]) for sequence, length in zip(sequences, lengths)
+            ]
         return strings

@@ -1,6 +1,6 @@
 from multiprocessing import Pool
 
-from scoring.guacamol import (
+from util.molecule.scoring.guacamol import (
     similarity,
     isomers_c11h24,
     isomers_c9h10n2o2pf2cl,
@@ -17,8 +17,8 @@ from scoring.guacamol import (
     decoration_hop,
     scaffold_hop,
 )
-from scoring.chemprop import jnk3_model, gsk3_model, qed_func, sa_func
-from scoring.penalized_logp import penalized_logp_cyclebasis
+from util.molecule.scoring.chemprop import jnk3_model, gsk3_model, qed_func, sa_func
+from util.molecule.scoring.penalized_logp import penalized_logp_cyclebasis
 
 from joblib import Parallel, delayed
 
