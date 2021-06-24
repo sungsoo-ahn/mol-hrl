@@ -1,6 +1,6 @@
 from multiprocessing import Pool
 
-from util.molecule.scoring.guacamol import (
+from data.score.guacamol import (
     similarity,
     isomers_c11h24,
     isomers_c9h10n2o2pf2cl,
@@ -17,12 +17,9 @@ from util.molecule.scoring.guacamol import (
     decoration_hop,
     scaffold_hop,
 )
-from util.molecule.scoring.chemprop import jnk3_model, gsk3_model, qed_func, sa_func
-from util.molecule.scoring.penalized_logp import penalized_logp_cyclebasis
+from data.score.penalized_logp import penalized_logp_cyclebasis
 
 from joblib import Parallel, delayed
-
-from tqdm import tqdm
 
 GUACAMOL_NAMES = [
     "celecoxib",
@@ -48,24 +45,7 @@ GUACAMOL_NAMES = [
     "penalized_logp",
 ]
 
-CHEMPROP_NAMES = [
-    "jnk3",
-    "gsk3",
-    "qed",
-    "sa",
-]
-
-
-def get_scoring_func(name):
-    if name in GUACAMOL_NAMES:
-        scoring_func = get_guacamol_scoring_func(name)
-    elif name in CHEMPROP_NAMES:
-        scoring_func = get_chemprop_scoring_func(name)
-
-    return scoring_func
-
-
-def get_guacamol_scoring_func(name):
+def get_scoring_func(name, num_workers=32):
     if name == "celecoxib":
         benchmark = similarity(
             smiles="CC1=CC=C(C=C1)C1=CC(=NN1C1=CC=C(C=C1)S(N)(=O)=O)C(F)(F)F",
@@ -164,39 +144,11 @@ def get_guacamol_scoring_func(name):
 
     elem_scoring_func = benchmark.wrapped_objective.score
 
-    def scoring_func(smiles_list, jobs=8):
-        if jobs == 0:
-            scores = []
-            for smiles in smiles_list:
-                scores.append(elem_scoring_func(smiles))
-
-        else:
-            scores = Parallel(jobs)(
-                delayed(elem_scoring_func)(smiles) for smiles in smiles_list
-            )
+    def parallel_scoring_func(smiles_list):
+        scores = Parallel(num_workers)(
+            delayed(elem_scoring_func)(smiles) for smiles in smiles_list
+        )
 
         return scores
 
-    return scoring_func
-
-
-def get_chemprop_scoring_func(name):
-    if name == "jnk3":
-        batch_scoring_func = jnk3_model()
-    elif name == "gsk3":
-        batch_scoring_func = gsk3_model()
-    elif name == "qed":
-        batch_scoring_func = qed_func()
-    elif name == "sa":
-        batch_scoring_func = sa_func()
-
-    def scoring_func(smiles_list, batch_size=10000):
-        scores = []
-        for start_idx in range(0, len(smiles_list), batch_size):
-            end_idx = min(start_idx + batch_size, len(smiles_list))
-            batch_scores = batch_scoring_func(smiles_list[start_idx:end_idx])
-            scores.extend(batch_scores)
-
-        return scores
-
-    return scoring_func
+    return elem_scoring_func, parallel_scoring_func

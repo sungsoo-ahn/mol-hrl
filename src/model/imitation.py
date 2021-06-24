@@ -25,6 +25,10 @@ class SmilesDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         train_smiles_list, vali_smiles_list = load_split_smiles_list(self.data_dir)
+        scoring_func = 
+        train_scores = torch.tensor(get_scoring_func(self.scoring_func_name)(train_smiles_list))
+        vali_scores = torch.tensor(get_scoring_func(self.scoring_func_name)(vali_smiles_list))
+        
         self.sequence_handler = SequenceHandler(self.data_dir)
         self.pyg_handler = PyGHandler()
         self.train_smiles_list = train_smiles_list
@@ -37,13 +41,13 @@ class SmilesDataModule(pl.LightningDataModule):
             SequenceDataset(vali_smiles_list, self.sequence_handler),
             PyGDataset(vali_smiles_list, self.pyg_handler),
         )
-    
+
     def collate_data_list(self, data_list):
         sequence_data_list, pyg_data_list = zip(*data_list)
         pad_id = self.sequence_handler.vocabulary.get_pad_id()
         return (
-            collate_sequence_data_list(sequence_data_list, pad_id), 
-            collate_pyg_data_list(pyg_data_list)
+            collate_sequence_data_list(sequence_data_list, pad_id),
+            collate_pyg_data_list(pyg_data_list),
         )
 
     @staticmethod
@@ -72,50 +76,23 @@ class SmilesDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
+
 class ImitationLearningModel(pl.LightningModule):
-    def __init__(
-        self,
-        encoder_num_layer,
-        encoder_emb_dim,
-        encoder_load_path,
-        encoder_optimize,
-        decoder_num_layers,
-        decoder_hidden_dim,
-        decoder_code_dim,
-        data_dir,
-    ):
+    def __init__(self, backbone, hparams):
         super(ImitationLearningModel, self).__init__()
-        self.encoder = GnnEncoder(num_layer=encoder_num_layer, emb_dim=encoder_emb_dim)
-        self.encoder_optimize = encoder_optimize
-        if encoder_load_path != "":
-            self.encoder.load_state_dict(torch.load(encoder_load_path))
-
-        if not self.encoder_optimize:
-            for param in self.encoder.parameters():
-                param.requires_grad = False
-
-        self.sequence_handler = SequenceHandler(data_dir)
-        num_vocabs = len(self.sequence_handler.vocabulary)
-        self.decoder = RnnDecoder(
-            num_layers=decoder_num_layers,
-            input_dim=num_vocabs,
-            output_dim=num_vocabs,
-            hidden_dim=decoder_hidden_dim,
-            code_dim=decoder_code_dim,
-        )
-        
-        self.save_hyperparameters()
+        self.backbone = backbone
+        self.save_hyperparameters(hparams)
 
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group("imitation")
         group.add_argument("--encoder_optimize", action="store_true")
         group.add_argument("--encoder_num_layer", type=int, default=5)
-        group.add_argument("--encoder_emb_dim", type=int, default=300)
+        group.add_argument("--encoder_emb_dim", type=int, default=256)
         group.add_argument("--encoder_load_path", type=str, default="")
         group.add_argument("--decoder_num_layers", type=int, default=3)
         group.add_argument("--decoder_hidden_dim", type=int, default=1024)
-        group.add_argument("--decoder_code_dim", type=int, default=300)
+        group.add_argument("--code_dim", type=int, default=32)
         return parser
 
     def training_step(self, batched_data, batch_idx):

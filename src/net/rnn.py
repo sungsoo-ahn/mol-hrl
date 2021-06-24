@@ -3,6 +3,36 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
 
+def compute_sequence_accuracy(logits, batched_sequence_data, pad_id):
+    sequences, _ = batched_sequence_data
+    batch_size = sequences.size(0)
+    logits = logits[:, :-1]
+    targets = sequences[:, 1:]
+    preds = torch.argmax(logits, dim=-1)
+
+    correct = preds == targets
+    correct[targets == pad_id] = True
+    elem_acc = correct[targets != 0].float().mean()
+    seq_acc = correct.view(batch_size, -1).all(dim=1).float().mean()
+
+    return elem_acc, seq_acc
+
+
+def compute_sequence_cross_entropy(logits, batched_sequence_data, pad_id):
+    sequences, lengths = batched_sequence_data
+    logits = logits[:, :-1]
+    targets = sequences[:, 1:]
+
+    loss = torch.nn.functional.cross_entropy(
+        logits.reshape(-1, logits.size(-1)),
+        targets.reshape(-1),
+        reduction="sum",
+        ignore_index=pad_id,
+    )
+    loss /= torch.sum(lengths - 1)
+
+    return loss
+
 
 class RnnDecoder(nn.Module):
     def __init__(self, num_layers, input_dim, output_dim, hidden_dim, code_dim):
@@ -46,7 +76,7 @@ class RnnDecoder(nn.Module):
             out = out + self.code_encoder(codes).unsqueeze(1)
             out, hidden = self.lstm(out, hidden)
             logit = self.decoder(out)
-            
+
             prob = torch.softmax(logit, dim=2)
             distribution = Categorical(probs=prob)
             tth_sequences = distribution.sample()
@@ -65,13 +95,48 @@ class RnnDecoder(nn.Module):
 
         return sequences, lengths, log_probs
 
+    def argmax_sample(self, codes, start_id, end_id, max_length):
+        sample_size = codes.size(0)
+        sequences = [torch.full((sample_size, 1), start_id, dtype=torch.long).cuda()]
+        hidden = None
+        terminated = torch.zeros(sample_size, dtype=torch.bool).cuda()
+        log_probs = 0.0
+        lengths = torch.ones(sample_size, dtype=torch.long).cuda()
+
+        for _ in range(max_length):
+            out = self.encoder(sequences[-1])
+            out = out + self.code_encoder(codes).unsqueeze(1)
+            out, hidden = self.lstm(out, hidden)
+            logit = self.decoder(out)
+
+            prob = torch.softmax(logit, dim=2)
+            distribution = Categorical(probs=prob)
+            tth_sequences = torch.argmax(logit, dim=2)
+
+            log_probs += (~terminated).float() * distribution.log_prob(tth_sequences).squeeze(1)
+
+            sequences.append(tth_sequences)
+
+            lengths[~terminated] += 1
+            terminated = terminated | (tth_sequences.squeeze(1) == end_id)
+
+            if terminated.all():
+                break
+
+        sequences = torch.cat(sequences, dim=1)
+
+        return sequences, lengths, log_probs
+
+
 def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, batch_size):
     num_sampling = sample_size // batch_size
     sequences = []
     lengths = []
     log_probs = []
     for _ in range(num_sampling):
-        batch_sequences, batch_lengths, batch_log_probs = model.sample(codes, start_id, end_id, max_length)
+        batch_sequences, batch_lengths, batch_log_probs = model.sample(
+            codes, start_id, end_id, max_length
+        )
         sequences.append(batch_sequences)
         lengths.append(batch_lengths)
         log_probs.append(batch_log_probs)
@@ -81,5 +146,3 @@ def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, ba
     log_probs = torch.cat(log_probs, dim=0)
 
     return sequences, lengths, log_probs
-
-

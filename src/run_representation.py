@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     RepresentationDataModule.add_args(parser)
     RepresentationLearningModel.add_args(parser)
-    parser.add_argument("--decoder_save_path", type=str, default="")
+    parser.add_argument("--encoder_save_path", type=str, default="")
     args = parser.parse_args()
 
     datamodule = RepresentationDataModule(args.data_dir, args.batch_size, args.num_workers)
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     )
 
     checkpoint_callback = ModelCheckpoint(
-        monitor='train/loss/total',
+        monitor='validation/loss/total',
         save_top_k=1,
         )
 
@@ -43,6 +43,5 @@ if __name__ == "__main__":
     trainer.fit(model, datamodule=datamodule)
     
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
-
-    if args.decoder_save_path != "":
-        torch.save(model.decoder.state_dict(), args.decoder_save_path)
+    if args.encoder_save_path != "":
+        torch.save(model.encoder.state_dict(), args.encoder_save_path)

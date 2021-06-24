@@ -73,7 +73,7 @@ class GnnEncoder(torch.nn.Module):
         node representations
     """
 
-    def __init__(self, num_layer, emb_dim, JK="last", drop_ratio=0):
+    def __init__(self, num_layer, emb_dim, code_dim, JK="last", drop_ratio=0):
         super(GnnEncoder, self).__init__()
         self.num_layer = num_layer
         self.drop_ratio = drop_ratio
@@ -98,11 +98,15 @@ class GnnEncoder(torch.nn.Module):
         for layer in range(num_layer):
             self.batch_norms.append(torch.nn.BatchNorm1d(emb_dim))
 
-        #self.linear = torch.nn.Linear(emb_dim, code_dim)
+        self.linear = torch.nn.Linear(emb_dim, code_dim)
 
     # def forward(self, x, edge_index, edge_attr):
     def forward(self, batched_data):
-        x, edge_index, edge_attr = batched_data.x, batched_data.edge_index, batched_data.edge_attr
+        x, edge_index, edge_attr = (
+            batched_data.x,
+            batched_data.edge_index,
+            batched_data.edge_attr,
+        )
 
         x = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
 
@@ -121,6 +125,6 @@ class GnnEncoder(torch.nn.Module):
         ### Different implementations of Jk-concat
         node_representation = h_list[-1]
         graph_representation = global_mean_pool(node_representation, batched_data.batch)
-        #graph_representation = self.linear(graph_representation)
-        #graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
+        graph_representation = self.linear(graph_representation)
+        graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
         return graph_representation

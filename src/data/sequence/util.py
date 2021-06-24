@@ -2,7 +2,7 @@
 Vocabulary helper class
 """
 
-from data.util import load_smiles_list
+from data.smiles.util import load_smiles_list
 import re
 import numpy as np
 import torch
@@ -106,38 +106,30 @@ class SmilesTokenizer:
         return "".join(tokens[1:-1])
 
 
-class SequenceHandler:
+def create_vocabulary_from_dir(dir, tokenizer):
+    smiles_list = load_smiles_list(dir)
+    vocabulary = create_vocabulary(smiles_list, tokenizer)
+    return vocabulary
+
+def create_vocabulary(smiles_list, tokenizer):
+    tokens = set()
+    max_length = 0
+    for smi in smiles_list:
+        cur_tokens = tokenizer.tokenize(smi)
+        max_length = max(max_length, len(cur_tokens))
+        tokens.update(cur_tokens)
+
+    vocabulary = Vocabulary(max_length)
+    vocabulary.update(sorted(tokens))
+    return vocabulary
+
+def create_tokenizer_and_vocabulary_from_dir(dir):
     tokenizer = SmilesTokenizer()
+    vocabulary = create_vocabulary_from_dir(dir, tokenizer)
+    return tokenizer, vocabulary
 
-    def __init__(self, dir):
-        smiles_list = load_smiles_list(dir)
-        self.vocabulary = self.create_vocabulary(smiles_list)
+def sequence_from_string(string, tokenizer, vocabulary):
+    return torch.tensor(vocabulary.encode(tokenizer.tokenize(string)))
 
-    def create_vocabulary(self, smiles_list):
-        tokens = set()
-        max_length = 0
-        for smi in smiles_list:
-            cur_tokens = self.tokenizer.tokenize(smi)
-            max_length = max(max_length, len(cur_tokens))
-            tokens.update(cur_tokens)
-
-        vocabulary = Vocabulary(max_length)
-        vocabulary.update(sorted(tokens))
-        return vocabulary
-
-    def sequence_from_string(self, string):
-        return torch.tensor(self.vocabulary.encode(self.tokenizer.tokenize(string)))
-
-    def string_from_sequence(self, sequence):
-        return self.tokenizer.untokenize(self.vocabulary.decode(sequence.squeeze(0).tolist()))
-
-    def sequences_from_strings(self, strings):
-        return [self.sequence_from_string(string) for string in strings]
-
-    def strings_from_sequences(self, sequences, lengths):
-        sequences = sequences.cpu().split(1, dim=0)
-        lengths = lengths.cpu().tolist()
-        strings = [
-            self.string_from_sequence(sequence[:length]) for sequence, length in zip(sequences, lengths)
-            ]
-        return strings
+def string_from_sequence(sequence, tokenizer, vocabulary):
+    return tokenizer.untokenize(vocabulary.decode(sequence.squeeze(0).tolist()))

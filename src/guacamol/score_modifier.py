@@ -80,7 +80,7 @@ class AbsoluteScoreModifier(ScoreModifier):
         self.target_value = target_value
 
     def __call__(self, x):
-        return 1. - np.abs(self.target_value - x)
+        return 1.0 - np.abs(self.target_value - x)
 
 
 class GaussianModifier(ScoreModifier):
@@ -93,7 +93,7 @@ class GaussianModifier(ScoreModifier):
         self.sigma = sigma
 
     def __call__(self, x):
-        return np.exp(-0.5 * np.power((x - self.mu) / self.sigma, 2.))
+        return np.exp(-0.5 * np.power((x - self.mu) / self.sigma, 2.0))
 
 
 class MinMaxGaussianModifier(ScoreModifier):

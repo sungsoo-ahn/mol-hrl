@@ -3,10 +3,25 @@ from typing import Callable, List
 from rdkit import Chem
 from rdkit.DataStructs.cDataStructs import TanimotoSimilarity
 
-from guacamol.utils.descriptors import mol_weight, logP, num_H_donors, tpsa, num_atoms, AtomCounter
+from guacamol.utils.descriptors import (
+    mol_weight,
+    logP,
+    num_H_donors,
+    tpsa,
+    num_atoms,
+    AtomCounter,
+)
 from guacamol.utils.fingerprints import get_fingerprint
-from guacamol.score_modifier import ScoreModifier, MinGaussianModifier, MaxGaussianModifier, GaussianModifier
-from guacamol.scoring_function import ScoringFunctionBasedOnRdkitMol, MoleculewiseScoringFunction
+from guacamol.score_modifier import (
+    ScoreModifier,
+    MinGaussianModifier,
+    MaxGaussianModifier,
+    GaussianModifier,
+)
+from guacamol.scoring_function import (
+    ScoringFunctionBasedOnRdkitMol,
+    MoleculewiseScoringFunction,
+)
 from guacamol.utils.chemistry import smiles_to_rdkit_mol, parse_molecular_formula
 from guacamol.utils.math import arithmetic_mean, geometric_mean
 
@@ -16,7 +31,9 @@ class RdkitScoringFunction(ScoringFunctionBasedOnRdkitMol):
     Scoring function wrapping RDKit descriptors.
     """
 
-    def __init__(self, descriptor: Callable[[Chem.Mol], float], score_modifier: ScoreModifier = None) -> None:
+    def __init__(
+        self, descriptor: Callable[[Chem.Mol], float], score_modifier: ScoreModifier = None,
+    ) -> None:
         """
         Args:
             descriptor: molecular descriptors, such as the ones in descriptors.py
@@ -47,7 +64,7 @@ class TanimotoScoringFunction(ScoringFunctionBasedOnRdkitMol):
         self.fp_type = fp_type
         target_mol = smiles_to_rdkit_mol(target)
         if target_mol is None:
-            raise RuntimeError(f'The similarity target {target} is not a valid molecule.')
+            raise RuntimeError(f"The similarity target {target} is not a valid molecule.")
 
         self.ref_fp = get_fingerprint(target_mol, self.fp_type)
 
@@ -98,7 +115,7 @@ class IsomerScoringFunction(MoleculewiseScoringFunction):
     - total number of atoms with a Gaussian modifier with mu=6, sigma=2
     """
 
-    def __init__(self, molecular_formula: str, mean_function='geometric') -> None:
+    def __init__(self, molecular_formula: str, mean_function="geometric") -> None:
         """
         Args:
             molecular_formula: target molecular formula
@@ -111,26 +128,34 @@ class IsomerScoringFunction(MoleculewiseScoringFunction):
 
     @staticmethod
     def determine_mean_function(mean_function: str) -> Callable[[List[float]], float]:
-        if mean_function == 'arithmetic':
+        if mean_function == "arithmetic":
             return arithmetic_mean
-        if mean_function == 'geometric':
+        if mean_function == "geometric":
             return geometric_mean
         raise ValueError(f'Invalid mean function: "{mean_function}"')
 
     @staticmethod
-    def determine_scoring_functions(molecular_formula: str) -> List[RdkitScoringFunction]:
+    def determine_scoring_functions(molecular_formula: str,) -> List[RdkitScoringFunction]:
         element_occurrences = parse_molecular_formula(molecular_formula)
 
         total_number_atoms = sum(element_tuple[1] for element_tuple in element_occurrences)
 
         # scoring functions for each element
-        functions = [RdkitScoringFunction(descriptor=AtomCounter(element),
-                                          score_modifier=GaussianModifier(mu=n_atoms, sigma=1.0))
-                     for element, n_atoms in element_occurrences]
+        functions = [
+            RdkitScoringFunction(
+                descriptor=AtomCounter(element),
+                score_modifier=GaussianModifier(mu=n_atoms, sigma=1.0),
+            )
+            for element, n_atoms in element_occurrences
+        ]
 
         # scoring functions for the total number of atoms
-        functions.append(RdkitScoringFunction(descriptor=num_atoms,
-                                              score_modifier=GaussianModifier(mu=total_number_atoms, sigma=2.0)))
+        functions.append(
+            RdkitScoringFunction(
+                descriptor=num_atoms,
+                score_modifier=GaussianModifier(mu=total_number_atoms, sigma=2.0),
+            )
+        )
 
         return functions
 
