@@ -31,32 +31,45 @@ if __name__ == "__main__":
     )
     trainer.fit(ae_model)
 
+    ###    
+    #
     score_func_name = "molwt"
     queries = [250.0, 350.0, 450.0]
     finetune_model = FinetuneModel(backbone, score_func_name, queries, hparams)
 
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
+        gpus=1, 
+        logger=neptune_logger, 
+        default_root_dir="../resource/log/", 
+        max_epochs=100,
+        gradient_clip_val=1.0,
     )
     trainer.fit(finetune_model)
     
+    #
     score_func_name = "logp"
     queries = [1.5, 3.0, 4.5]
-    finetune_model0 = FinetuneModel(backbone, score_func_name, queries, hparams)
+    finetune_model = FinetuneModel(backbone, score_func_name, queries, hparams)
 
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
+        gpus=1, 
+        logger=neptune_logger, 
+        default_root_dir="../resource/log/", 
+        max_epochs=100,
+        gradient_clip_val=1.0,
     )
-    trainer.fit(finetune_model0)
+    trainer.fit(finetune_model)
 
+    #
     score_func_name = "qed"
     queries = [0.5, 0.7, 0.9]
     finetune_model = FinetuneModel(backbone, score_func_name, queries, hparams)
 
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
+        gpus=1, 
+        logger=neptune_logger, 
+        default_root_dir="../resource/log/", 
+        max_epochs=100,
+        gradient_clip_val=1.0,
     )
-    trainer.fit(finetune_model0)
-
-    
-    
+    trainer.fit(finetune_model)
