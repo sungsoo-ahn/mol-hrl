@@ -1,6 +1,6 @@
-
 import torch
 from torch.nn.utils.rnn import pad_sequence
+
 
 def collate_sequence_data_list(sequence_list, pad_id):
     sequences, lengths = zip(*sequence_list)

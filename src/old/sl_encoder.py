@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from data.pyg.collate import collate_pyg_data_list
 from data.util import ZipDataset
 
+
 def collate_data_list(data_list):
     pyg_data_list, score_list = zip(*data_list)
     score_list = [score[0] for score in score_list]
@@ -12,6 +13,7 @@ def collate_data_list(data_list):
         collate_pyg_data_list(pyg_data_list),
         torch.stack(score_list, dim=0),
     )
+
 
 class SupervisedLearningEncoderModel(pl.LightningModule):
     def __init__(self, backbone, hparams):
@@ -21,8 +23,12 @@ class SupervisedLearningEncoderModel(pl.LightningModule):
         self.num_workers = hparams.sl_num_workers
         self.coef_maxpred = hparams.sl_coef_maxpred
 
-        self.train_dataset = ZipDataset(self.backbone.train_pyg_dataset, self.backbone.train_score_dataset)
-        self.val_dataset = ZipDataset(self.backbone.val_pyg_dataset, self.backbone.val_score_dataset)
+        self.train_dataset = ZipDataset(
+            self.backbone.train_pyg_dataset, self.backbone.train_score_dataset
+        )
+        self.val_dataset = ZipDataset(
+            self.backbone.val_pyg_dataset, self.backbone.val_score_dataset
+        )
 
         self.save_hyperparameters(hparams)
 
@@ -55,7 +61,7 @@ class SupervisedLearningEncoderModel(pl.LightningModule):
         batched_pyg_data, scores = batched_data
         code = self.backbone.encoder(batched_pyg_data)
         score_preds = self.backbone.score_predictor(code)
-        
+
         loss_mse = torch.nn.functional.mse_loss(score_preds, scores)
         loss_maxpred = torch.norm(self.backbone.score_predictor.weight, p=2, dim=1)
         loss_total = loss_mse + self.coef_maxpred * loss_maxpred
@@ -65,24 +71,27 @@ class SupervisedLearningEncoderModel(pl.LightningModule):
         self.backbone.train()
         loss_total, statistics = self.shared_step(batched_data, batch_idx)
         statistics["stat/maxpred"] = (
-            self.backbone.score_mean + self.backbone.score_std * statistics["loss/maxpred"]
+            self.backbone.score_mean
+            + self.backbone.score_std * statistics["loss/maxpred"]
         )
 
         self.log("sl_encoder/train/loss/total", loss_total, on_step=True, logger=True)
         for key, val in statistics.items():
             self.log(f"sl_encoder/train/{key}", val, on_step=True, logger=True)
-        
+
         return loss_total
 
     def validation_step(self, batched_data, batch_idx):
         self.backbone.eval()
         with torch.no_grad():
             loss_total, statistics = self.shared_step(batched_data, batch_idx)
-        
-        self.log("sl_encoder/validation/loss/total", loss_total, on_step=False, logger=True)
+
+        self.log(
+            "sl_encoder/validation/loss/total", loss_total, on_step=False, logger=True
+        )
         for key, val in statistics.items():
             self.log(f"sl_encoder/validation/{key}", val, on_step=False, logger=True)
-        
+
         return loss_total
 
     def configure_optimizers(self):

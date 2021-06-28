@@ -1,61 +1,51 @@
+import random
 import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
-from data.sequence.dataset import SequenceDataset
-from data.sequence.handler import SequenceHandler
 from data.sequence.collate import collate_sequence_data_list
-from data.pyg.dataset import PyGDataset
-from data.pyg.handler import PyGHandler
-from data.pyg.collate import collate_pyg_data_list
-from data.util import ZipDataset, load_split_smiles_list
-
-from net.gnn import GnnEncoder
-from net.rnn import RnnDecoder
-
-from util.sequence import compute_sequence_accuracy, compute_sequence_cross_entropy
+from data.util import ZipDataset
 
 
-class SmilesDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir, batch_size, num_workers):
-        super(SmilesDataModule, self).__init__()
-        self.data_dir = data_dir
-        self.batch_size = batch_size
-        self.num_workers = num_workers
+def collate_data_list(data_list):
+    pyg_data_list, score_list = zip(*data_list)
+    score_list = [score[0] for score in score_list]
+    return (
+        collate_sequence_data_list(pyg_data_list, pad_id=0),
+        torch.stack(score_list, dim=0),
+    )
 
-    def setup(self, stage=None):
-        train_smiles_list, vali_smiles_list = load_split_smiles_list(self.data_dir)
-        scoring_func = 
-        train_scores = torch.tensor(get_scoring_func(self.scoring_func_name)(train_smiles_list))
-        vali_scores = torch.tensor(get_scoring_func(self.scoring_func_name)(vali_smiles_list))
-        
-        self.sequence_handler = SequenceHandler(self.data_dir)
-        self.pyg_handler = PyGHandler()
-        self.train_smiles_list = train_smiles_list
-        self.train_dataset = ZipDataset(
-            SequenceDataset(train_smiles_list, self.sequence_handler),
-            PyGDataset(train_smiles_list, self.pyg_handler),
+
+class ImitationModel(pl.LightningModule):
+    def __init__(self, backbone, hparams):
+        super(ImitationModel, self).__init__()
+        self.save_hyperparameters(hparams)
+        self.backbone = backbone
+        self.batch_size = hparams.imitation_batch_size
+        self.num_workers = hparams.imitation_num_workers
+
+        k = int(hparams.imitation_subset_ratio * len(self.backbone.train_smiles_list))
+        print(k)
+        subset_idxs = random.Random(0).sample(
+            range(len(self.backbone.train_smiles_list)), k=k
         )
-        self.vali_smiles_list = vali_smiles_list
-        self.vali_dataset = ZipDataset(
-            SequenceDataset(vali_smiles_list, self.sequence_handler),
-            PyGDataset(vali_smiles_list, self.pyg_handler),
+        train_sequence_dataset = torch.utils.data.Subset(
+            self.backbone.train_sequence_dataset, subset_idxs
+        )
+        train_score_dataset = torch.utils.data.Subset(
+            self.backbone.train_score_dataset, subset_idxs
         )
 
-    def collate_data_list(self, data_list):
-        sequence_data_list, pyg_data_list = zip(*data_list)
-        pad_id = self.sequence_handler.vocabulary.get_pad_id()
-        return (
-            collate_sequence_data_list(sequence_data_list, pad_id),
-            collate_pyg_data_list(pyg_data_list),
+        self.train_dataset = ZipDataset(train_sequence_dataset, train_score_dataset)
+        self.val_dataset = ZipDataset(
+            self.backbone.val_sequence_dataset, self.backbone.val_score_dataset
         )
 
     @staticmethod
     def add_args(parser):
-        group = parser.add_argument_group("data")
-        group.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
-        group.add_argument("--batch_size", type=int, default=256)
-        group.add_argument("--num_workers", type=int, default=8)
+        parser.add_argument("--imitation_batch_size", type=int, default=128)
+        parser.add_argument("--imitation_num_workers", type=int, default=8)
+        parser.add_argument("--imitation_subset_ratio", type=float, default=0.01)
         return parser
 
     def train_dataloader(self):
@@ -63,79 +53,63 @@ class SmilesDataModule(pl.LightningDataModule):
             self.train_dataset,
             batch_size=self.batch_size,
             shuffle=True,
-            collate_fn=self.collate_data_list,
+            collate_fn=collate_data_list,
             num_workers=self.num_workers,
         )
 
     def val_dataloader(self):
         return DataLoader(
-            self.vali_dataset,
+            self.train_dataset,
             batch_size=self.batch_size,
             shuffle=False,
-            collate_fn=self.collate_data_list,
+            collate_fn=collate_data_list,
             num_workers=self.num_workers,
         )
 
+    def shared_step(self, batched_data, batch_idx):
+        batched_sequence_data, scores = batched_data
+        codes = self.backbone.score_embedding(scores)
+        logits = self.backbone.decoder(batched_sequence_data, codes)
 
-class ImitationLearningModel(pl.LightningModule):
-    def __init__(self, backbone, hparams):
-        super(ImitationLearningModel, self).__init__()
-        self.backbone = backbone
-        self.save_hyperparameters(hparams)
+        loss_total = loss_ce = self.backbone.compute_cross_entropy(
+            logits, batched_sequence_data
+        )
+        acc_elem, acc_sequence = self.backbone.compute_accuracy(
+            logits, batched_sequence_data
+        )
 
-    @staticmethod
-    def add_args(parser):
-        group = parser.add_argument_group("imitation")
-        group.add_argument("--encoder_optimize", action="store_true")
-        group.add_argument("--encoder_num_layer", type=int, default=5)
-        group.add_argument("--encoder_emb_dim", type=int, default=256)
-        group.add_argument("--encoder_load_path", type=str, default="")
-        group.add_argument("--decoder_num_layers", type=int, default=3)
-        group.add_argument("--decoder_hidden_dim", type=int, default=1024)
-        group.add_argument("--code_dim", type=int, default=32)
-        return parser
+        return (
+            loss_total,
+            {"loss/ce": loss_ce, "acc/elem": acc_elem, "acc/sequence": acc_sequence},
+        )
 
     def training_step(self, batched_data, batch_idx):
-        batched_sequence_data, batched_pyg_data = batched_data
-        with torch.no_grad():
-            codes = self.encoder(batched_pyg_data)
-            codes = torch.nn.functional.normalize(codes, p=2, dim=1)
+        loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
-        logits = self.decoder(batched_sequence_data, codes)
-        loss = compute_sequence_cross_entropy(
-            logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
-        )
-        elem_acc, sequence_acc = compute_sequence_accuracy(
-            logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
-        )
+        self.log("imitation/train/loss/total", loss_total, on_step=True, logger=True)
+        for key, val in statistics.items():
+            self.log(f"imitation/train/{key}", val, on_step=True, logger=True)
 
-        self.log("train/loss/total", loss, on_step=True, logger=True)
-        self.log("train/acc/element", elem_acc, on_step=True, logger=True)
-        self.log("train/acc/sequence", sequence_acc, on_step=True, logger=True)
-
-        return loss
+        return loss_total
 
     def validation_step(self, batched_data, batch_idx):
-        batched_sequence_data, batched_pyg_data = batched_data
-        with torch.no_grad():
-            codes = self.encoder(batched_pyg_data)
-            logits = self.decoder(batched_sequence_data, codes)
+        loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
-        loss = compute_sequence_cross_entropy(
-            logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
+        self.log(
+            "imitation/validation/loss/total", loss_total, on_step=False, logger=True
         )
-        elem_acc, sequence_acc = compute_sequence_accuracy(
-            logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
-        )
+        for key, val in statistics.items():
+            self.log(f"imitation/validation/{key}", val, on_step=False, logger=True)
 
-        self.log("validation/loss/total", loss, logger=True)
-        self.log("validation/acc/element", elem_acc, logger=True)
-        self.log("validation/acc/sequence", sequence_acc, logger=True)
+        return loss_total
 
     def configure_optimizers(self):
-        params = list(self.decoder.parameters())
-        if self.encoder_optimize:
-            params += list(self.encoder.parameters())
-
+        params = list(self.backbone.decoder.parameters())
+        params += list(self.backbone.score_embedding.parameters())
         optimizer = torch.optim.Adam(params, lr=1e-3)
         return [optimizer]
+
+    def on_validation_epoch_end(self):
+        statistics = self.backbone.on_validation_epoch_end(self.logger)
+        for key, val in statistics.items():
+            self.log(f"imitation/sampling/{key}", val, on_step=False, logger=True)

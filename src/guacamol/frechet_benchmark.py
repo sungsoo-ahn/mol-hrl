@@ -42,9 +42,13 @@ class FrechetBenchmark(DistributionLearningBenchmark):
         """
         self.chemnet_model_filename = chemnet_model_filename
         self.sample_size = sample_size
-        super().__init__(name="Frechet ChemNet Distance", number_samples=self.sample_size)
+        super().__init__(
+            name="Frechet ChemNet Distance", number_samples=self.sample_size
+        )
 
-        self.reference_molecules = get_random_subset(training_set, self.sample_size, seed=42)
+        self.reference_molecules = get_random_subset(
+            training_set, self.sample_size, seed=42
+        )
 
     def assess_model(
         self, model: DistributionMatchingGenerator
@@ -60,10 +64,14 @@ class FrechetBenchmark(DistributionLearningBenchmark):
         if len(generated_molecules) != self.number_samples:
             logger.warning("The model could not generate enough valid molecules.")
 
-        mu_ref, cov_ref = self._calculate_distribution_statistics(chemnet, self.reference_molecules)
+        mu_ref, cov_ref = self._calculate_distribution_statistics(
+            chemnet, self.reference_molecules
+        )
         mu, cov = self._calculate_distribution_statistics(chemnet, generated_molecules)
 
-        FCD = fcd.calculate_frechet_distance(mu1=mu_ref, mu2=mu, sigma1=cov_ref, sigma2=cov)
+        FCD = fcd.calculate_frechet_distance(
+            mu1=mu_ref, mu2=mu, sigma1=cov_ref, sigma2=cov
+        )
         score = np.exp(-0.2 * FCD)
 
         metadata = {

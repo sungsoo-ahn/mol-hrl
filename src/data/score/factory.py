@@ -45,6 +45,7 @@ GUACAMOL_NAMES = [
     "penalized_logp",
 ]
 
+
 def get_scoring_func(name, num_workers=32):
     if name == "celecoxib":
         benchmark = similarity(

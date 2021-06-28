@@ -1,5 +1,6 @@
 import torch
 
+
 class StringDataset(torch.utils.data.Dataset):
     def __init__(self, strings):
         self.strings = strings
@@ -29,21 +30,19 @@ class TensorDataset(torch.utils.data.Dataset):
 
 
 class ZipDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset0, dataset1):
+    def __init__(self, dataset0, dataset1, dataset2=None):
         self.dataset0 = dataset0
         self.dataset1 = dataset1
+        self.dataset2 = dataset2
 
     def __len__(self):
         return len(self.dataset0)
 
     def __getitem__(self, idx):
-        return (self.dataset0[idx], self.dataset1[idx])
-
-    def collate_fn(self, data_list):
-        data0_list, data1_list = zip(*data_list)
-        batched_data0 = self.dataset0.collate_fn(data0_list)
-        batched_data1 = self.dataset1.collate_fn(data1_list)
-        return batched_data0, batched_data1
+        if self.dataset2 is None:
+            return (self.dataset0[idx], self.dataset1[idx])
+        else:
+            return (self.dataset0[idx], self.dataset1[idx], self.dataset2[idx])
 
 
 class EnumerateDataset(torch.utils.data.Dataset):

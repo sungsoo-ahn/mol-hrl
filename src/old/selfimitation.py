@@ -113,7 +113,9 @@ class SelfImitationModel(pl.LightningModule):
         return parser
 
     def train_dataloader(self):
-        self.dataset = torch.randn(self.batch_size * self.batches_per_epoch, self.code_dim)
+        self.dataset = torch.randn(
+            self.batch_size * self.batches_per_epoch, self.code_dim
+        )
         return DataLoader(dataset=self.dataset, batch_size=self.batch_size)
 
     def training_step(self, batched_data, batch_idx):
@@ -149,7 +151,9 @@ class SelfImitationModel(pl.LightningModule):
 
         num_valid_samples = len(smiles_list)
         self.log(
-            "sample/valid_smiles_ratio", num_valid_samples / self.batch_size, prog_bar=True,
+            "sample/valid_smiles_ratio",
+            num_valid_samples / self.batch_size,
+            prog_bar=True,
         )
 
         batched_sequence_data = collate_sequence_data_list(
@@ -169,7 +173,9 @@ class SelfImitationModel(pl.LightningModule):
         logits = self.decoder(batched_sequence_data, relabeled_codes)
         loss = (
             compute_sequence_cross_entropy(
-                logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id(),
+                logits,
+                batched_sequence_data,
+                self.sequence_handler.vocabulary.get_pad_id(),
             )
             * num_valid_samples
             / self.batch_size
@@ -178,7 +184,9 @@ class SelfImitationModel(pl.LightningModule):
             logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id()
         )
 
-        code_cossim = torch.bmm(valid_codes.unsqueeze(1), relabeled_codes.unsqueeze(2)).mean()
+        code_cossim = torch.bmm(
+            valid_codes.unsqueeze(1), relabeled_codes.unsqueeze(2)
+        ).mean()
 
         self.log("train/loss/total", loss, on_step=True, logger=True)
         self.log("train/acc/element", elem_acc, on_step=True, logger=True)

@@ -111,6 +111,7 @@ def create_vocabulary_from_dir(dir, tokenizer):
     vocabulary = create_vocabulary(smiles_list, tokenizer)
     return vocabulary
 
+
 def create_vocabulary(smiles_list, tokenizer):
     tokens = set()
     max_length = 0
@@ -123,13 +124,16 @@ def create_vocabulary(smiles_list, tokenizer):
     vocabulary.update(sorted(tokens))
     return vocabulary
 
+
 def create_tokenizer_and_vocabulary_from_dir(dir):
     tokenizer = SmilesTokenizer()
     vocabulary = create_vocabulary_from_dir(dir, tokenizer)
     return tokenizer, vocabulary
 
+
 def sequence_from_string(string, tokenizer, vocabulary):
     return torch.tensor(vocabulary.encode(tokenizer.tokenize(string)))
+
 
 def string_from_sequence(sequence, tokenizer, vocabulary):
     return tokenizer.untokenize(vocabulary.decode(sequence.squeeze(0).tolist()))

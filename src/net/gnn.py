@@ -124,7 +124,7 @@ class GnnEncoder(torch.nn.Module):
 
         ### Different implementations of Jk-concat
         node_representation = h_list[-1]
+        node_representation = self.linear(node_representation)
         graph_representation = global_mean_pool(node_representation, batched_data.batch)
-        graph_representation = self.linear(graph_representation)
-        graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
-        return graph_representation
+        # graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
+        return graph_representation, node_representation

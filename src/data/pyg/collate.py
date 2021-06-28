@@ -1,6 +1,7 @@
 import torch
 import torch_geometric
 
+
 def collate_pyg_data_list(data_list):
     keys = [set(data.keys) for data in data_list]
     keys = list(set.union(*keys))
@@ -29,7 +30,9 @@ def collate_pyg_data_list(data_list):
     batch.batch = torch.cat(batch.batch, dim=-1)
 
     for key in keys:
-        batch[key] = torch.cat(batch[key], dim=data_list[0].__cat_dim__(key, batch[key][0]))
+        batch[key] = torch.cat(
+            batch[key], dim=data_list[0].__cat_dim__(key, batch[key][0])
+        )
 
     batch = batch.contiguous()
 

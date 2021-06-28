@@ -1,6 +1,7 @@
 import torch
 from data.pyg.util import pyg_from_string
 
+
 class PyGDataset(torch.utils.data.Dataset):
     def __init__(self, smiles_list):
         super(PyGDataset, self).__init__()

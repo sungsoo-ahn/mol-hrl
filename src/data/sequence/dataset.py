@@ -3,6 +3,7 @@ from fsspec.utils import tokenize
 import torch
 from data.sequence.util import sequence_from_string
 
+
 class SequenceDataset(torch.utils.data.Dataset):
     def __init__(self, smiles_list, tokenizer, vocabulary):
         super(SequenceDataset, self).__init__()

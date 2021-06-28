@@ -113,7 +113,7 @@ class ReinforceModel(pl.LightningModule):
 
         string_list = self.sequence_handler.strings_from_sequences(sequences, lengths)
 
-        # Filter out smiles and 
+        # Filter out smiles and
         pyg_data_list = [maybe_get_pyg_data(string) for string in string_list]
         valid_idxs, valid_pyg_data_list = map(
             list,
@@ -125,7 +125,7 @@ class ReinforceModel(pl.LightningModule):
                 ]
             ),
         )
-        
+
         # compute actual code
         batched_pyg_data = collate_pyg_data_list(valid_pyg_data_list)
         batched_pyg_data = batched_pyg_data.to(self.device)
@@ -143,11 +143,15 @@ class ReinforceModel(pl.LightningModule):
         loss = -(reward * log_probs).mean()
 
         self.log(
-            "sample/valid_smiles_ratio", len(valid_idxs) / self.batch_size, prog_bar=True,
+            "sample/valid_smiles_ratio",
+            len(valid_idxs) / self.batch_size,
+            prog_bar=True,
         )
         self.log("train/loss/total", loss, on_step=True, logger=True)
         self.log("train/stat/reward", reward.mean(), on_step=True, logger=True)
-        self.log("train/stat/code_cossim", code_cossim.mean(), on_step=True, logger=True)
+        self.log(
+            "train/stat/code_cossim", code_cossim.mean(), on_step=True, logger=True
+        )
 
         return loss
 

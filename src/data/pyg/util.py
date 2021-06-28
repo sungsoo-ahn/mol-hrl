@@ -41,9 +41,9 @@ allowable_features = {
 
 def get_atom_feature(atom_type):
     atom = Chem.Atom(atom_type)
-    atom_feature = [allowable_features["possible_atomic_num_list"].index(atom.GetAtomicNum())] + [
-        allowable_features["possible_chirality_list"].index(atom.GetChiralTag())
-    ]
+    atom_feature = [
+        allowable_features["possible_atomic_num_list"].index(atom.GetAtomicNum())
+    ] + [allowable_features["possible_chirality_list"].index(atom.GetChiralTag())]
     atom_feature = torch.tensor(np.array([atom_feature]), dtype=torch.long)
     return atom_feature
 
@@ -52,6 +52,7 @@ def get_bond_feature(bond_type):
     edge_feature = [bond_type - 1] + [0]
     edge_feature = torch.tensor(np.array([edge_feature]), dtype=torch.long)
     return edge_feature
+
 
 def pyg_from_string(string):
     mol = Chem.MolFromSmiles(string)
@@ -74,9 +75,9 @@ def pyg_from_string(string):
         for bond in mol.GetBonds():
             i = bond.GetBeginAtomIdx()
             j = bond.GetEndAtomIdx()
-            edge_feature = [allowable_features["possible_bonds"].index(bond.GetBondType())] + [
-                allowable_features["possible_bond_dirs"].index(bond.GetBondDir())
-            ]
+            edge_feature = [
+                allowable_features["possible_bonds"].index(bond.GetBondType())
+            ] + [allowable_features["possible_bond_dirs"].index(bond.GetBondDir())]
             edges_list.append((i, j))
             edge_features_list.append(edge_feature)
             edges_list.append((j, i))
@@ -94,6 +95,7 @@ def pyg_from_string(string):
     pyg = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 
     return pyg
+
 
 def string_from_pyg(pyg):
     data_x, data_edge_index, data_edge_attr = pyg.x, pyg.edge_index, pyg.edge_attr
