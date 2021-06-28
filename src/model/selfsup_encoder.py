@@ -6,13 +6,13 @@ import pytorch_lightning as pl
 from data.pyg.collate import collate_pyg_data_list
 
 
-class SelfSupervisedModel(pl.LightningModule):
+class SelfSupervisedEncoderModel(pl.LightningModule):
     def __init__(self, backbone, hparams):
-        super(SelfSupervisedModel, self).__init__()
+        super(SelfSupervisedEncoderModel, self).__init__()
         self.save_hyperparameters(hparams)
         self.backbone = backbone
-        self.batch_size = hparams.selfsup_batch_size
-        self.num_workers = hparams.selfsup_num_workers
+        self.batch_size = hparams.selfsupencoder_batch_size
+        self.num_workers = hparams.selfsupencoder_num_workers
         self.projector = torch.nn.Linear(hparams.code_dim, hparams.code_dim)
 
         self.train_dataset = self.backbone.train_pyg_dataset
@@ -20,8 +20,8 @@ class SelfSupervisedModel(pl.LightningModule):
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument("--selfsup_batch_size", type=int, default=256)
-        parser.add_argument("--selfsup_num_workers", type=int, default=8)
+        parser.add_argument("--selfsupencoder_batch_size", type=int, default=256)
+        parser.add_argument("--selfsupencoder_num_workers", type=int, default=8)
         return parser
 
     def train_dataloader(self):
@@ -55,20 +55,18 @@ class SelfSupervisedModel(pl.LightningModule):
     def training_step(self, batched_data, batch_idx):
         loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
-        self.log("selfsup/train/loss/total", loss_total, on_step=True, logger=True)
+        self.log("selfsupencoder/train/loss/total", loss_total, on_step=True, logger=True)
         for key, val in statistics.items():
-            self.log(f"selfsup/train/{key}", val, on_step=True, logger=True)
+            self.log(f"selfsupencoder/train/{key}", val, on_step=True, logger=True)
 
         return loss_total
 
     def validation_step(self, batched_data, batch_idx):
         loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
-        self.log(
-            "selfsup/validation/loss/total", loss_total, on_step=False, logger=True
-        )
+        self.log("selfsupencoder/validation/loss/total", loss_total, on_step=False, logger=True)
         for key, val in statistics.items():
-            self.log(f"selfsup/validation/{key}", val, on_step=False, logger=True)
+            self.log(f"selfsupencoder/validation/{key}", val, on_step=False, logger=True)
 
         return loss_total
 

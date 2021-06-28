@@ -146,10 +146,8 @@ def get_scoring_func(name, num_workers=32):
     elem_scoring_func = benchmark.wrapped_objective.score
 
     def parallel_scoring_func(smiles_list):
-        scores = Parallel(num_workers)(
-            delayed(elem_scoring_func)(smiles) for smiles in smiles_list
-        )
+        scores = Parallel(num_workers)(delayed(elem_scoring_func)(smiles) for smiles in smiles_list)
 
         return scores
 
-    return elem_scoring_func, parallel_scoring_func
+    return elem_scoring_func, parallel_scoring_func, benchmark.wrapped_objective.corrupt_score

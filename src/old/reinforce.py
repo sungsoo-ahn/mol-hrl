@@ -143,15 +143,11 @@ class ReinforceModel(pl.LightningModule):
         loss = -(reward * log_probs).mean()
 
         self.log(
-            "sample/valid_smiles_ratio",
-            len(valid_idxs) / self.batch_size,
-            prog_bar=True,
+            "sample/valid_smiles_ratio", len(valid_idxs) / self.batch_size, prog_bar=True,
         )
         self.log("train/loss/total", loss, on_step=True, logger=True)
         self.log("train/stat/reward", reward.mean(), on_step=True, logger=True)
-        self.log(
-            "train/stat/code_cossim", code_cossim.mean(), on_step=True, logger=True
-        )
+        self.log("train/stat/code_cossim", code_cossim.mean(), on_step=True, logger=True)
 
         return loss
 

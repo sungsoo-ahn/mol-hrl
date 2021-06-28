@@ -31,11 +31,7 @@ class DistributionLearningBenchmarkResult:
     """
 
     def __init__(
-        self,
-        benchmark_name: str,
-        score: float,
-        sampling_time: float,
-        metadata: Dict[str, Any],
+        self, benchmark_name: str, score: float, sampling_time: float, metadata: Dict[str, Any],
     ) -> None:
         """
         Args:
@@ -89,9 +85,7 @@ class ValidityBenchmark(DistributionLearningBenchmark):
         end_time = time.time()
 
         if len(molecules) != self.number_samples:
-            raise Exception(
-                "The model did not generate the correct number of molecules"
-            )
+            raise Exception("The model did not generate the correct number of molecules")
 
         number_valid = sum(1 if is_valid(smiles) else 0 for smiles in molecules)
         validity_ratio = number_valid / self.number_samples
@@ -120,9 +114,7 @@ class UniquenessBenchmark(DistributionLearningBenchmark):
         self, model: DistributionMatchingGenerator
     ) -> DistributionLearningBenchmarkResult:
         start_time = time.time()
-        molecules = sample_valid_molecules(
-            model=model, number_molecules=self.number_samples
-        )
+        molecules = sample_valid_molecules(model=model, number_molecules=self.number_samples)
         end_time = time.time()
 
         if len(molecules) != self.number_samples:
@@ -180,9 +172,7 @@ class NoveltyBenchmark(DistributionLearningBenchmark):
             )
 
         # canonicalize_list in order to remove stereo information (also removes duplicates and invalid molecules, but there shouldn't be any)
-        unique_molecules = set(
-            canonicalize_list(molecules, include_stereocenters=False)
-        )
+        unique_molecules = set(canonicalize_list(molecules, include_stereocenters=False))
 
         novel_molecules = unique_molecules.difference(self.training_set_molecules)
 
@@ -250,25 +240,17 @@ class KLDivBenchmark(DistributionLearningBenchmark):
             )
 
         # canonicalize_list in order to remove stereo information (also removes duplicates and invalid molecules, but there shouldn't be any)
-        unique_molecules = set(
-            canonicalize_list(molecules, include_stereocenters=False)
-        )
+        unique_molecules = set(canonicalize_list(molecules, include_stereocenters=False))
 
         # first we calculate the descriptors, which are np.arrays of size n_samples x n_descriptors
-        d_sampled = calculate_pc_descriptors(
-            unique_molecules, self.pc_descriptor_subset
-        )
-        d_chembl = calculate_pc_descriptors(
-            self.training_set_molecules, self.pc_descriptor_subset
-        )
+        d_sampled = calculate_pc_descriptors(unique_molecules, self.pc_descriptor_subset)
+        d_chembl = calculate_pc_descriptors(self.training_set_molecules, self.pc_descriptor_subset)
 
         kldivs = {}
 
         # now we calculate the kl divergence for the float valued descriptors ...
         for i in range(4):
-            kldiv = continuous_kldiv(
-                X_baseline=d_chembl[:, i], X_sampled=d_sampled[:, i]
-            )
+            kldiv = continuous_kldiv(X_baseline=d_chembl[:, i], X_sampled=d_sampled[:, i])
             kldivs[self.pc_descriptor_subset[i]] = kldiv
 
         # ... and for the int valued ones.
@@ -278,9 +260,7 @@ class KLDivBenchmark(DistributionLearningBenchmark):
 
         # pairwise similarity
 
-        chembl_sim = calculate_internal_pairwise_similarities(
-            self.training_set_molecules
-        )
+        chembl_sim = calculate_internal_pairwise_similarities(self.training_set_molecules)
         chembl_sim = chembl_sim.max(axis=1)
 
         sampled_sim = calculate_internal_pairwise_similarities(unique_molecules)

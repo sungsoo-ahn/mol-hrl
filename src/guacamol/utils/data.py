@@ -49,8 +49,7 @@ def get_random_subset(
     """
     if len(dataset) < subset_size:
         raise Exception(
-            f"The dataset to extract a subset from is too small: "
-            f"{len(dataset)} < {subset_size}"
+            f"The dataset to extract a subset from is too small: " f"{len(dataset)} < {subset_size}"
         )
 
     # save random number generator state
@@ -78,9 +77,7 @@ def download_if_not_present(filename, uri):
     else:
         with open(filename, "wb") as fd:
             print("Starting {} download from {}...".format(filename, uri))
-            with ProgressBarUpTo(
-                unit="B", unit_scale=True, unit_divisor=1024, miniters=1
-            ) as t:
+            with ProgressBarUpTo(unit="B", unit_scale=True, unit_divisor=1024, miniters=1) as t:
                 urlretrieve(uri, fd.name, reporthook=t.update_to)
             print("Finished {} download.".format(filename))
 
@@ -116,10 +113,4 @@ class ProgressBarUpTo(ProgressBar):
 
 def get_time_string():
     lt = time.localtime()
-    return "%04d%02d%02d-%02d%02d" % (
-        lt.tm_year,
-        lt.tm_mon,
-        lt.tm_mday,
-        lt.tm_hour,
-        lt.tm_min,
-    )
+    return "%04d%02d%02d-%02d%02d" % (lt.tm_year, lt.tm_mon, lt.tm_mday, lt.tm_hour, lt.tm_min,)

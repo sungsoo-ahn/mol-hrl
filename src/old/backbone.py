@@ -17,9 +17,7 @@ class BackBoneModel(pl.LightningModule):
         super(BackBoneModel, self).__init__()
         self.save_hyperparameters(hparams)
 
-        self.tokenizer, self.vocabulary = create_tokenizer_and_vocabulary_from_dir(
-            hparams.data_dir
-        )
+        self.tokenizer, self.vocabulary = create_tokenizer_and_vocabulary_from_dir(hparams.data_dir)
         self.encoder = GnnEncoder(
             num_layer=hparams.encoder_num_layer,
             emb_dim=hparams.encoder_emb_dim,
@@ -41,9 +39,7 @@ class BackBoneModel(pl.LightningModule):
         (
             (self.train_smiles_list, self.val_smiles_list),
             (self.train_score_list, self.val_score_list),
-        ) = load_split_smiles_list(
-            hparams.data_dir, score_func_name=hparams.score_func_name
-        )
+        ) = load_split_smiles_list(hparams.data_dir, score_func_name=hparams.score_func_name)
 
         self.train_sequence_dataset = SequenceDataset(
             self.train_smiles_list, self.tokenizer, self.vocabulary

@@ -25,9 +25,7 @@ def sample_valid_molecules(
 
     valid_molecules: List[str] = []
 
-    while (
-        len(valid_molecules) < number_molecules and number_already_sampled < max_samples
-    ):
+    while len(valid_molecules) < number_molecules and number_already_sampled < max_samples:
         remaining_to_sample = number_molecules - len(valid_molecules)
 
         samples = model.generate(remaining_to_sample)

@@ -16,13 +16,13 @@ def collate_data_list(data_list):
     )
 
 
-class SelfSupervisedImitationModel(pl.LightningModule):
+class AutoEncoderModel(pl.LightningModule):
     def __init__(self, backbone, hparams):
-        super(SelfSupervisedImitationModel, self).__init__()
+        super(AutoEncoderModel, self).__init__()
         self.save_hyperparameters(hparams)
         self.backbone = backbone
-        self.batch_size = hparams.selfsupimitation_batch_size
-        self.num_workers = hparams.selfsupimitation_num_workers
+        self.batch_size = hparams.autoencoder_batch_size
+        self.num_workers = hparams.autoencoder_num_workers
 
         self.train_dataset = ZipDataset(
             self.backbone.train_sequence_dataset, self.backbone.train_pyg_dataset
@@ -33,8 +33,8 @@ class SelfSupervisedImitationModel(pl.LightningModule):
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument("--selfsupimitation_batch_size", type=int, default=128)
-        parser.add_argument("--selfsupimitation_num_workers", type=int, default=8)
+        parser.add_argument("--autoencoder_batch_size", type=int, default=128)
+        parser.add_argument("--autoencoder_num_workers", type=int, default=8)
         return parser
 
     def train_dataloader(self):
@@ -60,12 +60,8 @@ class SelfSupervisedImitationModel(pl.LightningModule):
         codes, _ = self.backbone.encoder(batched_pyg_data)
         logits = self.backbone.decoder(batched_sequence_data, codes)
 
-        loss_total = loss_ce = self.backbone.compute_cross_entropy(
-            logits, batched_sequence_data
-        )
-        acc_elem, acc_sequence = self.backbone.compute_accuracy(
-            logits, batched_sequence_data
-        )
+        loss_total = loss_ce = self.backbone.compute_cross_entropy(logits, batched_sequence_data)
+        acc_elem, acc_sequence = self.backbone.compute_accuracy(logits, batched_sequence_data)
 
         return (
             loss_total,
@@ -75,11 +71,9 @@ class SelfSupervisedImitationModel(pl.LightningModule):
     def training_step(self, batched_data, batch_idx):
         loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
-        self.log(
-            "selfsupimitation/train/loss/total", loss_total, on_step=True, logger=True
-        )
+        self.log("autoencoder/train/loss/total", loss_total, on_step=True, logger=True)
         for key, val in statistics.items():
-            self.log(f"selfsupimitation/train/{key}", val, on_step=True, logger=True)
+            self.log(f"autoencoder/train/{key}", val, on_step=True, logger=True)
 
         return loss_total
 
@@ -87,19 +81,15 @@ class SelfSupervisedImitationModel(pl.LightningModule):
         loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
         self.log(
-            "selfsupimitation/validation/loss/total",
-            loss_total,
-            on_step=False,
-            logger=True,
+            "autoencoder/validation/loss/total", loss_total, on_step=False, logger=True,
         )
         for key, val in statistics.items():
-            self.log(
-                f"selfsupimitation/validation/{key}", val, on_step=False, logger=True
-            )
+            self.log(f"autoencoder/validation/{key}", val, on_step=False, logger=True)
 
         return loss_total
 
     def configure_optimizers(self):
         params = list(self.backbone.decoder.parameters())
+        params += list(self.backbone.encoder.parameters())
         optimizer = torch.optim.Adam(params, lr=1e-3)
         return [optimizer]

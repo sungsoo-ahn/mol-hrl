@@ -39,9 +39,7 @@ def get_argparser():
         description="Data Preparation for GuacaMol",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "-o", "--destination", default=".", help="Download and Output location"
-    )
+    parser.add_argument("-o", "--destination", default=".", help="Download and Output location")
     parser.add_argument("--n_jobs", default=8, type=int, help="Number of cores to use")
     return parser
 
@@ -225,9 +223,7 @@ def main():
     chembl_file = os.path.join(args.destination, CHEMBL_FILE_NAME)
 
     data = (
-        pkgutil.get_data("guacamol.data", "holdout_set_gcm_v1.smiles")
-        .decode("utf-8")
-        .splitlines()
+        pkgutil.get_data("guacamol.data", "holdout_set_gcm_v1.smiles").decode("utf-8").splitlines()
     )
 
     holdout_mols = [i.split(" ")[0] for i in data]
@@ -237,10 +233,7 @@ def main():
     # Download Chembl23 if needed.
     download_if_not_present(chembl_file, uri=CHEMBL_URL)
     raw_smiles = get_raw_smiles(
-        chembl_file,
-        smiles_char_dict=smiles_dict,
-        open_fn=gzip.open,
-        extract_fn=extract_chembl,
+        chembl_file, smiles_char_dict=smiles_dict, open_fn=gzip.open, extract_fn=extract_chembl,
     )
 
     file_prefix = "chembl24_canon"
@@ -255,12 +248,7 @@ def main():
 
     joblist = (
         delayed(filter_and_canonicalize)(
-            smiles_str,
-            holdout_set,
-            holdout_fps,
-            neutralization_rxns,
-            TANIMOTO_CUTOFF,
-            False,
+            smiles_str, holdout_set, holdout_fps, neutralization_rxns, TANIMOTO_CUTOFF, False,
         )
         for smiles_str in raw_smiles
     )

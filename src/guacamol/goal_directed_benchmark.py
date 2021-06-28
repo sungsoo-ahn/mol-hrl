@@ -92,9 +92,7 @@ class GoalDirectedBenchmark:
         )
         end_time = time.time()
 
-        canonicalized_molecules = canonicalize_list(
-            molecules, include_stereocenters=False
-        )
+        canonicalized_molecules = canonicalize_list(molecules, include_stereocenters=False)
         unique_molecules = remove_duplicates(canonicalized_molecules)
         scores = self.objective.score_list(unique_molecules)
 
@@ -107,18 +105,12 @@ class GoalDirectedBenchmark:
             )
             scores.extend([0.0] * number_missing)
 
-        global_score, top_x_dict = compute_global_score(
-            self.contribution_specification, scores
-        )
+        global_score, top_x_dict = compute_global_score(self.contribution_specification, scores)
 
         scored_molecules = zip(unique_molecules, scores)
-        sorted_scored_molecules = sorted(
-            scored_molecules, key=lambda x: (x[1], x[0]), reverse=True
-        )
+        sorted_scored_molecules = sorted(scored_molecules, key=lambda x: (x[1], x[0]), reverse=True)
 
-        internal_similarities = calculate_internal_pairwise_similarities(
-            unique_molecules
-        )
+        internal_similarities = calculate_internal_pairwise_similarities(unique_molecules)
 
         # accumulate internal_similarities in metadata
         int_simi_histogram = np.histogram(
@@ -129,12 +121,8 @@ class GoalDirectedBenchmark:
         metadata.update(top_x_dict)
         metadata["internal_similarity_max"] = internal_similarities.max()
         metadata["internal_similarity_mean"] = internal_similarities.mean()
-        metadata["internal_similarity_histogram_density"] = (
-            int_simi_histogram[0].tolist(),
-        )
-        metadata["internal_similarity_histogram_bins"] = (
-            int_simi_histogram[1].tolist(),
-        )
+        metadata["internal_similarity_histogram_density"] = (int_simi_histogram[0].tolist(),)
+        metadata["internal_similarity_histogram_bins"] = (int_simi_histogram[1].tolist(),)
 
         return GoalDirectedBenchmarkResult(
             benchmark_name=self.name,

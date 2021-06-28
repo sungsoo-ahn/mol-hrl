@@ -57,9 +57,7 @@ def canonicalize(smiles: str, include_stereocenters=True) -> Optional[str]:
         return None
 
 
-def canonicalize_list(
-    smiles_list: Iterable[str], include_stereocenters=True
-) -> List[str]:
+def canonicalize_list(smiles_list: Iterable[str], include_stereocenters=True) -> List[str]:
     """
     Canonicalize a list of smiles. Filters out repetitions and removes corrupted molecules.
 
@@ -71,9 +69,7 @@ def canonicalize_list(
         The canonicalized and filtered input smiles.
     """
 
-    canonicalized_smiles = [
-        canonicalize(smiles, include_stereocenters) for smiles in smiles_list
-    ]
+    canonicalized_smiles = [canonicalize(smiles, include_stereocenters) for smiles in smiles_list]
 
     # Remove None elements
     canonicalized_smiles = [s for s in canonicalized_smiles if s is not None]
@@ -188,9 +184,7 @@ def filter_and_canonicalize(
         mol = Chem.RemoveHs(mol)
 
         # We only accept molecules consisting of H, B, C, N, O, F, Si, P, S, Cl, aliphatic Se, Br, I.
-        metal_smarts = Chem.MolFromSmarts(
-            "[!#1!#5!#6!#7!#8!#9!#14!#15!#16!#17!#34!#35!#53]"
-        )
+        metal_smarts = Chem.MolFromSmarts("[!#1!#5!#6!#7!#8!#9!#14!#15!#16!#17!#34!#35!#53]")
 
         has_metal = mol.HasSubstructMatch(metal_smarts)
 
@@ -249,9 +243,7 @@ def calculate_internal_pairwise_similarities(smiles_list: Collection[str]) -> np
     return similarities
 
 
-def calculate_pairwise_similarities(
-    smiles_list1: List[str], smiles_list2: List[str]
-) -> np.array:
+def calculate_pairwise_similarities(smiles_list1: List[str], smiles_list2: List[str]) -> np.array:
     """
     Computes the pairwise ECFP4 tanimoto similarity of the two smiles containers.
 
@@ -362,9 +354,7 @@ def discrete_kldiv(X_baseline: np.array, X_sampled: np.array) -> float:
     return entropy(P, Q)
 
 
-def calculate_pc_descriptors(
-    smiles: Iterable[str], pc_descriptors: List[str]
-) -> np.array:
+def calculate_pc_descriptors(smiles: Iterable[str], pc_descriptors: List[str]) -> np.array:
     output = []
 
     for i in smiles:

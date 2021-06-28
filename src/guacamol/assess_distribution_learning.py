@@ -59,9 +59,7 @@ def _assess_distribution_learning(
         number_samples=number_samples,
     )
 
-    results = _evaluate_distribution_learning_benchmarks(
-        model=model, benchmarks=benchmarks
-    )
+    results = _evaluate_distribution_learning_benchmarks(model=model, benchmarks=benchmarks)
 
     benchmark_results: Dict[str, Any] = OrderedDict()
     benchmark_results["guacamol_version"] = guacamol.__version__
@@ -76,8 +74,7 @@ def _assess_distribution_learning(
 
 
 def _evaluate_distribution_learning_benchmarks(
-    model: DistributionMatchingGenerator,
-    benchmarks: List[DistributionLearningBenchmark],
+    model: DistributionMatchingGenerator, benchmarks: List[DistributionLearningBenchmark],
 ) -> List[DistributionLearningBenchmarkResult]:
     """
     Evaluate a model with the given benchmarks.

@@ -42,9 +42,7 @@ class RnnDecoder(nn.Module):
 
         self.encoder = nn.Embedding(input_dim, hidden_dim)
         self.code_encoder = nn.Linear(code_dim, hidden_dim)
-        self.lstm = nn.LSTM(
-            hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers
-        )
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
         self.decoder = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, batched_sequence_data, codes):
@@ -84,9 +82,7 @@ class RnnDecoder(nn.Module):
             distribution = Categorical(probs=prob)
             tth_sequences = distribution.sample()
 
-            log_probs += (~terminated).float() * distribution.log_prob(
-                tth_sequences
-            ).squeeze(1)
+            log_probs += (~terminated).float() * distribution.log_prob(tth_sequences).squeeze(1)
 
             sequences.append(tth_sequences)
 
@@ -118,9 +114,7 @@ class RnnDecoder(nn.Module):
             distribution = Categorical(probs=prob)
             tth_sequences = torch.argmax(logit, dim=2)
 
-            log_probs += (~terminated).float() * distribution.log_prob(
-                tth_sequences
-            ).squeeze(1)
+            log_probs += (~terminated).float() * distribution.log_prob(tth_sequences).squeeze(1)
 
             sequences.append(tth_sequences)
 
@@ -135,9 +129,7 @@ class RnnDecoder(nn.Module):
         return sequences, lengths, log_probs
 
 
-def rnn_sample_large(
-    model, codes, start_id, end_id, max_length, sample_size, batch_size
-):
+def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, batch_size):
     num_sampling = sample_size // batch_size
     sequences = []
     lengths = []

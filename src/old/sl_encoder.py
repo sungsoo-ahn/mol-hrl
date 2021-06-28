@@ -71,8 +71,7 @@ class SupervisedLearningEncoderModel(pl.LightningModule):
         self.backbone.train()
         loss_total, statistics = self.shared_step(batched_data, batch_idx)
         statistics["stat/maxpred"] = (
-            self.backbone.score_mean
-            + self.backbone.score_std * statistics["loss/maxpred"]
+            self.backbone.score_mean + self.backbone.score_std * statistics["loss/maxpred"]
         )
 
         self.log("sl_encoder/train/loss/total", loss_total, on_step=True, logger=True)
@@ -86,9 +85,7 @@ class SupervisedLearningEncoderModel(pl.LightningModule):
         with torch.no_grad():
             loss_total, statistics = self.shared_step(batched_data, batch_idx)
 
-        self.log(
-            "sl_encoder/validation/loss/total", loss_total, on_step=False, logger=True
-        )
+        self.log("sl_encoder/validation/loss/total", loss_total, on_step=False, logger=True)
         for key, val in statistics.items():
             self.log(f"sl_encoder/validation/{key}", val, on_step=False, logger=True)
 

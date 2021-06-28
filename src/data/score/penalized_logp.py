@@ -65,13 +65,9 @@ def _penalized_logp_cyclebasis(mol: Mol):
 
 def penalized_logp_cyclebasis():
     benchmark_name = "Penalized logP CycleBasis"
-    objective = RdkitScoringFunction(
-        descriptor=lambda mol: _penalized_logp_cyclebasis(mol)
-    )
+    objective = RdkitScoringFunction(descriptor=lambda mol: _penalized_logp_cyclebasis(mol))
     objective.corrupt_score = -1000.0
     specification = uniform_specification(1)
     return GoalDirectedBenchmark(
-        name=benchmark_name,
-        objective=objective,
-        contribution_specification=specification,
+        name=benchmark_name, objective=objective, contribution_specification=specification,
     )

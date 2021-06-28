@@ -161,9 +161,7 @@ class SearchModel(pl.LightningModule):
 
     def populate(self):
         print("Initializing buffer with dataset...")
-        smiles_list = load_subsampled_train_smiles_list(
-            self.data_dir, k=self.num_warmup_samples
-        )
+        smiles_list = load_subsampled_train_smiles_list(self.data_dir, k=self.num_warmup_samples)
         for smiles in tqdm(smiles_list):
             sequence = self.sequence_handler.sequence_from_string(smiles)
             sequence_data = (sequence, torch.tensor(sequence.size(0)))
@@ -223,9 +221,7 @@ class SearchModel(pl.LightningModule):
                     self.sequence_handler.vocabulary.get_end_id(),
                     self.sequence_handler.vocabulary.get_max_length(),
                 )
-            batch_smiles_list = self.sequence_handler.strings_from_sequences(
-                sequences, lengths
-            )
+            batch_smiles_list = self.sequence_handler.strings_from_sequences(sequences, lengths)
 
             for smiles in batch_smiles_list:
                 num_samples += 1
@@ -250,14 +246,9 @@ class SearchModel(pl.LightningModule):
 
         num_valid_samples = len(smiles_list)
 
+        self.log("sample/max_score", torch.tensor(scores).max(), logger=True, prog_bar=True)
         self.log(
-            "sample/max_score", torch.tensor(scores).max(), logger=True, prog_bar=True
-        )
-        self.log(
-            "sample/valid_ratio",
-            num_valid_samples / num_samples,
-            logger=True,
-            prog_bar=True,
+            "sample/valid_ratio", num_valid_samples / num_samples, logger=True, prog_bar=True,
         )
 
         return sequence_data_list, pyg_data_list, scores
@@ -266,9 +257,7 @@ class SearchModel(pl.LightningModule):
         batched_sequence_data, batched_pyg_data, scores = batched_data
         codes = self.encoder(batched_pyg_data)
         codes = torch.nn.functional.normalize(codes, p=2, dim=1)
-        pred = (
-            torch.mm(codes, self.target_code.unsqueeze(1)).squeeze(1) + self.pred_bias
-        )
+        pred = torch.mm(codes, self.target_code.unsqueeze(1)).squeeze(1) + self.pred_bias
         loss = code_loss = torch.nn.functional.mse_loss(pred, scores)
         loss += 1.0 * torch.norm(codes, p=2, dim=1).mean()
 
@@ -276,9 +265,7 @@ class SearchModel(pl.LightningModule):
             self.decoder.train()
             logits = self.decoder(batched_sequence_data, codes)
             decoder_loss = compute_sequence_cross_entropy(
-                logits,
-                batched_sequence_data,
-                self.sequence_handler.vocabulary.get_pad_id(),
+                logits, batched_sequence_data, self.sequence_handler.vocabulary.get_pad_id(),
             )
             loss = loss + decoder_loss
 

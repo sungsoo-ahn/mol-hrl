@@ -31,9 +31,7 @@ def load_split_smiles_list(dir, score_func_name=None):
     vali_idxs_path = os.path.join(dir, "vali_idxs.pth")
 
     if not os.path.exists(train_idxs_path) or not os.path.exists(vali_idxs_path):
-        train_idxs, vali_idxs = get_pseudorandom_split_idxs(
-            len(smiles_list), [0.95, 0.05]
-        )
+        train_idxs, vali_idxs = get_pseudorandom_split_idxs(len(smiles_list), [0.95, 0.05])
         torch.save(train_idxs, train_idxs_path)
         torch.save(vali_idxs, vali_idxs_path)
 
@@ -52,9 +50,7 @@ def load_split_smiles_list(dir, score_func_name=None):
     train_score_list_path = os.path.join(dir, "train_{score_func_name}.pth")
     vali_score_list_path = os.path.join(dir, "vali_{score_func_name}.pth")
 
-    if not os.path.exists(train_score_list_path) or not os.path.exists(
-        vali_score_list_path
-    ):
+    if not os.path.exists(train_score_list_path) or not os.path.exists(vali_score_list_path):
         elem_score_func, parallel_score_func = get_scoring_func(score_func_name)
         train_score_list = parallel_score_func(train_smiles_list)
         vali_score_list = parallel_score_func(vali_smiles_list)
