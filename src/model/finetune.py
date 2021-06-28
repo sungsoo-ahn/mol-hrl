@@ -45,6 +45,12 @@ class FinetuneModel(pl.LightningModule):
 
         train_score_list = self.parallel_score_func(train_smiles_list)
         train_scores = torch.tensor(train_score_list).unsqueeze(1)
+
+        self.score_mean = train_scores.mean()
+        self.score_std = train_scores.std()
+
+        train_scores = (train_scores - self.score_mean) / self.score_std
+
         train_score_dataset = torch.utils.data.TensorDataset(train_scores)
         self.train_dataset = ZipDataset(train_sequence_dataset, train_score_dataset)
 
@@ -91,6 +97,7 @@ class FinetuneModel(pl.LightningModule):
         if (self.current_epoch + 1) % 5 == 0:
             for query in self.queries:
                 scores = torch.tensor(query, device=self.device)
+                scores = (scores - self.score_mean) / self.score_std
                 scores = scores.view(1, 1).expand(self.num_samples_per_query, 1)
                 codes = self.backbone.score_embedding(scores)
                 smiles_list = self.backbone.sample_from_codes(codes)
