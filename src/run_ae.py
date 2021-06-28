@@ -22,21 +22,41 @@ if __name__ == "__main__":
     
     ae_model = AutoEncoderModel(backbone, hparams)
     
-    score_func_name = "penalized_logp"
-    queries = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
-    finetune_model = FinetuneModel(backbone, score_func_name, queries, hparams)
-
     neptune_logger = NeptuneLogger(
         project_name="sungsahn0215/mol-hrl", experiment_name="neptune_logs", params=vars(hparams),
     )
 
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=50,
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=30,
     )
     trainer.fit(ae_model)
 
+    score_func_name = "molwt"
+    queries = [250.0, 350.0, 450.0]
+    finetune_model = FinetuneModel(backbone, score_func_name, queries, hparams)
 
     trainer = pl.Trainer(
         gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
     )
     trainer.fit(finetune_model)
+    
+    score_func_name = "logp"
+    queries = [1.5, 3.0, 4.5]
+    finetune_model0 = FinetuneModel(backbone, score_func_name, queries, hparams)
+
+    trainer = pl.Trainer(
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
+    )
+    trainer.fit(finetune_model0)
+
+    score_func_name = "qed"
+    queries = [0.5, 0.7, 0.9]
+    finetune_model = FinetuneModel(backbone, score_func_name, queries, hparams)
+
+    trainer = pl.Trainer(
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
+    )
+    trainer.fit(finetune_model0)
+
+    
+    
