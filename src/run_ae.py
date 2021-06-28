@@ -31,7 +31,7 @@ if __name__ == "__main__":
     )
 
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=1,
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=50,
     )
     trainer.fit(ae_model)
 

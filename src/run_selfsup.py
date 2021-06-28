@@ -35,18 +35,18 @@ if __name__ == "__main__":
 
     ###
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=1#100,
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
     )
     trainer.fit(selfsupencoder_model)
 
     ###
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=1#50,
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=50,
     )
     trainer.fit(selfsupdecoder_model)
 
     ###    
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=1#100,
+        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=100,
     )
     trainer.fit(finetune_model)
