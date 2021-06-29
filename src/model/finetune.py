@@ -124,7 +124,7 @@ class FinetuneModel(pl.LightningModule):
                 self.log(f"finetune/query{query:.1f}/mean_abs_error", mae)
                 
     def configure_optimizers(self):
-        params = list(self.backbone.decoder.parameters())
-        params += list(self.backbone.score_embedding.parameters())
+        #params = list(self.backbone.decoder.parameters())
+        params = list(self.backbone.score_embedding.parameters())
         optimizer = torch.optim.Adam(params, lr=1e-3)
         return [optimizer]
