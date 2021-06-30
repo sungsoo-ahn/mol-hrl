@@ -4,14 +4,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
-from model.ae import AutoEncoderModel
+from model.vae import VariationalAutoEncoderModel
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    AutoEncoderModel.add_args(parser)
+    VariationalAutoEncoderModel.add_args(parser)
     hparams = parser.parse_args()
-    model = AutoEncoderModel(hparams)
+    model = VariationalAutoEncoderModel(hparams)
 
     neptune_logger = NeptuneLogger(
         project_name="sungsahn0215/mol-hrl", experiment_name="neptune_logs", params=vars(hparams),

@@ -7,7 +7,6 @@ import pytorch_lightning as pl
 
 from data.sequence.collate import collate_sequence_data_list
 from data.sequence.dataset import SequenceDataset
-from data.score.factory import get_scoring_func
 from data.util import ZipDataset
 
 
