@@ -24,13 +24,6 @@ class AutoEncoderModel(pl.LightningModule):
         self.batch_size = hparams.autoencoder_batch_size
         self.num_workers = hparams.autoencoder_num_workers
 
-        self.train_dataset = ZipDataset(
-            self.backbone.train_sequence_dataset, self.backbone.train_pyg_dataset
-        )
-        self.val_dataset = ZipDataset(
-            self.backbone.val_sequence_dataset, self.backbone.val_pyg_dataset
-        )
-
     @staticmethod
     def add_args(parser):
         parser.add_argument("--autoencoder_batch_size", type=int, default=128)

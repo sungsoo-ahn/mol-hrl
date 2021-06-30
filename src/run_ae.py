@@ -26,11 +26,19 @@ if __name__ == "__main__":
         project_name="sungsahn0215/mol-hrl", experiment_name="neptune_logs", params=vars(hparams),
     )
 
+    checkpoint_callback = ModelCheckpoint(monitor='autoencoder/train/loss/total')
     trainer = pl.Trainer(
-        gpus=1, logger=neptune_logger, default_root_dir="../resource/log/", max_epochs=30,
+        gpus=1, 
+        logger=neptune_logger, 
+        default_root_dir="../resource/log/", 
+        max_epochs=100,
+        callbacks=[checkpoint_callback]
     )
     trainer.fit(ae_model)
-
+    
+    state_dict = ae_model.state_dict()
+    torch.save(state_dict, "ae.pth")
+        
     ###    
     #
     score_func_name = "molwt"
