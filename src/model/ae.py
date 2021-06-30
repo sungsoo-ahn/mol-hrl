@@ -87,7 +87,9 @@ class AutoEncoderModel(pl.LightningModule):
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
         parser.add_argument("--train_ratio", type=float, default=0.9)
         parser.add_argument("--label_ratio", type=float, default=0.1)
-        parser.add_argument("--score_func_names", type=str, nargs="+", default=["penalized_logp"])
+        parser.add_argument("--score_func_names", type=str, nargs="+", default=[
+            "penalized_logp", "molwt", "qed", "tpsa"
+            ])
         parser.add_argument("--randomize_smiles", action="store_true")
         parser.add_argument("--mutate", action="store_true")
         

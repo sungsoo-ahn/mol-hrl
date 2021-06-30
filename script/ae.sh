@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_base.py
+python run_ae.py
