@@ -26,6 +26,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.model_type == "ae":
         model = AutoEncoderModel.load_from_checkpoint(args.load_path)
+        hparams = model.hparams
     else:
         model = VariationalAutoEncoderModel.load_from_checkpoint(args.load_path)
         hparams = model.hparams
