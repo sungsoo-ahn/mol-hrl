@@ -51,7 +51,7 @@ if __name__ == "__main__":
     optim = torch.optim.SGD([codes], lr=1e-2)
 
     smiles_traj_list = [[""] for _ in range(1024)]
-    for step in tqdm(range(10)):
+    for step in tqdm(range(1000)):
         if args.model_type == "vae" and hparams.spherical:
             codes = torch.nn.functional.normalize(codes, p=2, dim=1)
         pred_scores = model.scores_predictor(codes)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             run["score/max"].log(clean_scores.max())
             run["score/mean"].log(clean_scores.mean())
             run["pred/max"].log(pred_scores.max())
-            run["pred/mean"].log(pred_scores.max())
+            run["pred/mean"].log(pred_scores.mean())
         
         for idx, (smiles, score) in enumerate(zip(smiles_list, scores)):
             if smiles_traj_list[idx][-1] != smiles and score > corrupt_score + 1e-3:
