@@ -28,8 +28,7 @@ if __name__ == "__main__":
         model = AutoEncoderModel.load_from_checkpoint(args.load_path)
     else:
         model = VariationalAutoEncoderModel.load_from_checkpoint(args.load_path)
-
-    hparams = model.hparams
+        hparams = model.hparams
 
     #neptune_logger = NeptuneLogger(
     #    project_name="sungsahn0215/mol-hrl", experiment_name="neptune_logs", params=vars(hparams),

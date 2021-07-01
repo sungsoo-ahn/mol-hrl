@@ -128,3 +128,4 @@ class GnnEncoder(torch.nn.Module):
         graph_representation = global_mean_pool(node_representation, batched_data.batch)
         # graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
         return graph_representation, node_representation
+
