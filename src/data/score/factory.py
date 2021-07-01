@@ -57,7 +57,7 @@ def get_scoring_func(name, num_workers=32):
             threshold=1.0,
             rediscovery=True,
         )
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "troglitazone":
         benchmark = similarity(
@@ -67,7 +67,7 @@ def get_scoring_func(name, num_workers=32):
             threshold=1.0,
             rediscovery=True,
         )
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "thiothixene":
         benchmark = similarity(
@@ -77,7 +77,7 @@ def get_scoring_func(name, num_workers=32):
             threshold=1.0,
             rediscovery=True,
         )
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "aripiprazole":
         benchmark = similarity(
@@ -86,7 +86,7 @@ def get_scoring_func(name, num_workers=32):
             fp_type="ECFP4",
             threshold=0.75,
         )
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "albuterol":
         benchmark = similarity(
@@ -95,7 +95,7 @@ def get_scoring_func(name, num_workers=32):
             fp_type="FCFP4",
             threshold=0.75,
         )
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "mestranol":
         benchmark = similarity(
@@ -104,67 +104,67 @@ def get_scoring_func(name, num_workers=32):
             fp_type="AP",
             threshold=0.75,
         )
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "c11h24":
         benchmark = isomers_c11h24()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "c9h10n2o2pf2cl":
         benchmark = isomers_c9h10n2o2pf2cl()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "camphor_menthol":
         benchmark = median_camphor_menthol()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "tadalafil_sildenafil":
         benchmark = median_tadalafil_sildenafil()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "osimertinib":
         benchmark = hard_osimertinib()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "fexofenadine":
         benchmark = hard_fexofenadine()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "ranolazine":
         benchmark = ranolazine_mpo()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "perindopril":
         benchmark = perindopril_rings()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "amlodipine":
         benchmark = amlodipine_rings()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "sitagliptin":
         benchmark = sitagliptin_replacement()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "zaleplon":
         benchmark = zaleplon_with_other_formula()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "valsartan_smarts":
         benchmark = valsartan_smarts()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "decoration_hop":
         benchmark = decoration_hop()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "scaffold_hop":
         benchmark = scaffold_hop()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "penalized_logp":
         benchmark = penalized_logp_cyclebasis()
-        objective = benchmark.wrapped_objective
+        objective = benchmark.objective
 
     elif name == "molwt":
         objective = RdkitScoringFunction(descriptor=mol_weight)
@@ -178,6 +178,7 @@ def get_scoring_func(name, num_workers=32):
     elif name == "tpsa":
         objective = RdkitScoringFunction(descriptor=tpsa)
     
+    #print(objective.corrupt_score)
     objective.corrupt_score = -1e6
     float_score = lambda smiles: float(objective.score(smiles))
     def parallel_scoring_func(smiles_list):
