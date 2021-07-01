@@ -1,3 +1,4 @@
+from argparse import Namespace
 import torch
 import torch.nn.functional as F
 from model.ae import AutoEncoderModel
@@ -5,6 +6,7 @@ from hyperspherical_vae.distributions import VonMisesFisher, HypersphericalUnifo
 
 class VariationalAutoEncoderModel(AutoEncoderModel):
     def __init__(self, hparams):
+        hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         super(VariationalAutoEncoderModel, self).__init__(hparams)
         self.spherical = hparams.spherical
         self.linear_mu = torch.nn.Linear(hparams.code_dim, hparams.code_dim)

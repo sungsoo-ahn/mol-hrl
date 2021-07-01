@@ -1,3 +1,5 @@
+from argparse import Namespace
+
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Subset, DataLoader
@@ -24,6 +26,7 @@ def collate_data_list(data_list):
 class AutoEncoderModel(pl.LightningModule):
     def __init__(self, hparams):
         super(AutoEncoderModel, self).__init__()
+        hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
         self.setup_base_datasets(hparams)
         self.setup_base_models(hparams)
