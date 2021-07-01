@@ -49,12 +49,13 @@ if __name__ == "__main__":
 
     codes = torch.nn.Parameter(torch.randn(1024, hparams.code_dim).cuda())
     model = model.cuda()
-    optim = torch.optim.Adam([codes], lr=1e-3)
+    optim = torch.optim.SGD([codes], lr=1e-2)
 
     smiles_traj_list = [[""] for _ in range(1024)]
-    for step in tqdm(range(1000)):
+    for step in tqdm(range(100)):
         if args.model_type == "vae" and hparams.spherical:
             codes = torch.nn.functional.normalize(codes, p=2, dim=1)
+        
         pred_scores = model.scores_predictor(codes)
         loss = -pred_scores[:, 0].sum()
         
