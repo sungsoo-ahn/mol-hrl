@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=8
 
 srun \
-  --container-image=sungsahn0215/mol-opt:latest \
+  --container-image=sungsahn0215/mol-hrl:latest \
   --no-container-mount-home \
   --container-mounts="/nfs/projects/mbzuai/peterahn/workspace/mol-hrl:/mol-hrl" \
   --container-workdir="/mol-hrl/src" \
