@@ -1,16 +1,8 @@
 import torch
 from torch_geometric.nn import MessagePassing
-from torch_geometric.utils import add_self_loops, degree, softmax
-from torch_geometric.nn import (
-    global_add_pool,
-    global_mean_pool,
-    global_max_pool,
-    GlobalAttention,
-    Set2Set,
-)
+from torch_geometric.utils import add_self_loops
+from torch_geometric.nn import global_mean_pool
 import torch.nn.functional as F
-from torch_scatter import scatter_add
-from torch_geometric.nn.inits import glorot, zeros
 
 num_atom_type = 120
 num_chirality_tag = 3
@@ -60,24 +52,9 @@ class GINConv(MessagePassing):
 
 
 class GnnEncoder(torch.nn.Module):
-    """
-    
-    Args:
-        num_layer (int): the number of GNN layers
-        emb_dim (int): dimensionality of embeddings
-        JK (str): last, concat, max or sum.
-        max_pool_layer (int): the layer from which we use max pool rather than add pool for neighbor aggregation
-        drop_ratio (float): dropout rate
-        gnn_type: gin, gcn, graphsage, gat
-    Output:
-        node representations
-    """
-
-    def __init__(self, num_layer, emb_dim, code_dim, JK="last", drop_ratio=0):
+    def __init__(self, num_layer, emb_dim, code_dim, spherical):
         super(GnnEncoder, self).__init__()
         self.num_layer = num_layer
-        self.drop_ratio = drop_ratio
-        self.JK = JK
 
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
@@ -100,32 +77,32 @@ class GnnEncoder(torch.nn.Module):
 
         self.linear = torch.nn.Linear(emb_dim, code_dim)
 
+        self.spherical = spherical
+
     # def forward(self, x, edge_index, edge_attr):
     def forward(self, batched_data):
+        out = self.get_node_representation(batched_data)
+        codes = global_mean_pool(out, batched_data.batch)
+        if self.spherical:
+            codes = torch.nn.functional.normalize(codes, p=2, dim=1)
+
+        return codes
+
+    def get_node_representation(self, batched_data):
         x, edge_index, edge_attr = (
             batched_data.x,
             batched_data.edge_index,
             batched_data.edge_attr,
         )
 
-        x = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
+        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
 
-        h_list = [x]
         for layer in range(self.num_layer):
-            h = self.gnns[layer](h_list[layer], edge_index, edge_attr)
+            h = self.gnns[layer](h, edge_index, edge_attr)
             h = self.batch_norms[layer](h)
-            # h = F.dropout(F.relu(h), self.drop_ratio, training = self.training)
-            if layer == self.num_layer - 1:
-                # remove relu for the last layer
-                h = F.dropout(h, self.drop_ratio, training=self.training)
-            else:
-                h = F.dropout(F.relu(h), self.drop_ratio, training=self.training)
-            h_list.append(h)
+            if layer < self.num_layer - 1:
+                h = F.relu(h)
 
-        ### Different implementations of Jk-concat
-        node_representation = h_list[-1]
-        node_representation = self.linear(node_representation)
-        graph_representation = global_mean_pool(node_representation, batched_data.batch)
-        # graph_representation = torch.nn.functional.normalize(graph_representation, p=2, dim=1)
-        return graph_representation, node_representation
+        node_representation = self.linear(h)
 
+        return node_representation

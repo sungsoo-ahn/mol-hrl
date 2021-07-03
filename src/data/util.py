@@ -4,6 +4,7 @@ import torch
 
 from data.score.factory import get_scoring_func
 
+
 def load_raw_data(root_dir, score_func_names, train_ratio, label_ratio):
     smiles_list_path = os.path.join(root_dir, "smiles_list.txt")
     with open(smiles_list_path, "r") as f:
@@ -22,9 +23,9 @@ def load_raw_data(root_dir, score_func_names, train_ratio, label_ratio):
                 assert False
 
             scores_list.append(scores)
-        
+
         torch.save(scores_list, scores_list_path)
-    
+
     num_samples = len(smiles_list)
     idxs = list(range(num_samples))
     random.Random(0).shuffle(idxs)
@@ -40,7 +41,6 @@ def load_raw_data(root_dir, score_func_names, train_ratio, label_ratio):
     return smiles_list, scores_list, split_idxs
 
 
-
 class ZipDataset(torch.utils.data.Dataset):
     def __init__(self, datasets):
         self.datasets = datasets
@@ -50,6 +50,7 @@ class ZipDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return [dataset[idx] for dataset in self.datasets]
+
 
 class EnumerateDataset(torch.utils.data.Dataset):
     def __init__(self, dataset):

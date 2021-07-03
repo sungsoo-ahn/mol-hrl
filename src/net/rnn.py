@@ -36,7 +36,7 @@ def compute_sequence_cross_entropy(logits, batched_sequence_data, pad_id):
 
 
 class RnnDecoder(nn.Module):
-    def __init__(self, num_layers, input_dim, output_dim, hidden_dim, code_dim):
+    def __init__(self, num_layers, input_dim, output_dim, hidden_dim, code_dim, spherical):
         super(RnnDecoder, self).__init__()
         self.hidden_dim = hidden_dim
 
@@ -44,10 +44,13 @@ class RnnDecoder(nn.Module):
         self.code_encoder = nn.Linear(code_dim, hidden_dim)
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, num_layers=num_layers)
         self.decoder = nn.Linear(hidden_dim, output_dim)
+        self.spherical = spherical
 
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
         codes = codes.unsqueeze(1).expand(-1, sequences.size(1), -1)
+        if self.spherical:
+            codes = torch.nn.functional.normalize(codes, p=2, dim=1)
 
         sequences_embedding = self.encoder(sequences)
         codes_embedding = self.code_encoder(codes)

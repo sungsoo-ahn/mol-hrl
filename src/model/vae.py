@@ -1,8 +1,11 @@
 from argparse import Namespace
 import torch
 import torch.nn.functional as F
+
 from model.ae import AutoEncoderModel
 from hyperspherical_vae.distributions import VonMisesFisher, HypersphericalUniform
+from data.pyg.collate import collate_pyg_data_list
+from data.pyg.util import pyg_from_string
 
 class VariationalAutoEncoderModel(AutoEncoderModel):
     def __init__(self, hparams):
@@ -14,15 +17,10 @@ class VariationalAutoEncoderModel(AutoEncoderModel):
             self.linear_logvar = torch.nn.Linear(hparams.code_dim, 1)
         else:
             self.linear_logvar = torch.nn.Linear(hparams.code_dim, hparams.code_dim)
-
-    @staticmethod
-    def add_args(parser):
-        super(VariationalAutoEncoderModel, VariationalAutoEncoderModel).add_args(parser)
-        parser.add_argument("--spherical", action="store_true")
-
+    
     def shared_step(self, batched_data):
         batched_sequence_data, batched_pyg_data, scores = batched_data
-        out, _ = self.encoder(batched_pyg_data)
+        out = self.encoder(batched_pyg_data)
         p, q, codes = self.sample(out)
         logits = self.decoder(batched_sequence_data, codes)
         scores_pred = self.scores_predictor(codes.detach())
@@ -35,13 +33,13 @@ class VariationalAutoEncoderModel(AutoEncoderModel):
         acc_elem, acc_sequence = self.compute_accuracy(logits, batched_sequence_data)
 
         return (
-            loss, 
+            loss,
             {
-                "loss/ce": loss_ce, 
-                "loss/mse": loss_mse, 
+                "loss/ce": loss_ce,
+                "loss/mse": loss_mse,
                 "loss/kl": loss_kl,
-                "acc/elem": acc_elem, 
-                "acc/sequence": acc_sequence
+                "acc/elem": acc_elem,
+                "acc/sequence": acc_sequence,
             },
         )
 
@@ -62,3 +60,12 @@ class VariationalAutoEncoderModel(AutoEncoderModel):
         codes = q.rsample()
 
         return p, q, codes
+
+    def encode(self, smiles_list):
+        pyg_data_list = [pyg_from_string(smiles) for smiles in smiles_list]
+        batched_pyg_data = collate_pyg_data_list(pyg_data_list)
+        batched_pyg_data.to(self.device)
+        out = self.encoder(batched_pyg_data)
+        codes = self.linear_mu(out)
+
+        return codes
