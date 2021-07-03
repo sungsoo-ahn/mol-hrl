@@ -19,16 +19,14 @@ class VariationalAutoEncoderModel(AutoEncoderModel):
             self.linear_logvar = torch.nn.Linear(hparams.code_dim, hparams.code_dim)
     
     def shared_step(self, batched_data):
-        batched_sequence_data, batched_pyg_data, scores = batched_data
+        batched_sequence_data, batched_pyg_data = batched_data
         out = self.encoder(batched_pyg_data)
         p, q, codes = self.sample(out)
         logits = self.decoder(batched_sequence_data, codes)
-        scores_pred = self.scores_predictor(codes.detach())
 
         loss_kl = (q.log_prob(codes) - p.log_prob(codes).to(self.device)).mean()
         loss_ce = self.compute_cross_entropy(logits, batched_sequence_data)
-        loss_mse = F.mse_loss(scores_pred, scores)
-        loss = loss_ce + loss_mse + loss_kl
+        loss = loss_ce + loss_kl
 
         acc_elem, acc_sequence = self.compute_accuracy(logits, batched_sequence_data)
 
@@ -36,7 +34,6 @@ class VariationalAutoEncoderModel(AutoEncoderModel):
             loss,
             {
                 "loss/ce": loss_ce,
-                "loss/mse": loss_mse,
                 "loss/kl": loss_kl,
                 "acc/elem": acc_elem,
                 "acc/sequence": acc_sequence,
