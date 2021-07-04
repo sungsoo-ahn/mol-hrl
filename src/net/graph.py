@@ -72,7 +72,11 @@ class GraphEncoder(torch.nn.Module):
         for _ in range(hparams.encoder_num_layers):
             self.batch_norms.append(torch.nn.BatchNorm1d(hparams.encoder_hidden_dim))
 
-        self.linear = torch.nn.Linear(hparams.encoder_hidden_dim, hparams.code_dim)
+        self.projector = torch.nn.Sequential(
+            torch.nn.Linear(hparams.encoder_hidden_dim, hparams.encoder_hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hparams.encoder_hidden_dim, hparams.code_dim)
+        )
 
     @staticmethod
     def add_args(parser):
@@ -101,6 +105,6 @@ class GraphEncoder(torch.nn.Module):
             if layer < self.num_layers - 1:
                 h = F.relu(h)
 
-        node_representation = self.linear(h)
+        node_representation = self.projector(h)
 
         return node_representation
