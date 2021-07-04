@@ -79,7 +79,7 @@ class LatentSpaceOptimizationModel(pl.LightningModule):
             statistics["score/mean"] = 0.0
 
         for key, val in statistics.items():
-            self.log(f"lso/{key}", val, on_step=False, logger=True)
+            self.log(f"lso/{self.scoring_func_name}/{key}", val, on_step=False, logger=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD([self.codes], lr=self.code_lr)

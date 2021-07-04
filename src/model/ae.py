@@ -117,7 +117,7 @@ class AutoEncoderModel(pl.LightningModule):
         )
         
         parser.add_argument("--batch_size", type=int, default=256)
-        parser.add_argument("--num_workers", type=int, default=24)
+        parser.add_argument("--num_workers", type=int, default=8)
 
         parser.add_argument("--code_dim", type=int, default=32)
         parser.add_argument("--encoder_num_layer", type=int, default=5)

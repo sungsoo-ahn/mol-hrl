@@ -61,7 +61,7 @@ class ScorePredictorModel(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         parser.add_argument("--score_predictor_batch_size", type=int, default=256)
-        parser.add_argument("--score_predictor_num_workers", type=int, default=24)
+        parser.add_argument("--score_predictor_num_workers", type=int, default=8)
         return parser
 
     def train_dataloader(self):

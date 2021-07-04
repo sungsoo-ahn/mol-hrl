@@ -48,10 +48,11 @@ class RnnDecoder(nn.Module):
 
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
-        codes = codes.unsqueeze(1).expand(-1, sequences.size(1), -1)
         if self.spherical:
             codes = torch.nn.functional.normalize(codes, p=2, dim=1)
-
+        
+        codes = codes.unsqueeze(1).expand(-1, sequences.size(1), -1)
+        
         sequences_embedding = self.encoder(sequences)
         codes_embedding = self.code_encoder(codes)
 
