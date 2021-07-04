@@ -10,14 +10,17 @@ import torch
 START_TOKEN = "<SOS>"
 END_TOKEN = "<EOS>"
 PAD_TOKEN = "<PAD>"
-
+MASK_TOKEN = "<MASK>"
+START_ID = 2
+END_ID = 1
+PAD_ID = 0
+MASK_ID = 3
 
 class Vocabulary:
-    def __init__(self, max_length):
+    def __init__(self):
         self._tokens = dict()
         self._current_id = 0
-        self.update([PAD_TOKEN, END_TOKEN, START_TOKEN])
-        self._max_length = max_length
+        self.update([PAD_TOKEN, END_TOKEN, START_TOKEN, MASK_TOKEN])
 
     def __getitem__(self, token_or_id):
         return self._tokens[token_or_id]
@@ -74,18 +77,6 @@ class Vocabulary:
     def tokens(self):
         return [t for t in self._tokens if isinstance(t, str)]
 
-    def get_start_id(self):
-        return self._tokens[START_TOKEN]
-
-    def get_end_id(self):
-        return self._tokens[END_TOKEN]
-
-    def get_pad_id(self):
-        return self._tokens[PAD_TOKEN]
-
-    def get_max_length(self):
-        return self._max_length
-
 
 class SmilesTokenizer:
     REGEXP = re.compile(
@@ -105,31 +96,24 @@ class SmilesTokenizer:
 
         return "".join(tokens[1:-1])
 
-
-def create_vocabulary_from_dir(dir, tokenizer):
-    smiles_list = load_smiles_list(dir)
-    vocabulary = create_vocabulary(smiles_list, tokenizer)
-    return vocabulary
-
-
 def create_vocabulary(smiles_list, tokenizer):
     tokens = set()
-    max_length = 0
     for smi in smiles_list:
         cur_tokens = tokenizer.tokenize(smi)
-        max_length = max(max_length, len(cur_tokens))
         tokens.update(cur_tokens)
 
-    vocabulary = Vocabulary(max_length)
+    vocabulary = Vocabulary()
     vocabulary.update(sorted(tokens))
     return vocabulary
 
+def load_tokenizer(data_dir):
+    return SmilesTokenizer()
 
-def create_tokenizer_and_vocabulary_from_dir(dir):
-    tokenizer = SmilesTokenizer()
-    vocabulary = create_vocabulary_from_dir(dir, tokenizer)
-    return tokenizer, vocabulary
-
+def load_vocabulary(data_dir):
+    tokenizer = load_tokenizer(data_dir)
+    smiles_list = load_smiles_list(data_dir, "full")
+    vocabulary = create_vocabulary(smiles_list, tokenizer)
+    return vocabulary
 
 def sequence_from_string(string, tokenizer, vocabulary):
     return torch.tensor(vocabulary.encode(tokenizer.tokenize(string)))

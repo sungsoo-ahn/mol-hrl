@@ -15,20 +15,13 @@ def get_pseudorandom_split_idxs(size, split_ratios):
 
     return train_idxs, vali_idxs
 
-
-def load_smiles_list(dir):
-    smiles_list_path = os.path.join(dir, "smiles_list.txt")
+def load_smiles_list(root_dir, split):
+    smiles_list_path = os.path.join(root_dir, "smiles_list.txt")
     with open(smiles_list_path, "r") as f:
         smiles_list = f.read().splitlines()
-
-    return smiles_list
-
-
-def load_split_smiles_list(dir, score_func_name=None):
-    smiles_list = load_smiles_list(dir)
-
-    train_idxs_path = os.path.join(dir, "train_idxs.pth")
-    vali_idxs_path = os.path.join(dir, "vali_idxs.pth")
+    
+    train_idxs_path = os.path.join(root_dir, "train_idxs.pth")
+    vali_idxs_path = os.path.join(root_dir, "vali_idxs.pth")
 
     if not os.path.exists(train_idxs_path) or not os.path.exists(vali_idxs_path):
         train_idxs, vali_idxs = get_pseudorandom_split_idxs(len(smiles_list), [0.95, 0.05])
@@ -41,12 +34,14 @@ def load_split_smiles_list(dir, score_func_name=None):
     with open(vali_idxs_path, "r") as f:
         vali_idxs = torch.load(vali_idxs_path)
 
-    train_smiles_list = [smiles_list[idx] for idx in train_idxs]
-    vali_smiles_list = [smiles_list[idx] for idx in vali_idxs]
+    if split == "full":
+        return smiles_list
+    elif split == "train":
+        return [smiles_list[idx] for idx in train_idxs]
+    elif split == "val":
+        return [smiles_list[idx] for idx in vali_idxs]
 
-    if score_func_name is None:
-        return train_smiles_list, vali_smiles_list
-
+    """
     train_score_list_path = os.path.join(dir, "train_{score_func_name}.pth")
     vali_score_list_path = os.path.join(dir, "vali_{score_func_name}.pth")
 
@@ -65,7 +60,7 @@ def load_split_smiles_list(dir, score_func_name=None):
         vali_score_list = torch.load(vali_score_list_path)
 
     return (train_smiles_list, vali_smiles_list), (train_score_list, vali_score_list)
-
+    """
 
 def randomize_smiles(smiles):
     mol = Chem.MolFromSmiles(smiles)

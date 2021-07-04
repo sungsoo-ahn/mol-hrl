@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_vae.py
+python train_seq2seq_aae.py

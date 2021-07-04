@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_vae.py --spherical
+python train_graph2seq_aae.py --use_mutate

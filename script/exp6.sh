@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_vae.py --spherical --code_dim 256
+python train_seq2seq_aae.py --mask_rate 0.3

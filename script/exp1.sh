@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_ae.py --spherical
+python train_graph2seq_aae.py

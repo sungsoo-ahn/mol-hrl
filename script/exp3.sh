@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_ae.py --spherical --contrastive_coef 0.1 --code_dim 256
+python train_graph2seq_cae.py

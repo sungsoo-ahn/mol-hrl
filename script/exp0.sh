@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_ae.py
+python train_graph2seq_ae.py

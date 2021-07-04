@@ -42,7 +42,7 @@ def load_raw_data(root_dir, score_func_names, train_ratio, label_ratio):
 
 
 class ZipDataset(torch.utils.data.Dataset):
-    def __init__(self, datasets):
+    def __init__(self, *datasets):
         self.datasets = datasets
 
     def __len__(self):
@@ -51,20 +51,8 @@ class ZipDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return [dataset[idx] for dataset in self.datasets]
 
-
-class EnumerateDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset):
-        self.dataset = dataset
-
-    def __len__(self):
-        return len(self.dataset)
-
-    def __getitem__(self, idx):
-        return torch.tensor(idx), self.dataset[idx]
-
     def collate_fn(self, data_list):
-        idxs, data_list = zip(*data_list)
-        idxs = torch.stack(idxs, dim=0)
-        batched_data = self.dataset.collate_fn(data_list)
-
-        return idxs, batched_data
+        return [
+            dataset.collate_fn(data_list) 
+            for dataset, data_list in zip(self.datasets, zip(*data_list))
+            ]
