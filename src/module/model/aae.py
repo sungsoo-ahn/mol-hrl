@@ -67,5 +67,5 @@ class Graph2SeqAAEModule(Seq2SeqAAEModule):
         SeqDecoder.add_args(parser)
         GraphEncoder.add_args(parser)
         parser.add_argument("--lr", type=float, default=1e-3)
-        parser.add_argument("--beta", type=float, default=1e-1)
+        parser.add_argument("--beta", type=float, default=1e-2)
         return parser
