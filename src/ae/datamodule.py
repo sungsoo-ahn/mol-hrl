@@ -107,9 +107,9 @@ class AutoEncoderDataModule(pl.LightningDataModule):
             train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
             self.train_dataset = ZipDataset(train_input_dataset, train_target_dataset)
 
-            val_input_dataset0 = GraphDataset(hparams.data_dir, split="train")
+            val_input_dataset0 = GraphDataset(hparams.data_dir, split="val")
             val_input_dataset1 = GraphDataset(
-                hparams.data_dir, split="train", mutate=hparams.use_mutate
+                hparams.data_dir, split="val", mutate=hparams.use_mutate
             )
             val_input_dataset = ZipDataset(val_input_dataset0, val_input_dataset1)
             val_target_dataset = SequenceDataset(hparams.data_dir, split="val")
