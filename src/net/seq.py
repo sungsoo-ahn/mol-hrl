@@ -2,8 +2,16 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
-from data.seq.util import START_ID, END_ID, PAD_ID
-
+from data.seq.util import (
+    START_ID, 
+    END_ID,
+    PAD_ID, 
+    load_tokenizer, 
+    load_vocabulary, 
+    sequence_from_string, 
+    string_from_sequence
+)
+from data.seq.dataset import SequenceDataset
 
 def compute_sequence_accuracy(logits, batched_sequence_data):
     sequences, _ = batched_sequence_data
@@ -39,21 +47,18 @@ def compute_sequence_cross_entropy(logits, batched_sequence_data):
 class SeqEncoder(nn.Module):
     def __init__(self, hparams):
         super(SeqEncoder, self).__init__()
-        self.encoder = nn.Embedding(hparams.num_vocabs, hparams.encoder_hidden_dim)
+        self.encoder = nn.Embedding(hparams.num_vocabs, hparams.seq_encoder_hidden_dim)
         self.lstm = nn.LSTM(
-            hparams.encoder_hidden_dim, 
-            hparams.encoder_hidden_dim, 
-            batch_first=True, 
-            num_layers=hparams.encoder_num_layers,
-            )
-        self.decoder = nn.Linear(2 * hparams.encoder_hidden_dim, hparams.code_dim)
-    
-    @staticmethod
-    def add_args(parser):
-        parser.add_argument("--encoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--encoder_num_layers", type=int, default=3)
-        parser.add_argument("--code_dim", type=int, default=256)
-        
+            hparams.seq_encoder_hidden_dim,
+            hparams.seq_encoder_hidden_dim,
+            batch_first=True,
+            num_layers=hparams.seq_encoder_num_layers,
+            bidirectional=True,
+        )
+        self.decoder = nn.Linear(2 * hparams.seq_encoder_hidden_dim, hparams.code_dim)
+        self.vocabulary = load_vocabulary(hparams.data_dir)
+        self.tokenizer = load_tokenizer(hparams.data_dir)
+
     def forward(self, batched_sequence_data):
         sequences, lengths = batched_sequence_data
         out = self.encoder(sequences)
@@ -63,34 +68,41 @@ class SeqEncoder(nn.Module):
         _, (h, _) = self.lstm(out, None)
         out = torch.cat([h[-2], h[-1]], 1)
         out = self.decoder(out)
-        
-        return out, {}
+
+        return out
+    
+    def encode_smiles(self, smiles_list):
+        sequences = [
+            sequence_from_string(smiles, self.tokenizer, self.vocabulary) for smiles in smiles_list
+        ]
+        lengths = [torch.tensor(sequence.size(0)) for sequence in sequences]
+        data_list = list(zip(sequences, lengths))
+        batched_sequence_data = SequenceDataset.collate_fn(data_list)
+        return self(batched_sequence_data)
+
 
 class SeqDecoder(nn.Module):
     def __init__(self, hparams):
         super(SeqDecoder, self).__init__()
-        self.encoder = nn.Embedding(hparams.num_vocabs, hparams.decoder_hidden_dim)
-        self.code_encoder = nn.Linear(hparams.code_dim, hparams.decoder_hidden_dim)
+        self.encoder = nn.Embedding(hparams.num_vocabs, hparams.seq_decoder_hidden_dim)
+        self.code_encoder = nn.Linear(hparams.code_dim, hparams.seq_decoder_hidden_dim)
         self.lstm = nn.LSTM(
-            hparams.decoder_hidden_dim, 
-            hparams.decoder_hidden_dim, 
-            batch_first=True, 
-            num_layers=hparams.decoder_num_layers,
-            )
-        self.decoder = nn.Linear(hparams.decoder_hidden_dim, hparams.num_vocabs)
-        self.max_length = hparams.decoder_max_length
+            hparams.seq_decoder_hidden_dim,
+            hparams.seq_decoder_hidden_dim,
+            batch_first=True,
+            num_layers=hparams.seq_decoder_num_layers,
+        )
+        self.decoder = nn.Linear(hparams.seq_decoder_hidden_dim, hparams.num_vocabs)
+        self.max_length = hparams.seq_decoder_max_length
 
-    @staticmethod
-    def add_args(parser):
-        parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--decoder_num_layers", type=int, default=3)
-        parser.add_argument("--decoder_max_length", type=int, default=81)
-        
+        self.vocabulary = load_vocabulary(hparams.data_dir)
+        self.tokenizer = load_tokenizer(hparams.data_dir)
+
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
 
         codes = codes.unsqueeze(1).expand(-1, sequences.size(1), -1)
-        
+
         sequences_embedding = self.encoder(sequences)
         codes_embedding = self.code_encoder(codes)
 
@@ -102,12 +114,18 @@ class SeqDecoder(nn.Module):
         out, _ = self.lstm(out, None)
         out, _ = pad_packed_sequence(out, batch_first=True)
 
-        logits = self.decoder(out)
+        out = self.decoder(out)
 
-        loss = compute_sequence_cross_entropy(logits, batched_sequence_data)
-        elemwise_acc,acc = compute_sequence_accuracy(logits, batched_sequence_data)
+        return out
+    
+    def compute_loss(self, logits, targets):
+        loss = compute_sequence_cross_entropy(logits, targets)
+        return loss
+    
+    def compute_statistics(self, logits, targets):
+        elemwise_acc, acc = compute_sequence_accuracy(logits, targets)
         statistics = {"elemwise_acc": elemwise_acc, "acc": acc}
-        return loss, statistics
+        return statistics
 
     def decode(self, codes, deterministic):
         sample_size = codes.size(0)
@@ -123,7 +141,7 @@ class SeqDecoder(nn.Module):
             logit = self.decoder(out)
 
             prob = torch.softmax(logit, dim=2)
-            if deterministic==True:
+            if deterministic == True:
                 tth_sequences = torch.argmax(logit, dim=2)
             else:
                 distribution = Categorical(probs=prob)
@@ -140,6 +158,14 @@ class SeqDecoder(nn.Module):
         sequences = torch.cat(sequences, dim=1)
 
         return sequences, lengths
+
+    def decode_smiles(self, codes, deterministic):
+        sequences, lengths = self.decode(codes, deterministic)
+        sequences = sequences.cpu()
+        lengths = lengths.cpu()
+        sequences = [sequence[:length] for sequence, length in zip(sequences, lengths)]
+        smiles_list = [string_from_sequence(sequence, self.tokenizer, self.vocabulary) for sequence in sequences]
+        return smiles_list
 
 """
 def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, batch_size):

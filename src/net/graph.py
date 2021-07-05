@@ -51,46 +51,34 @@ class GINConv(MessagePassing):
 class GraphEncoder(torch.nn.Module):
     def __init__(self, hparams):
         super(GraphEncoder, self).__init__()
-        self.num_layers = hparams.encoder_num_layers
+        self.num_layers = hparams.graph_encoder_num_layers
 
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.x_embedding1 = torch.nn.Embedding(num_atom_type, hparams.encoder_hidden_dim)
-        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hparams.encoder_hidden_dim)
+        self.x_embedding1 = torch.nn.Embedding(num_atom_type, hparams.graph_encoder_hidden_dim)
+        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hparams.graph_encoder_hidden_dim)
 
         torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
         torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
 
         ###List of MLPs
         self.gnns = torch.nn.ModuleList()
-        for layer in range(hparams.encoder_num_layers):
-            self.gnns.append(GINConv(hparams.encoder_hidden_dim))
+        for layer in range(hparams.graph_encoder_num_layers):
+            self.gnns.append(GINConv(hparams.graph_encoder_hidden_dim))
 
         ###List of batchnorms
         self.batch_norms = torch.nn.ModuleList()
-        for _ in range(hparams.encoder_num_layers):
-            self.batch_norms.append(torch.nn.BatchNorm1d(hparams.encoder_hidden_dim))
+        for _ in range(hparams.graph_encoder_num_layers):
+            self.batch_norms.append(torch.nn.BatchNorm1d(hparams.graph_encoder_hidden_dim))
 
         self.projector = torch.nn.Sequential(
-            torch.nn.Linear(hparams.encoder_hidden_dim, hparams.encoder_hidden_dim),
+            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.graph_encoder_hidden_dim),
             torch.nn.ReLU(),
-            torch.nn.Linear(hparams.encoder_hidden_dim, hparams.code_dim)
+            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
         )
 
-    @staticmethod
-    def add_args(parser):
-        parser.add_argument("--encoder_hidden_dim", type=int, default=256)
-        parser.add_argument("--encoder_num_layers", type=int, default=5)
-        parser.add_argument("--code_dim", type=int, default=256)
-
     def forward(self, batched_data):
-        out = self.get_node_representation(batched_data)
-        codes = global_mean_pool(out, batched_data.batch)
-        statistics = dict()
-        return codes, statistics
-
-    def get_node_representation(self, batched_data):
         x, edge_index, edge_attr = (
             batched_data.x,
             batched_data.edge_index,
@@ -105,6 +93,6 @@ class GraphEncoder(torch.nn.Module):
             if layer < self.num_layers - 1:
                 h = F.relu(h)
 
-        node_representation = self.projector(h)
-
-        return node_representation
+        out = self.projector(h)
+        out = global_mean_pool(out, batched_data.batch)
+        return out

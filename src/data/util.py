@@ -53,6 +53,6 @@ class ZipDataset(torch.utils.data.Dataset):
 
     def collate_fn(self, data_list):
         return [
-            dataset.collate_fn(data_list) 
+            dataset.collate_fn(data_list)
             for dataset, data_list in zip(self.datasets, zip(*data_list))
-            ]
+        ]

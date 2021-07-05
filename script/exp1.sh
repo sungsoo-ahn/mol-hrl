@@ -1,3 +1,5 @@
 #!/bin/bash
 
-python train_graph2seq_ae.py --use_mutate --checkpoint_path "../resource/checkpoint/graph2seq_ae_mutate.pth"
+python train_ae.py \
+--ae_type vae \
+--checkpoint_path "../resource/checkpoint/seq2seq_vae.pth"
