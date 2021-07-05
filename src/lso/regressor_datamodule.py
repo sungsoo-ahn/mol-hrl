@@ -19,7 +19,7 @@ class LatentRegressorDataModule(pl.LightningDataModule):
     def add_args(parser):
         parser.add_argument("--dm_type", type=str, default="seq")
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
-        parser.add_argument("--score_func_names", type=str, nargs="+", default=["penalized_logp"])
+        parser.add_argument("--score_func_names", type=str, nargs="+", default=["penalized_logp", "qed", "molwt", "tpsa"])
         parser.add_argument("--batch_size", type=int, default=128)
         parser.add_argument("--num_workers", type=int, default=8)
 
