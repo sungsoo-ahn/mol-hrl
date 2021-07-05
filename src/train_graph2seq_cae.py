@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     Graphs2SeqDataModule.add_args(parser)
     Graph2SeqCAEModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=50)
+    parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--checkpoint_path", type=str, default="")
     hparams = parser.parse_args()
 

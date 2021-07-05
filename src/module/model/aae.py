@@ -22,7 +22,7 @@ class Seq2SeqAAEModule(BaseAEModule):
         SeqDecoder.add_args(parser)
         SeqEncoder.add_args(parser)
         parser.add_argument("--lr", type=float, default=1e-3)
-        parser.add_argument("--beta", type=float, default=1e-1)
+        parser.add_argument("--beta", type=float, default=1e-2)
         return parser
 
     def shared_step(self, batched_data):

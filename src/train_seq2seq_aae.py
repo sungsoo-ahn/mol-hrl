@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     Seq2SeqAAEModule.add_args(parser)
     Seq2SeqDataModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=50)
+    parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--checkpoint_path", type=str, default="")
     hparams = parser.parse_args()
 
@@ -29,6 +29,7 @@ if __name__ == "__main__":
         default_root_dir="../resource/log/",
         max_epochs=hparams.max_epochs,
         callbacks=[checkpoint_callback],
+        gradient_clip_val=0.5,
     )
     trainer.fit(model, datamodule=datamodule)
     

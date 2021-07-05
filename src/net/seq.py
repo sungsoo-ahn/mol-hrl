@@ -51,7 +51,7 @@ class SeqEncoder(nn.Module):
     @staticmethod
     def add_args(parser):
         parser.add_argument("--encoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--encoder_num_layers", type=int, default=2)
+        parser.add_argument("--encoder_num_layers", type=int, default=3)
         parser.add_argument("--code_dim", type=int, default=256)
         
     def forward(self, batched_sequence_data):
@@ -83,7 +83,7 @@ class SeqDecoder(nn.Module):
     @staticmethod
     def add_args(parser):
         parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--decoder_num_layers", type=int, default=2)
+        parser.add_argument("--decoder_num_layers", type=int, default=3)
         parser.add_argument("--decoder_max_length", type=int, default=81)
         
     def forward(self, batched_sequence_data, codes):
