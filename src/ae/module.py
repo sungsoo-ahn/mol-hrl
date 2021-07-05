@@ -30,10 +30,11 @@ class AutoEncoderModule(pl.LightningModule):
         if hparams.ae_type == "vae":
             self.linear_mu = nn.Linear(hparams.code_dim, hparams.code_dim)
             self.linear_logvar = nn.Linear(hparams.code_dim, hparams.code_dim)
+        
         elif hparams.ae_type == "aae":
             self.discriminator = nn.Sequential(
-                nn.Linear(hparams.code_dim, hparams.code_dim),
-                nn.ReLU(),
+                #nn.Linear(hparams.code_dim, hparams.code_dim),
+                #nn.ReLU(),
                 nn.Linear(hparams.code_dim, 1),
                 nn.Sigmoid(),
             )
@@ -168,9 +169,10 @@ class AutoEncoderModule(pl.LightningModule):
             discriminator_out_detach, zeros
         ) + F.binary_cross_entropy(discriminator_zn_out, ones)
         adv_g_loss = F.binary_cross_entropy(discriminator_out, ones)
-        adv_d_acc = (discriminator_out_detach < 0.5).float().mean() + (
-            discriminator_zn_out > 0.5
-        ).float().mean()
+        adv_d_acc = (
+            0.5 * (discriminator_out_detach < 0.5).float().mean() 
+            + 0.5 * (discriminator_zn_out > 0.5).float().mean()
+        )
 
         loss = adv_d_loss + adv_g_loss
         return loss, {"loss/adv_d": adv_d_loss, "loss/adv_g": adv_g_loss, "acc/adv_d": adv_d_acc}

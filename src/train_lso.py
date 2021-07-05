@@ -14,11 +14,13 @@ if __name__ == "__main__":
     LatentRegressorDataModule.add_args(parser)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--checkpoint_path", type=str, default="")
+    parser.add_argument("--tag", nargs="+", type=str, default=[])
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
-        project_name="sungsahn0215/mol-hrl", experiment_name="neptune_logs", params=vars(hparams),
+        project_name="sungsahn0215/molrep", experiment_name="train_lso", params=vars(hparams),
     )
+    neptune_logger.append_tags(hparams.tag)
     
     datamodule = LatentRegressorDataModule(hparams)
     model = LatentRegressorModule(hparams)
