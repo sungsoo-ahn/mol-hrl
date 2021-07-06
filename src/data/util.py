@@ -17,9 +17,7 @@ def load_raw_data(root_dir, score_func_names, train_ratio, label_ratio):
     else:
         scores_list = []
         for name in score_func_names:
-            _, parallel_score_func, corrupt_score = get_scoring_func(
-                name, num_workers=32
-            )
+            _, parallel_score_func, corrupt_score = get_scoring_func(name, num_workers=32)
             scores = parallel_score_func(smiles_list)
             if corrupt_score in scores:
                 assert False

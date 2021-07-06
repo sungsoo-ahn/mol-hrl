@@ -20,19 +20,13 @@ parser.add_argument(
     action="store_true",
     help="flag to initialize GP hyperparameters instead of loading them",
 )
-parser.add_argument(
-    "--logfile", type=str, help="file to log to", default="gp_train.log"
-)
+parser.add_argument("--logfile", type=str, help="file to log to", default="gp_train.log")
 parser.add_argument("--seed", type=int, required=True)
-parser.add_argument(
-    "--kmeans_init", action="store_true", help="flag to use k means init"
-)
+parser.add_argument("--kmeans_init", action="store_true", help="flag to use k means init")
 parser.add_argument(
     "--nZ", type=int, help="Number of incuding points to use (if initializing)",
 )
-parser.add_argument(
-    "--data_file", type=str, help="file to load data from", required=True
-)
+parser.add_argument("--data_file", type=str, help="file to load data from", required=True)
 parser.add_argument(
     "--gp_file",
     type=str,
@@ -48,14 +42,9 @@ parser.add_argument(
 parser.add_argument(
     "--n_opt_iter", type=int, default=100000, help="Number of GP optimization iters"
 )
+parser.add_argument("--save_file", type=str, required=True, help="File to save results to")
 parser.add_argument(
-    "--save_file", type=str, required=True, help="File to save results to"
-)
-parser.add_argument(
-    "--convergence_tol",
-    type=float,
-    default=5e-4,
-    help="tolerence value to stop training GP",
+    "--convergence_tol", type=float, default=5e-4, help="tolerence value to stop training GP",
 )
 parser.add_argument(
     "--kernel_convergence_tol",
@@ -70,17 +59,13 @@ parser.add_argument(
     help="Flag to turn off early stopping",
 )
 parser.add_argument(
-    "--measure_freq",
-    type=int,
-    default=100,
-    help="Frequency to measure training performance",
+    "--measure_freq", type=int, default=100, help="Frequency to measure training performance",
 )
 parser.add_argument(
     "--z_noise",
     type=float,
     default=None,
-    help="amplitude of normal noise to add to initialized Z points "
-    "(might help GP retrain)",
+    help="amplitude of normal noise to add to initialized Z points " "(might help GP retrain)",
 )
 parser.add_argument(
     "--learning_rate", type=float, default=3e-2, help="Learning rate for main optimizer"
@@ -238,9 +223,7 @@ def gp_train(
     start_time = time.time()
 
     # Set up optimization functions
-    kernel_hparams = list(gp.kernel.trainable_variables) + list(
-        gp.likelihood.trainable_variables
-    )
+    kernel_hparams = list(gp.kernel.trainable_variables) + list(gp.likelihood.trainable_variables)
     optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
     fast_kernel_optimizer = tf.optimizers.Adam(learning_rate=kernel_learning_rate)
     training_loss = gp.training_loss_closure(compile=True)
@@ -291,9 +274,7 @@ def gp_train(
 
         # Message for end of optimization
         if step == n_opt_iter:
-            LOGGER.info(
-                f"Optimization stopping because {n_opt_iter} iterations reached"
-            )
+            LOGGER.info(f"Optimization stopping because {n_opt_iter} iterations reached")
 
     # Save GP parameters
     LOGGER.info("\n\nSaving GP parameters...")

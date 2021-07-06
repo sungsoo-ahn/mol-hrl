@@ -15,9 +15,7 @@ class AutoEncoderDataModule(pl.LightningDataModule):
     @staticmethod
     def add_args(parser):
         parser.add_argument("--dm_type", type=str, default="seq2seq")
-        parser.add_argument(
-            "--data_dir", type=str, default="../resource/data/zinc_small/"
-        )
+        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
         parser.add_argument("--batch_size", type=int, default=128)
         parser.add_argument("--num_workers", type=int, default=8)
 

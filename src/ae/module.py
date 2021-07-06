@@ -32,10 +32,7 @@ class AutoEncoderModule(pl.LightningModule):
             self.linear_logvar = nn.Linear(hparams.code_dim, hparams.code_dim)
 
         elif hparams.ae_type == "aae":
-            self.discriminator = nn.Sequential(
-                nn.Linear(hparams.code_dim, 1),
-                nn.Sigmoid(),
-            )
+            self.discriminator = nn.Sequential(nn.Linear(hparams.code_dim, 1), nn.Sigmoid(),)
 
     @staticmethod
     def add_args(parser):
@@ -132,12 +129,8 @@ class AutoEncoderModule(pl.LightningModule):
 
     def compute_loss(self, decoder_out, encoder_out, batched_target_data, p, q, codes):
         statistics = OrderedDict()
-        statistics["loss/recon"] = self.decoder.compute_loss(
-            decoder_out, batched_target_data
-        )
-        statistics.update(
-            self.decoder.compute_statistics(decoder_out, batched_target_data)
-        )
+        statistics["loss/recon"] = self.decoder.compute_loss(decoder_out, batched_target_data)
+        statistics.update(self.decoder.compute_statistics(decoder_out, batched_target_data))
         loss = statistics["loss/recon"]
         if self.hparams.ae_type == "vae":
             vae_loss, vae_statistics = self.compute_vae_reg_loss(p, q, codes)
@@ -179,11 +172,7 @@ class AutoEncoderModule(pl.LightningModule):
         loss = adv_d_loss + adv_g_loss
         return (
             loss,
-            {
-                "loss/adv_d": adv_d_loss,
-                "loss/adv_g": adv_g_loss,
-                "acc/adv_d": adv_d_acc,
-            },
+            {"loss/adv_d": adv_d_loss, "loss/adv_g": adv_g_loss, "acc/adv_d": adv_d_acc,},
         )
 
     def compute_cae_reg_loss(self, encoder_out):

@@ -30,14 +30,11 @@ def assess_goal_directed_generation(
         json_output_file: Name of the file where to save the results in JSON format
         benchmark_version: which benchmark suite to execute
     """
-    logger.info(
-        f"Benchmarking goal-directed molecule generation, version {benchmark_version}"
-    )
+    logger.info(f"Benchmarking goal-directed molecule generation, version {benchmark_version}")
     benchmarks = goal_directed_benchmark_suite(version_name=benchmark_version)
 
     results = _evaluate_goal_directed_benchmarks(
-        goal_directed_molecule_generator=goal_directed_molecule_generator,
-        benchmarks=benchmarks,
+        goal_directed_molecule_generator=goal_directed_molecule_generator, benchmarks=benchmarks,
     )
 
     benchmark_results: Dict[str, Any] = OrderedDict()

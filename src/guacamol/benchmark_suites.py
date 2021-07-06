@@ -69,9 +69,7 @@ def distribution_learning_benchmark_suite(
             chembl_file_path=chembl_file_path, number_samples=number_samples
         )
 
-    raise Exception(
-        f'Distribution-learning benchmark suite "{version_name}" does not exist.'
-    )
+    raise Exception(f'Distribution-learning benchmark suite "{version_name}" does not exist.')
 
 
 def goal_directed_suite_v1() -> List[GoalDirectedBenchmark]:
@@ -231,13 +229,7 @@ def distribution_learning_suite_v1(
     return [
         ValidityBenchmark(number_samples=number_samples),
         UniquenessBenchmark(number_samples=number_samples),
-        novelty_benchmark(
-            training_set_file=chembl_file_path, number_samples=number_samples
-        ),
-        kldiv_benchmark(
-            training_set_file=chembl_file_path, number_samples=number_samples
-        ),
-        frechet_benchmark(
-            training_set_file=chembl_file_path, number_samples=number_samples
-        ),
+        novelty_benchmark(training_set_file=chembl_file_path, number_samples=number_samples),
+        kldiv_benchmark(training_set_file=chembl_file_path, number_samples=number_samples),
+        frechet_benchmark(training_set_file=chembl_file_path, number_samples=number_samples),
     ]

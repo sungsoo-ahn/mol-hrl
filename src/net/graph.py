@@ -59,12 +59,8 @@ class GraphEncoder(torch.nn.Module):
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.x_embedding1 = torch.nn.Embedding(
-            num_atom_type, hparams.graph_encoder_hidden_dim
-        )
-        self.x_embedding2 = torch.nn.Embedding(
-            num_chirality_tag, hparams.graph_encoder_hidden_dim
-        )
+        self.x_embedding1 = torch.nn.Embedding(num_atom_type, hparams.graph_encoder_hidden_dim)
+        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hparams.graph_encoder_hidden_dim)
 
         torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
         torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
@@ -77,14 +73,10 @@ class GraphEncoder(torch.nn.Module):
         ###List of batchnorms
         self.batch_norms = torch.nn.ModuleList()
         for _ in range(hparams.graph_encoder_num_layers):
-            self.batch_norms.append(
-                torch.nn.BatchNorm1d(hparams.graph_encoder_hidden_dim)
-            )
+            self.batch_norms.append(torch.nn.BatchNorm1d(hparams.graph_encoder_hidden_dim))
 
         self.projector = torch.nn.Sequential(
-            torch.nn.Linear(
-                hparams.graph_encoder_hidden_dim, hparams.graph_encoder_hidden_dim
-            ),
+            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.graph_encoder_hidden_dim),
             torch.nn.ReLU(),
             torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
         )
@@ -108,7 +100,8 @@ class GraphEncoder(torch.nn.Module):
         out = global_mean_pool(out, batched_data.batch)
         return out
 
-    def encode_smiles(self, smiles_list):
+    def encode_smiles(self, smiles_list, device):
         data_list = [pyg_from_string(smiles) for smiles in smiles_list]
         batched_sequence_data = GraphDataset.collate_fn(data_list)
+        batched_sequence_data = batched_sequence_data.to(device)
         return self(batched_sequence_data)

@@ -19,9 +19,7 @@ class LatentRegressorDataModule(pl.LightningDataModule):
     @staticmethod
     def add_args(parser):
         parser.add_argument("--dm_type", type=str, default="seq")
-        parser.add_argument(
-            "--data_dir", type=str, default="../resource/data/zinc_small/"
-        )
+        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
         parser.add_argument(
             "--score_func_names",
             type=str,
@@ -51,13 +49,9 @@ class LatentRegressorDataModule(pl.LightningDataModule):
 
     def setup_datasets(self, hparams):
         if hparams.dm_type == "seq":
-            train_input_dataset = SequenceDataset(
-                hparams.data_dir, split="train_labeled"
-            )
+            train_input_dataset = SequenceDataset(hparams.data_dir, split="train_labeled")
             train_score_dataset = ScoreDataset(
-                hparams.data_dir,
-                score_func_names=hparams.score_func_names,
-                split="train_labeled",
+                hparams.data_dir, score_func_names=hparams.score_func_names, split="train_labeled",
             )
             self.train_dataset = ZipDataset(train_input_dataset, train_score_dataset)
 
@@ -70,9 +64,7 @@ class LatentRegressorDataModule(pl.LightningDataModule):
         elif hparams.dm_type == "graph":
             train_input_dataset = GraphDataset(hparams.data_dir, split="train_labeled")
             train_score_dataset = ScoreDataset(
-                hparams.data_dir,
-                score_func_names=hparams.score_func_names,
-                split="train_labeled",
+                hparams.data_dir, score_func_names=hparams.score_func_names, split="train_labeled",
             )
             self.train_dataset = ZipDataset(train_input_dataset, train_score_dataset)
 

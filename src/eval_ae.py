@@ -71,9 +71,7 @@ def eval_knn(model, k_list=[50, 10, 5, 1]):
     ]
     statistics = dict()
     for k in k_list:
-        neighbors_list = torch.topk(code_dists, k=k + 1, dim=1, largest=False)[
-            1
-        ].tolist()
+        neighbors_list = torch.topk(code_dists, k=k + 1, dim=1, largest=False)[1].tolist()
         sim_avg = 0.0
         for idx, neighbors in enumerate(neighbors_list):
             assert idx == neighbors[0]

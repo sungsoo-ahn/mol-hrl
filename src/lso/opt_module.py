@@ -19,16 +19,12 @@ class LatentOptimizationModule(pl.LightningModule):
         for param in self.ae.parameters():
             param.requires_grad = False
 
-        self.regressor = LatentRegressorModule.load_from_checkpoint(
-            hparams.lso_checkpoint_path
-        )
+        self.regressor = LatentRegressorModule.load_from_checkpoint(hparams.lso_checkpoint_path)
         for param in self.regressor.parameters():
             param.requires_grad = False
 
         # For scoring at evaluation
-        _, self.score_func, self.corrupt_score = get_scoring_func(
-            hparams.scoring_func_name
-        )
+        _, self.score_func, self.corrupt_score = get_scoring_func(hparams.scoring_func_name)
 
         # For code optimization
         self.setup_codes()
@@ -40,9 +36,7 @@ class LatentOptimizationModule(pl.LightningModule):
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument(
-            "--data_dir", type=str, default="../resource/data/zinc_small"
-        )
+        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small")
         parser.add_argument("--num_opt_codes", type=int, default=1024)
         parser.add_argument("--num_steps_per_epoch", type=int, default=10)
         parser.add_argument("--lr", type=float, default=1e-2)
@@ -54,27 +48,24 @@ class LatentOptimizationModule(pl.LightningModule):
     def setup_codes(self):
         smiles_list = load_smiles_list(self.hparams.data_dir, split="train_labeled")
         score_list = self.score_func(smiles_list)
-        smiles_list = [
-            smiles for _, smiles in sorted(zip(score_list, smiles_list), reverse=True)
-        ]
+        smiles_list = [smiles for _, smiles in sorted(zip(score_list, smiles_list), reverse=True)]
         smiles_list = smiles_list[: self.hparams.num_opt_codes]
 
-        init_codes = self.ae.encoder.encode_smiles(smiles_list)
+        self.ae.eval()
+        init_codes = self.ae.encoder.encode_smiles(smiles_list, self.device)
         self.codes = torch.nn.Parameter(init_codes)
+
+        #self.training_epoch_end(None)
 
     def training_step(self, batched_data, batch_idx):
         self.ae.eval()
         self.regressor.eval()
 
-        pred_scores = self.regressor.predict_scores(
-            self.codes, self.hparams.scoring_func_name
-        )
+        _, _, codes = self.ae.compute_codes(self.codes)
+        pred_scores = self.regressor.predict_scores(codes, self.hparams.scoring_func_name)
         loss = -pred_scores.sum()
         self.log(
-            f"lso/{self.hparams.scoring_func_name}/loss/total",
-            loss,
-            on_step=True,
-            logger=True,
+            f"lso/{self.hparams.scoring_func_name}/loss/total", loss, on_step=True, logger=True,
         )
 
         statistics = {
@@ -83,21 +74,14 @@ class LatentOptimizationModule(pl.LightningModule):
         }
         for key, val in statistics.items():
             self.log(
-                f"lso/{self.hparams.scoring_func_name}/{key}",
-                val,
-                on_step=True,
-                logger=True,
+                f"lso/{self.hparams.scoring_func_name}/{key}", val, on_step=True, logger=True,
             )
 
         return loss
 
     def training_epoch_end(self, outputs):
         with torch.no_grad():
-            if self.ae.hparams.ae_type == "sae":
-                codes = F.normalize(self.codes, p=2, dim=1)
-            else:
-                codes = self.codes
-
+            _, _, codes = self.ae.compute_codes(self.codes)
             smiles_list = self.ae.decoder.decode_smiles(codes, deterministic=True)
 
         scores = torch.FloatTensor(self.score_func(smiles_list))
@@ -115,10 +99,7 @@ class LatentOptimizationModule(pl.LightningModule):
 
         for key, val in statistics.items():
             self.log(
-                f"lso/{self.hparams.scoring_func_name}/{key}",
-                val,
-                on_step=False,
-                logger=True,
+                f"lso/{self.hparams.scoring_func_name}/{key}", val, on_step=False, logger=True,
             )
 
     def configure_optimizers(self):

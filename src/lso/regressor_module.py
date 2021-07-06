@@ -69,13 +69,12 @@ class LatentRegressorModule(pl.LightningModule):
 
     def shared_step(self, batched_data):
         batched_pyg_data, scores = batched_data
-        codes = self.ae.encoder(batched_pyg_data)
+        encoder_out = self.ae.compute_encoder_out(batched_pyg_data)
+        _, _, codes = self.ae.compute_codes(encoder_out)
 
         statistics = dict()
         loss = 0.0
-        for idx, (score_func_name, score_predictor) in enumerate(
-            self.regressors.items()
-        ):
+        for idx, (score_func_name, score_predictor) in enumerate(self.regressors.items()):
             scores_pred = score_predictor(codes)
             mse_loss = F.mse_loss(scores_pred.squeeze(1), scores[:, idx])
             loss += mse_loss

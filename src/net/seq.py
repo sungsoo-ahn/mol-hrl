@@ -72,14 +72,14 @@ class SeqEncoder(nn.Module):
 
         return out
 
-    def encode_smiles(self, smiles_list):
+    def encode_smiles(self, smiles_list, device):
         sequences = [
-            sequence_from_string(smiles, self.tokenizer, self.vocabulary)
-            for smiles in smiles_list
+            sequence_from_string(smiles, self.tokenizer, self.vocabulary) for smiles in smiles_list
         ]
         lengths = [torch.tensor(sequence.size(0)) for sequence in sequences]
         data_list = list(zip(sequences, lengths))
         batched_sequence_data = SequenceDataset.collate_fn(data_list)
+        batched_sequence_data = [item.to(device) for item in batched_sequence_data]
         return self(batched_sequence_data)
 
 

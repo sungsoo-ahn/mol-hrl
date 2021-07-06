@@ -18,9 +18,7 @@ if __name__ == "__main__":
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
-        project_name="sungsahn0215/molrep",
-        experiment_name="train_ae",
-        params=vars(hparams),
+        project_name="sungsahn0215/molrep", experiment_name="train_ae", params=vars(hparams),
     )
     if len(hparams.tag) > 0:
         neptune_logger.append_tags(hparams.tag)
