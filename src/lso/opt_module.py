@@ -1,5 +1,6 @@
 from argparse import Namespace
 import torch
+import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.utils.data.dataloader import DataLoader
 
@@ -73,7 +74,12 @@ class LatentOptimizationModule(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         with torch.no_grad():
-            smiles_list = self.ae.decoder.decode_smiles(self.codes, deterministic=True)
+            if self.ae.ae_type == "sae":
+                codes = F.normalize(self.codes, p=2, dim=1)
+            else:
+                codes = self.codes
+
+            smiles_list = self.ae.decoder.decode_smiles(codes, deterministic=True)
 
         scores = torch.FloatTensor(self.score_func(smiles_list))
         clean_scores = scores[scores > self.corrupt_score + 1e-3]
