@@ -53,6 +53,7 @@ class AutoEncoderDataModule(pl.LightningDataModule):
                 split="train",
                 use_random_smiles=hparams.use_random_smiles,
                 mask_rate=hparams.mask_rate,
+                mutate=hparams.use_mutate,
             )
             train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
             self.train_dataset = ZipDataset(train_input_dataset, train_target_dataset)
@@ -69,6 +70,7 @@ class AutoEncoderDataModule(pl.LightningDataModule):
                 split="train",
                 use_random_smiles=hparams.use_random_smiles,
                 mask_rate=hparams.mask_rate,
+                mutate=hparams.use_mutate,
             )
             train_input_dataset = ZipDataset(train_input_dataset0, train_input_dataset1)
             train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
@@ -80,6 +82,7 @@ class AutoEncoderDataModule(pl.LightningDataModule):
                 split="val",
                 use_random_smiles=hparams.use_random_smiles,
                 mask_rate=hparams.mask_rate,
+                mutate=hparams.use_mutate,
             )
             val_input_dataset = ZipDataset(val_input_dataset0, val_input_dataset1)
             val_target_dataset = SequenceDataset(hparams.data_dir, split="val")

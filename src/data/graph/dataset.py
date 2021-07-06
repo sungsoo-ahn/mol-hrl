@@ -1,7 +1,7 @@
 import torch
 import torch_geometric
 from data.graph.util import pyg_from_string
-from data.smiles.mutate import mutate
+from data.selfies.mutate import mutate
 from data.smiles.util import load_smiles_list
 
 

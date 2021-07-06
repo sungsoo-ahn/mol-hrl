@@ -10,18 +10,23 @@ from data.seq.util import (
     MASK_ID,
 )
 from data.smiles.util import randomize_smiles, load_smiles_list
+from data.selfies.mutate import mutate
 
 class SequenceDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, split, use_random_smiles=False, mask_rate=0.0):
+    def __init__(self, data_dir, split, use_random_smiles=False, mask_rate=0.0, mutate=False):
         super(SequenceDataset, self).__init__()
         self.smiles_list = load_smiles_list(data_dir, split)
         self.tokenizer = load_tokenizer(data_dir)
         self.vocabulary = load_vocabulary(data_dir)
         self.use_random_smiles = use_random_smiles
         self.mask_rate = mask_rate
+        self.mutate = mutate
 
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
+        if self.mutate:
+            smiles = mutate(smiles)
+
         if self.use_random_smiles:
             smiles = randomize_smiles(smiles)
 

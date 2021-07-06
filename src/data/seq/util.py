@@ -21,6 +21,7 @@ class Vocabulary:
         self._tokens = dict()
         self._current_id = 0
         self.update([PAD_TOKEN, END_TOKEN, START_TOKEN, MASK_TOKEN])
+        self.update(["p"])
 
     def __getitem__(self, token_or_id):
         return self._tokens[token_or_id]

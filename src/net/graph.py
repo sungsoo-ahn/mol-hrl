@@ -4,6 +4,9 @@ from torch_geometric.utils import add_self_loops
 from torch_geometric.nn import global_mean_pool
 import torch.nn.functional as F
 
+from data.graph.dataset import GraphDataset
+from data.graph.util import pyg_from_string
+
 num_atom_type = 120
 num_chirality_tag = 3
 
@@ -104,3 +107,13 @@ class GraphEncoder(torch.nn.Module):
         out = self.projector(h)
         out = global_mean_pool(out, batched_data.batch)
         return out
+
+    def encode_smiles(self, smiles_list):
+        sequences = [
+            pyg_from_string(smiles, self.tokenizer, self.vocabulary)
+            for smiles in smiles_list
+        ]
+        lengths = [torch.tensor(sequence.size(0)) for sequence in sequences]
+        data_list = list(zip(sequences, lengths))
+        batched_sequence_data = GraphDataset.collate_fn(data_list)
+        return self(batched_sequence_data)
