@@ -21,6 +21,7 @@ class AutoEncoderDataModule(pl.LightningDataModule):
 
         # sequence specific augmentation
         parser.add_argument("--use_random_smiles", action="store_true")
+        parser.add_argument("--use_dec_random_smiles", action="store_true")
         parser.add_argument("--mask_rate", type=float, default=0.0)
 
         # mutation_specific augmentation
@@ -53,7 +54,9 @@ class AutoEncoderDataModule(pl.LightningDataModule):
                 mask_rate=hparams.mask_rate,
                 mutate=hparams.use_mutate,
             )
-            train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
+            train_target_dataset = SequenceDataset(
+                hparams.data_dir, split="train", use_random_smiles=hparams.use_dec_random_smiles
+                )
             self.train_dataset = ZipDataset(train_input_dataset, train_target_dataset)
 
             val_input_dataset = SequenceDataset(hparams.data_dir, split="val")
@@ -71,7 +74,9 @@ class AutoEncoderDataModule(pl.LightningDataModule):
                 mutate=hparams.use_mutate,
             )
             train_input_dataset = ZipDataset(train_input_dataset0, train_input_dataset1)
-            train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
+            train_target_dataset = SequenceDataset(
+                hparams.data_dir, split="train", use_random_smiles=hparams.use_dec_random_smiles
+                )
             self.train_dataset = ZipDataset(train_input_dataset, train_target_dataset)
 
             val_input_dataset0 = SequenceDataset(hparams.data_dir, split="val")
@@ -92,7 +97,9 @@ class AutoEncoderDataModule(pl.LightningDataModule):
             train_input_dataset = GraphDataset(
                 hparams.data_dir, split="train", mutate=hparams.use_mutate
             )
-            train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
+            train_target_dataset = SequenceDataset(
+                hparams.data_dir, split="train", use_random_smiles=hparams.use_dec_random_smiles
+                )
             self.train_dataset = ZipDataset(train_input_dataset, train_target_dataset)
 
             val_input_dataset = GraphDataset(hparams.data_dir, split="val")
@@ -107,7 +114,9 @@ class AutoEncoderDataModule(pl.LightningDataModule):
                 hparams.data_dir, split="train", mutate=hparams.use_mutate
             )
             train_input_dataset = ZipDataset(train_input_dataset0, train_input_dataset1)
-            train_target_dataset = SequenceDataset(hparams.data_dir, split="train")
+            train_target_dataset = SequenceDataset(
+                hparams.data_dir, split="train", use_random_smiles=hparams.use_dec_random_smiles
+                )
             self.train_dataset = ZipDataset(train_input_dataset, train_target_dataset)
 
             val_input_dataset0 = GraphDataset(hparams.data_dir, split="val")

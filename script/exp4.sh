@@ -1,13 +1,12 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="seq2seq_cae"
+TAG="seq2seq_ae_dec_random"
 
 python train_ae.py \
---ae_type cae \
---dm_type "seqs2seq" \
---mask_rate 0.1 \
+--ae_type ae \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--use_dec_random_smiles \
 --tag $TAG
 
 bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG seq

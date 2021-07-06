@@ -41,7 +41,7 @@ class LatentOptimizationModule(pl.LightningModule):
         parser.add_argument("--num_steps_per_epoch", type=int, default=10)
         parser.add_argument("--lr", type=float, default=1e-2)
 
-        parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
+        parser.add_argument("--scoring_func_name", type=str, default="logp")
         parser.add_argument("--ae_checkpoint_path", type=str, default="")
         parser.add_argument("--lso_checkpoint_path", type=str, default="")
 

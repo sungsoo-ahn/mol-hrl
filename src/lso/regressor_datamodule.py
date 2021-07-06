@@ -24,7 +24,7 @@ class LatentRegressorDataModule(pl.LightningDataModule):
             "--score_func_names",
             type=str,
             nargs="+",
-            default=["penalized_logp", "qed", "molwt", "tpsa"],
+            default=["logp", "qed", "molwt", "tpsa"],
         )
         parser.add_argument("--batch_size", type=int, default=128)
         parser.add_argument("--num_workers", type=int, default=8)

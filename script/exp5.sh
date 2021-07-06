@@ -1,12 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="seq2seq_aae_mask1"
+TAG="graph2seq_ae"
 
 python train_ae.py \
---ae_type aae \
---mask_rate 0.1 \
+--ae_type ae \
+--encoder_type graph \
+--dm_type graph2seq \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG seq
+bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG graph
