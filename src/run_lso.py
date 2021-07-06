@@ -18,7 +18,8 @@ if __name__ == "__main__":
         experiment_name="run_lso",
         params=vars(hparams),
     )
-    neptune_logger.append_tags(hparams.tag)
+    if len(hparams.tag) > 0:
+        neptune_logger.append_tags(hparams.tag)
 
     model = LatentOptimizationModule(hparams)
 

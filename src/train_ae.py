@@ -22,7 +22,8 @@ if __name__ == "__main__":
         experiment_name="train_ae",
         params=vars(hparams),
     )
-    neptune_logger.append_tags(hparams.tag)
+    if len(hparams.tag) > 0:
+        neptune_logger.append_tags(hparams.tag)
 
     datamodule = AutoEncoderDataModule(hparams)
     model = AutoEncoderModule(hparams)

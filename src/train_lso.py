@@ -22,7 +22,8 @@ if __name__ == "__main__":
         experiment_name="train_lso",
         params=vars(hparams),
     )
-    neptune_logger.append_tags(hparams.tag)
+    if len(hparams.tag) > 0:
+        neptune_logger.append_tags(hparams.tag)
 
     datamodule = LatentRegressorDataModule(hparams)
     model = LatentRegressorModule(hparams)

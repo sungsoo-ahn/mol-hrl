@@ -33,8 +33,6 @@ class AutoEncoderModule(pl.LightningModule):
 
         elif hparams.ae_type == "aae":
             self.discriminator = nn.Sequential(
-                # nn.Linear(hparams.code_dim, hparams.code_dim),
-                # nn.ReLU(),
                 nn.Linear(hparams.code_dim, 1),
                 nn.Sigmoid(),
             )
