@@ -109,11 +109,6 @@ class GraphEncoder(torch.nn.Module):
         return out
 
     def encode_smiles(self, smiles_list):
-        sequences = [
-            pyg_from_string(smiles, self.tokenizer, self.vocabulary)
-            for smiles in smiles_list
-        ]
-        lengths = [torch.tensor(sequence.size(0)) for sequence in sequences]
-        data_list = list(zip(sequences, lengths))
+        data_list = [pyg_from_string(smiles) for smiles in smiles_list]
         batched_sequence_data = GraphDataset.collate_fn(data_list)
         return self(batched_sequence_data)
