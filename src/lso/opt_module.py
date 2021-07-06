@@ -74,7 +74,7 @@ class LatentOptimizationModule(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         with torch.no_grad():
-            if self.ae.ae_type == "sae":
+            if self.ae.hparams.ae_type == "sae":
                 codes = F.normalize(self.codes, p=2, dim=1)
             else:
                 codes = self.codes
