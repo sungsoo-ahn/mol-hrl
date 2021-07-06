@@ -76,8 +76,8 @@ class LatentRegressorModule(pl.LightningModule):
             scores_pred = score_predictor(codes)
             mse_loss = F.mse_loss(scores_pred.squeeze(1), scores[:, idx])
             loss += mse_loss
-
-            statistics[f"loss/{score_func_name}/mse"] = mse_loss
+            
+            statistics[f"loss/{score_func_name}/mse"] = mse_loss.detach().clone()
 
         return loss, statistics
 

@@ -4,7 +4,7 @@ import torch
 import os
 
 def load_score_list(root_dir, score_func_name, split):
-    score_list_path = os.path.join(root_dir, "{split}_{score_func_name}.pth")
+    score_list_path = os.path.join(root_dir, f"{split}_{score_func_name}.pth")
     
     if not os.path.exists(score_list_path):
         smiles_list = load_smiles_list(root_dir, split)
