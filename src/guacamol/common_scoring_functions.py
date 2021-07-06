@@ -32,7 +32,9 @@ class RdkitScoringFunction(ScoringFunctionBasedOnRdkitMol):
     """
 
     def __init__(
-        self, descriptor: Callable[[Chem.Mol], float], score_modifier: ScoreModifier = None,
+        self,
+        descriptor: Callable[[Chem.Mol], float],
+        score_modifier: ScoreModifier = None,
     ) -> None:
         """
         Args:
@@ -64,7 +66,9 @@ class TanimotoScoringFunction(ScoringFunctionBasedOnRdkitMol):
         self.fp_type = fp_type
         target_mol = smiles_to_rdkit_mol(target)
         if target_mol is None:
-            raise RuntimeError(f"The similarity target {target} is not a valid molecule.")
+            raise RuntimeError(
+                f"The similarity target {target} is not a valid molecule."
+            )
 
         self.ref_fp = get_fingerprint(target_mol, self.fp_type)
 
@@ -78,7 +82,9 @@ class CNS_MPO_ScoringFunction(ScoringFunctionBasedOnRdkitMol):
     CNS MPO scoring function
     """
 
-    def __init__(self, max_logP=5.0, maxMW=360, min_tpsa=40, max_tpsa=90, max_hbd=0) -> None:
+    def __init__(
+        self, max_logP=5.0, maxMW=360, min_tpsa=40, max_tpsa=90, max_hbd=0
+    ) -> None:
         super().__init__()
 
         self.logP_gauss = MinGaussianModifier(max_logP, 1)
@@ -135,10 +141,14 @@ class IsomerScoringFunction(MoleculewiseScoringFunction):
         raise ValueError(f'Invalid mean function: "{mean_function}"')
 
     @staticmethod
-    def determine_scoring_functions(molecular_formula: str,) -> List[RdkitScoringFunction]:
+    def determine_scoring_functions(
+        molecular_formula: str,
+    ) -> List[RdkitScoringFunction]:
         element_occurrences = parse_molecular_formula(molecular_formula)
 
-        total_number_atoms = sum(element_tuple[1] for element_tuple in element_occurrences)
+        total_number_atoms = sum(
+            element_tuple[1] for element_tuple in element_occurrences
+        )
 
         # scoring functions for each element
         functions = [

@@ -6,12 +6,13 @@ import pytorch_lightning as pl
 
 from ae.module import AutoEncoderModule
 
+
 class LatentRegressorModule(pl.LightningModule):
     def __init__(self, hparams):
         super(LatentRegressorModule, self).__init__()
         hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
-        
+
         self.ae = AutoEncoderModule.load_from_checkpoint(hparams.ae_checkpoint_path)
         for param in self.ae.parameters():
             param.requires_grad = False
@@ -22,7 +23,7 @@ class LatentRegressorModule(pl.LightningModule):
     def add_args(parser):
         parser.add_argument("--ae_checkpoint_path", type=str, default="")
         parser.add_argument("--use_mlp", action="store_true")
-        
+
     def setup_models(self, hparams):
         if hparams.use_mlp:
             self.regressors = nn.ModuleDict(
@@ -30,7 +31,7 @@ class LatentRegressorModule(pl.LightningModule):
                     score_func_name: nn.Sequenctial(
                         nn.Linear(self.ae.hparams.code_dim, self.ae.hparams.code_dim),
                         nn.ReLU(),
-                        nn.Linear(self.ae.hparams.code_dim, 1)
+                        nn.Linear(self.ae.hparams.code_dim, 1),
                     )
                     for score_func_name in hparams.score_func_names
                 }
@@ -72,11 +73,13 @@ class LatentRegressorModule(pl.LightningModule):
 
         statistics = dict()
         loss = 0.0
-        for idx, (score_func_name, score_predictor) in enumerate(self.regressors.items()):
+        for idx, (score_func_name, score_predictor) in enumerate(
+            self.regressors.items()
+        ):
             scores_pred = score_predictor(codes)
             mse_loss = F.mse_loss(scores_pred.squeeze(1), scores[:, idx])
             loss += mse_loss
-            
+
             statistics[f"loss/{score_func_name}/mse"] = mse_loss.detach().clone()
 
         return loss, statistics

@@ -54,7 +54,9 @@ def retrain_model(model, datamodule, save_dir, version_str, num_epochs, gpu):
     train_pbar = utils.SubmissivePlProgressbar(process_position=1)
 
     # Create custom saver and logger
-    tb_logger = pl.loggers.TensorBoardLogger(save_dir=save_dir, version=version_str, name="")
+    tb_logger = pl.loggers.TensorBoardLogger(
+        save_dir=save_dir, version=version_str, name=""
+    )
     checkpointer = pl.callbacks.ModelCheckpoint(save_last=True, monitor="loss/val",)
 
     # Handle fractional epochs
@@ -118,7 +120,8 @@ def _batch_decode_z_and_props(
     # Calculate objective function values and choose which points to keep
     # Invalid points get a value of None
     z_prop = [
-        args.invalid_score if s is None else datamodule.train_dataset.prop_func(s) for s in z_decode
+        args.invalid_score if s is None else datamodule.train_dataset.prop_func(s)
+        for s in z_decode
     ]
 
     # Now back to normal
@@ -137,7 +140,9 @@ def _choose_best_rand_points(args: argparse.Namespace, dataset: WeightedMolTreeF
     for i in range(args.n_best_points):
         chosen_point_set.add(targets_argsort[i])
     candidate_rand_points = np.random.choice(
-        len(targets_argsort), size=args.n_rand_points + args.n_best_points, replace=False,
+        len(targets_argsort),
+        size=args.n_rand_points + args.n_best_points,
+        replace=False,
     )
     for i in candidate_rand_points:
         if i not in chosen_point_set and len(chosen_point_set) < (
@@ -154,7 +159,9 @@ def _encode_mol_trees(model, mol_trees):
     batch_size = 64
     mu_list = []
     with torch.no_grad():
-        for i in trange(0, len(mol_trees), batch_size, desc="encoding GP points", leave=False):
+        for i in trange(
+            0, len(mol_trees), batch_size, desc="encoding GP points", leave=False
+        ):
             batch_slice = slice(i, i + batch_size)
             _, jtenc_holder, mpn_holder = tensorize(
                 mol_trees[batch_slice], model.jtnn_vae.vocab, assm=False
@@ -290,7 +297,11 @@ def latent_optimization(
 
         # Decode point
         smiles_opt, prop_opt = _batch_decode_z_and_props(
-            model, torch.as_tensor(z_opt, device=model.device), datamodule, args, pbar=pbar,
+            model,
+            torch.as_tensor(z_opt, device=model.device),
+            datamodule,
+            args,
+            pbar=pbar,
         )
 
         # Reset pbar description
@@ -319,7 +330,9 @@ def latent_sampling(args, model, datamodule, num_queries_to_do, pbar=None):
     """ Draws samples from latent space and appends to the dataset """
 
     z_sample = torch.randn(num_queries_to_do, model.latent_dim, device=model.device)
-    z_decode, z_prop = _batch_decode_z_and_props(model, z_sample, datamodule, args, pbar=pbar)
+    z_decode, z_prop = _batch_decode_z_and_props(
+        model, z_sample, datamodule, args, pbar=pbar
+    )
 
     return z_decode, z_prop
 
@@ -341,13 +354,17 @@ def main_loop(args):
     datamodule.setup("fit")
 
     # Load model
-    model = JTVAE.load_from_checkpoint(args.pretrained_model_file, vocab=datamodule.vocab)
+    model = JTVAE.load_from_checkpoint(
+        args.pretrained_model_file, vocab=datamodule.vocab
+    )
     model.beta = model.hparams.beta_final  # Override any beta annealing
 
     # Set up some stuff for the progress bar
     num_retrain = int(np.ceil(args.query_budget / args.retraining_frequency))
     postfix = dict(
-        retrain_left=num_retrain, best=-float("inf"), n_train=len(datamodule.train_dataset.data),
+        retrain_left=num_retrain,
+        best=-float("inf"),
+        n_train=len(datamodule.train_dataset.data),
     )
 
     # Set up results tracking
@@ -362,7 +379,9 @@ def main_loop(args):
     )
 
     # Main loop
-    with tqdm(total=args.query_budget, dynamic_ncols=True, smoothing=0.0, file=sys.stdout) as pbar:
+    with tqdm(
+        total=args.query_budget, dynamic_ncols=True, smoothing=0.0, file=sys.stdout
+    ) as pbar:
 
         for ret_idx in range(num_retrain):
             pbar.set_postfix(postfix)
@@ -378,7 +397,9 @@ def main_loop(args):
             if num_epochs > 0:
                 retrain_dir = result_dir / "retraining"
                 version = f"retrain_{samples_so_far}"
-                retrain_model(model, datamodule, retrain_dir, version, num_epochs, args.gpu)
+                retrain_model(
+                    model, datamodule, retrain_dir, version, num_epochs, args.gpu
+                )
             del num_epochs
 
             # Update progress bar
@@ -388,9 +409,15 @@ def main_loop(args):
             # Draw samples for logs!
             if args.samples_per_model > 0:
                 pbar.set_description("sampling")
-                with trange(args.samples_per_model, desc="sampling", leave=False) as sample_pbar:
+                with trange(
+                    args.samples_per_model, desc="sampling", leave=False
+                ) as sample_pbar:
                     sample_x, sample_y = latent_sampling(
-                        args, model, datamodule, args.samples_per_model, pbar=sample_pbar
+                        args,
+                        model,
+                        datamodule,
+                        args.samples_per_model,
+                        pbar=sample_pbar,
                     )
 
                 # Append to results dict
@@ -400,7 +427,9 @@ def main_loop(args):
 
             # Do querying!
             pbar.set_description("querying")
-            num_queries_to_do = min(args.retraining_frequency, args.query_budget - samples_so_far)
+            num_queries_to_do = min(
+                args.retraining_frequency, args.query_budget - samples_so_far
+            )
             if args.lso_strategy == "opt":
                 gp_dir = result_dir / "gp" / f"iter{samples_so_far}"
                 gp_dir.mkdir(parents=True)
@@ -434,7 +463,9 @@ def main_loop(args):
             np.savez_compressed(str(result_dir / "results.npz"), **results)
 
             # Keep a record of the dataset here
-            new_data_file = data_dir / f"train_data_iter{samples_so_far + num_queries_to_do}.txt"
+            new_data_file = (
+                data_dir / f"train_data_iter{samples_so_far + num_queries_to_do}.txt"
+            )
             with open(new_data_file, "w") as f:
                 f.write("\n".join(datamodule.train_dataset.canonic_smiles))
 

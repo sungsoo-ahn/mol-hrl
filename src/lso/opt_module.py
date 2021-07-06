@@ -9,6 +9,7 @@ from lso.regressor_module import LatentRegressorModule
 from data.smiles.util import load_smiles_list
 from data.score.factory import get_scoring_func
 
+
 class LatentOptimizationModule(pl.LightningModule):
     def __init__(self, hparams):
         super(LatentOptimizationModule, self).__init__()
@@ -18,12 +19,16 @@ class LatentOptimizationModule(pl.LightningModule):
         for param in self.ae.parameters():
             param.requires_grad = False
 
-        self.regressor = LatentRegressorModule.load_from_checkpoint(hparams.lso_checkpoint_path)
+        self.regressor = LatentRegressorModule.load_from_checkpoint(
+            hparams.lso_checkpoint_path
+        )
         for param in self.regressor.parameters():
             param.requires_grad = False
 
         # For scoring at evaluation
-        _, self.score_func, self.corrupt_score = get_scoring_func(hparams.scoring_func_name)
+        _, self.score_func, self.corrupt_score = get_scoring_func(
+            hparams.scoring_func_name
+        )
 
         # For code optimization
         self.setup_codes()
@@ -35,7 +40,9 @@ class LatentOptimizationModule(pl.LightningModule):
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small")
+        parser.add_argument(
+            "--data_dir", type=str, default="../resource/data/zinc_small"
+        )
         parser.add_argument("--num_opt_codes", type=int, default=1024)
         parser.add_argument("--num_steps_per_epoch", type=int, default=10)
         parser.add_argument("--lr", type=float, default=1e-2)
@@ -47,8 +54,10 @@ class LatentOptimizationModule(pl.LightningModule):
     def setup_codes(self):
         smiles_list = load_smiles_list(self.hparams.data_dir, split="train_labeled")
         score_list = self.score_func(smiles_list)
-        smiles_list = [smiles for _, smiles in sorted(zip(score_list, smiles_list), reverse=True)]
-        smiles_list = smiles_list[:self.hparams.num_opt_codes]
+        smiles_list = [
+            smiles for _, smiles in sorted(zip(score_list, smiles_list), reverse=True)
+        ]
+        smiles_list = smiles_list[: self.hparams.num_opt_codes]
 
         init_codes = self.ae.encoder.encode_smiles(smiles_list)
         self.codes = torch.nn.Parameter(init_codes)
@@ -57,18 +66,28 @@ class LatentOptimizationModule(pl.LightningModule):
         self.ae.eval()
         self.regressor.eval()
 
-        pred_scores = self.regressor.predict_scores(self.codes, self.hparams.scoring_func_name)
+        pred_scores = self.regressor.predict_scores(
+            self.codes, self.hparams.scoring_func_name
+        )
         loss = -pred_scores.sum()
         self.log(
-            f"lso/{self.hparams.scoring_func_name}/loss/total", loss, on_step=True, logger=True
-            )
+            f"lso/{self.hparams.scoring_func_name}/loss/total",
+            loss,
+            on_step=True,
+            logger=True,
+        )
 
         statistics = {
             "pred/max": pred_scores.max(),
             "pred/mean": pred_scores.mean(),
         }
         for key, val in statistics.items():
-            self.log(f"lso/{self.hparams.scoring_func_name}/{key}", val, on_step=True, logger=True)
+            self.log(
+                f"lso/{self.hparams.scoring_func_name}/{key}",
+                val,
+                on_step=True,
+                logger=True,
+            )
 
         return loss
 
@@ -95,7 +114,12 @@ class LatentOptimizationModule(pl.LightningModule):
             statistics["score/mean"] = 0.0
 
         for key, val in statistics.items():
-            self.log(f"lso/{self.hparams.scoring_func_name}/{key}", val, on_step=False, logger=True)
+            self.log(
+                f"lso/{self.hparams.scoring_func_name}/{key}",
+                val,
+                on_step=False,
+                logger=True,
+            )
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD([self.codes], lr=self.code_lr)

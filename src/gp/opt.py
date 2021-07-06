@@ -21,10 +21,18 @@ parser.add_argument("--seed", type=int, required=True)
 parser.add_argument(
     "--gp_file", type=str, required=True, help="file to load GP hyperparameters from",
 )
-parser.add_argument("--data_file", type=str, help="file to load data from", required=True)
-parser.add_argument("--save_file", type=str, required=True, help="File to save results to")
-parser.add_argument("--n_out", type=int, default=1, help="Number of optimization points to return")
-parser.add_argument("--n_starts", type=int, default=20, help="Number of optimization starts to use")
+parser.add_argument(
+    "--data_file", type=str, help="file to load data from", required=True
+)
+parser.add_argument(
+    "--save_file", type=str, required=True, help="File to save results to"
+)
+parser.add_argument(
+    "--n_out", type=int, default=1, help="Number of optimization points to return"
+)
+parser.add_argument(
+    "--n_starts", type=int, default=20, help="Number of optimization starts to use"
+)
 parser.add_argument(
     "--no_early_stopping",
     dest="early_stopping",
@@ -93,10 +101,13 @@ def robust_multi_restart_optimizer(
 
     # Set up points to optimize in
     rand_points = [
-        np.random.randn(X_train.shape[1]).astype(np.float32) for _ in range(num_random_starts)
+        np.random.randn(X_train.shape[1]).astype(np.float32)
+        for _ in range(num_random_starts)
     ]
     top_point_idxs = np.arange(len(y_train))[(y_train <= good_point_cutoff).ravel()]
-    chosen_top_point_indices = np.random.choice(top_point_idxs, size=num_good_starts, replace=False)
+    chosen_top_point_indices = np.random.choice(
+        top_point_idxs, size=num_good_starts, replace=False
+    )
     top_points = [X_train[i].ravel().copy() for i in chosen_top_point_indices]
     all_points = rand_points + top_points
     point_sources = ["rand"] * len(rand_points) + ["good"] * len(top_points)
@@ -138,7 +149,9 @@ def robust_multi_restart_optimizer(
         if result_is_good:
             num_good_results += 1
             if (num_good_results >= num_pts_to_return) and early_stop:
-                logger.info(f"Early stopping since {num_good_results} good points found.")
+                logger.info(
+                    f"Early stopping since {num_good_results} good points found."
+                )
                 break
 
     # Potentially directly return optimization results
@@ -153,7 +166,9 @@ def robust_multi_restart_optimizer(
     return np.array(x_out), opt_vals_out
 
 
-def gp_opt(gp_file, data_file, save_file, n_out, logfile, n_starts=20, early_stopping=True):
+def gp_opt(
+    gp_file, data_file, save_file, n_out, logfile, n_starts=20, early_stopping=True
+):
     """ Do optimization via GPFlow"""
 
     # Set up logger

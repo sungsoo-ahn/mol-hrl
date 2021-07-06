@@ -14,12 +14,14 @@ if __name__ == "__main__":
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
-        project_name="sungsahn0215/molrep", experiment_name="run_lso", params=vars(hparams),
+        project_name="sungsahn0215/molrep",
+        experiment_name="run_lso",
+        params=vars(hparams),
     )
     neptune_logger.append_tags(hparams.tag)
-    
+
     model = LatentOptimizationModule(hparams)
-    
+
     trainer = pl.Trainer(
         gpus=1,
         logger=neptune_logger,
@@ -27,4 +29,3 @@ if __name__ == "__main__":
         max_epochs=hparams.max_epochs,
     )
     trainer.fit(model)
-    

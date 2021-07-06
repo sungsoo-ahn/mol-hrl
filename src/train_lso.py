@@ -18,13 +18,15 @@ if __name__ == "__main__":
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
-        project_name="sungsahn0215/molrep", experiment_name="train_lso", params=vars(hparams),
+        project_name="sungsahn0215/molrep",
+        experiment_name="train_lso",
+        params=vars(hparams),
     )
     neptune_logger.append_tags(hparams.tag)
-    
+
     datamodule = LatentRegressorDataModule(hparams)
     model = LatentRegressorModule(hparams)
-    
+
     checkpoint_callback = ModelCheckpoint(monitor="train/loss/total")
     trainer = pl.Trainer(
         gpus=1,
@@ -37,4 +39,3 @@ if __name__ == "__main__":
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
     if hparams.checkpoint_path != "":
         trainer.save_checkpoint(hparams.checkpoint_path)
-    

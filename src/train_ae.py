@@ -18,13 +18,15 @@ if __name__ == "__main__":
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
-        project_name="sungsahn0215/molrep", experiment_name="train_ae", params=vars(hparams),
+        project_name="sungsahn0215/molrep",
+        experiment_name="train_ae",
+        params=vars(hparams),
     )
     neptune_logger.append_tags(hparams.tag)
-    
+
     datamodule = AutoEncoderDataModule(hparams)
     model = AutoEncoderModule(hparams)
-    
+
     checkpoint_callback = ModelCheckpoint(monitor="train/loss/total")
     trainer = pl.Trainer(
         gpus=1,
@@ -35,8 +37,7 @@ if __name__ == "__main__":
         gradient_clip_val=hparams.gradient_clip_val,
     )
     trainer.fit(model, datamodule=datamodule)
-    
+
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
     if hparams.checkpoint_path != "":
         trainer.save_checkpoint(hparams.checkpoint_path)
-    

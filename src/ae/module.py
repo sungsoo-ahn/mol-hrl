@@ -26,19 +26,19 @@ class AutoEncoderModule(pl.LightningModule):
 
         if hparams.decoder_type == "seq":
             self.decoder = SeqDecoder(hparams)
-        
+
         if hparams.ae_type == "vae":
             self.linear_mu = nn.Linear(hparams.code_dim, hparams.code_dim)
             self.linear_logvar = nn.Linear(hparams.code_dim, hparams.code_dim)
-        
+
         elif hparams.ae_type == "aae":
             self.discriminator = nn.Sequential(
-                #nn.Linear(hparams.code_dim, hparams.code_dim),
-                #nn.ReLU(),
+                # nn.Linear(hparams.code_dim, hparams.code_dim),
+                # nn.ReLU(),
                 nn.Linear(hparams.code_dim, 1),
                 nn.Sigmoid(),
             )
-        
+
     @staticmethod
     def add_args(parser):
         # Common
@@ -134,8 +134,12 @@ class AutoEncoderModule(pl.LightningModule):
 
     def compute_loss(self, decoder_out, encoder_out, batched_target_data, p, q, codes):
         statistics = OrderedDict()
-        statistics["loss/recon"] = self.decoder.compute_loss(decoder_out, batched_target_data)
-        statistics.update(self.decoder.compute_statistics(decoder_out, batched_target_data))
+        statistics["loss/recon"] = self.decoder.compute_loss(
+            decoder_out, batched_target_data
+        )
+        statistics.update(
+            self.decoder.compute_statistics(decoder_out, batched_target_data)
+        )
         loss = statistics["loss/recon"]
         if self.hparams.ae_type == "vae":
             vae_loss, vae_statistics = self.compute_vae_reg_loss(p, q, codes)
@@ -170,12 +174,19 @@ class AutoEncoderModule(pl.LightningModule):
         ) + F.binary_cross_entropy(discriminator_zn_out, ones)
         adv_g_loss = F.binary_cross_entropy(discriminator_out, ones)
         adv_d_acc = (
-            0.5 * (discriminator_out_detach < 0.5).float().mean() 
+            0.5 * (discriminator_out_detach < 0.5).float().mean()
             + 0.5 * (discriminator_zn_out > 0.5).float().mean()
         )
 
         loss = adv_d_loss + adv_g_loss
-        return loss, {"loss/adv_d": adv_d_loss, "loss/adv_g": adv_g_loss, "acc/adv_d": adv_d_acc}
+        return (
+            loss,
+            {
+                "loss/adv_d": adv_d_loss,
+                "loss/adv_g": adv_g_loss,
+                "acc/adv_d": adv_d_acc,
+            },
+        )
 
     def compute_cae_reg_loss(self, encoder_out):
         out0, out1 = encoder_out

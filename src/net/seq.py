@@ -3,15 +3,16 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
 from data.seq.util import (
-    START_ID, 
+    START_ID,
     END_ID,
-    PAD_ID, 
-    load_tokenizer, 
-    load_vocabulary, 
-    sequence_from_string, 
-    string_from_sequence
+    PAD_ID,
+    load_tokenizer,
+    load_vocabulary,
+    sequence_from_string,
+    string_from_sequence,
 )
 from data.seq.dataset import SequenceDataset
+
 
 def compute_sequence_accuracy(logits, batched_sequence_data):
     sequences, _ = batched_sequence_data
@@ -70,10 +71,11 @@ class SeqEncoder(nn.Module):
         out = self.decoder(out)
 
         return out
-    
+
     def encode_smiles(self, smiles_list):
         sequences = [
-            sequence_from_string(smiles, self.tokenizer, self.vocabulary) for smiles in smiles_list
+            sequence_from_string(smiles, self.tokenizer, self.vocabulary)
+            for smiles in smiles_list
         ]
         lengths = [torch.tensor(sequence.size(0)) for sequence in sequences]
         data_list = list(zip(sequences, lengths))
@@ -117,11 +119,11 @@ class SeqDecoder(nn.Module):
         out = self.decoder(out)
 
         return out
-    
+
     def compute_loss(self, logits, targets):
         loss = compute_sequence_cross_entropy(logits, targets)
         return loss
-    
+
     def compute_statistics(self, logits, targets):
         elemwise_acc, acc = compute_sequence_accuracy(logits, targets)
         statistics = {"elemwise_acc": elemwise_acc, "acc": acc}
@@ -164,8 +166,12 @@ class SeqDecoder(nn.Module):
         sequences = sequences.cpu()
         lengths = lengths.cpu()
         sequences = [sequence[:length] for sequence, length in zip(sequences, lengths)]
-        smiles_list = [string_from_sequence(sequence, self.tokenizer, self.vocabulary) for sequence in sequences]
+        smiles_list = [
+            string_from_sequence(sequence, self.tokenizer, self.vocabulary)
+            for sequence in sequences
+        ]
         return smiles_list
+
 
 """
 def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, batch_size):
