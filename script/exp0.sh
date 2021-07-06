@@ -3,9 +3,9 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="seq2seq_ae"
 
-python train_ae.py \
---ae_type ae \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag $TAG
+#python train_ae.py \
+#--ae_type ae \
+#--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag $TAG
 
 bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG seq
