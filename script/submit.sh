@@ -7,6 +7,7 @@
 #SBATCH -N 1
 #SBATCH -G 1
 #SBATCH --cpus-per-task=8
+#SBATCH --exclude=p1-r05-b.g42cloud.net
 
 srun \
   --container-image=sungsahn0215/mol-hrl:latest \
