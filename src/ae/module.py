@@ -26,11 +26,10 @@ class AutoEncoderModule(pl.LightningModule):
 
         if hparams.decoder_type == "seq":
             self.decoder = SeqDecoder(hparams)
-
+        
         if hparams.ae_type == "vae":
             self.linear_mu = nn.Linear(hparams.code_dim, hparams.code_dim)
             self.linear_logvar = nn.Linear(hparams.code_dim, hparams.code_dim)
-
         elif hparams.ae_type == "aae":
             self.discriminator = nn.Sequential(nn.Linear(hparams.code_dim, 1), nn.Sigmoid(),)
 

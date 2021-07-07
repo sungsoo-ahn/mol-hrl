@@ -16,7 +16,11 @@ class GraphDataset(torch.utils.data.Dataset):
         if self.mutate:
             smiles = mutate(smiles)
             
-        pyg_data = pyg_from_string(smiles)
+        try:
+            pyg_data = pyg_from_string(smiles)
+        except:
+            print(smiles)
+            assert False
 
         return pyg_data
 
