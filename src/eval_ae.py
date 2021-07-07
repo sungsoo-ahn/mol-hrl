@@ -1,5 +1,4 @@
 import argparse
-from evaluation.util import run_lso
 
 import pytorch_lightning as pl
 
@@ -8,8 +7,9 @@ import neptune.new as neptune
 from ae.module import AutoEncoderModule
 
 from evaluation.knn import run_knn
+from evaluation.median import run_median
 from evaluation.lso_linear import run_lso_linear
-from evaluation.lso_gp import run_lso_gp
+#from evaluation.lso_gp import run_lso_gp
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -28,6 +28,7 @@ if __name__ == "__main__":
     )
 
     run_knn(model, [1, 5, 10, 50], run)
+    run_median(model, run)
     for scoring_func_name in ["logp", "molwt", "tpsa"]:
         run_lso_linear(model, scoring_func_name, run)
-        run_lso_gp(model, scoring_func_name, run)
+        #run_lso_gp(model, scoring_func_name, run)

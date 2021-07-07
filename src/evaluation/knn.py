@@ -1,4 +1,3 @@
-import argparse
 from tqdm import tqdm
 
 from rdkit import Chem
@@ -11,11 +10,7 @@ from torch.utils.data.dataloader import DataLoader
 
 from data.graph.dataset import GraphDataset
 from data.seq.dataset import SequenceDataset
-from ae.module import AutoEncoderModule
 from data.smiles.util import load_smiles_list
-
-import neptune.new as neptune
-
 
 def compute_code_dists(model):
     if model.hparams.encoder_type == "seq":
