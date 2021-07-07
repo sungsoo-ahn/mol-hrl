@@ -16,7 +16,7 @@ DM_TYPE=$3
 
 for NAME in "logp" "qed" "molwt" "tpsa"
 do
-    python run_lso.py \
+    python eval_ae.py \
     --ae_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
     --lso_checkpoint_path "${CHECKPOINT_DIR}/${TAG}_lso.pth" \
     --scoring_func_name $NAME \

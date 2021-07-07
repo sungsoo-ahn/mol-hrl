@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from torch.utils.data.dataloader import DataLoader
 
 from ae.module import AutoEncoderModule
-from lso.regressor_module import LatentRegressorModule
+from evaluation.lso.regressor_module import LatentRegressorModule
 from data.smiles.util import load_smiles_list
 from data.score.factory import get_scoring_func
 
@@ -53,18 +53,16 @@ class LatentOptimizationModule(pl.LightningModule):
 
         self.ae.eval()
         encoder_out = self.ae.encoder.encode_smiles(smiles_list, self.device)
-        init_codes = self.ae.compute_codes(encoder_out)
+        _, _, init_codes = self.ae.compute_codes(encoder_out)
         self.codes = torch.nn.Parameter(init_codes)
-
-        #self.training_epoch_end(None)
 
     def training_step(self, batched_data, batch_idx):
         self.ae.eval()
         self.regressor.eval()
 
         #_, _, codes = self.ae.compute_codes(self.codes)
-        if self.ae.ae_type in ["sae", "cae"]:
-            self.codes.data.copy(F.normalize(self.codes, p=2, dim=1).data)
+        if self.ae.hparams.ae_type in ["sae", "cae"]:
+            self.codes.data = F.normalize(self.codes, p=2, dim=1).data
 
         pred_scores = self.regressor.predict_scores(self.codes, self.hparams.scoring_func_name)
         loss = -pred_scores.sum()
