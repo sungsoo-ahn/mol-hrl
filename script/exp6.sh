@@ -11,4 +11,4 @@ python train_ae.py \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG graph
+python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth"

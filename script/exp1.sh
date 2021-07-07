@@ -9,4 +9,4 @@ python train_ae.py \
 --mask_rate 0.2 \
 --tag $TAG
 
-bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG seq
+python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth"

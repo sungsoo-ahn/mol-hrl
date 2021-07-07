@@ -8,4 +8,4 @@ python train_ae.py \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-bash ../script/evaluate.sh $CHECKPOINT_DIR $TAG seq
+python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth"
