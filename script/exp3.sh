@@ -9,4 +9,4 @@ python train_ae.py \
 --use_random_smiles \
 --tag $TAG
 
-python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth"
+python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
