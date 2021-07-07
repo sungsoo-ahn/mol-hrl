@@ -52,7 +52,8 @@ class LatentOptimizationModule(pl.LightningModule):
         smiles_list = smiles_list[: self.hparams.num_opt_codes]
 
         self.ae.eval()
-        init_codes = self.ae.encoder.encode_smiles(smiles_list, self.device)
+        encoder_out = self.ae.encoder.encode_smiles(smiles_list, self.device)
+        init_codes = self.ae.compute_codes(encoder_out)
         self.codes = torch.nn.Parameter(init_codes)
 
         #self.training_epoch_end(None)
@@ -61,8 +62,11 @@ class LatentOptimizationModule(pl.LightningModule):
         self.ae.eval()
         self.regressor.eval()
 
-        _, _, codes = self.ae.compute_codes(self.codes)
-        pred_scores = self.regressor.predict_scores(codes, self.hparams.scoring_func_name)
+        #_, _, codes = self.ae.compute_codes(self.codes)
+        if self.ae.ae_type in ["sae", "cae"]:
+            self.codes.data.copy(F.normalize(self.codes, p=2, dim=1).data)
+
+        pred_scores = self.regressor.predict_scores(self.codes, self.hparams.scoring_func_name)
         loss = -pred_scores.sum()
         self.log(
             f"lso/{self.hparams.scoring_func_name}/loss/total", loss, on_step=True, logger=True,

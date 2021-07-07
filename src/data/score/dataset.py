@@ -18,6 +18,9 @@ def load_score_list(root_dir, score_func_name, split):
 
     return score_list
 
+def load_scores(root_dir, score_func_name, split):
+    score_list = load_score_list(root_dir, score_func_name, split)
+    return torch.FloatTensor(score_list).unsqueeze(1)
 
 class ScoreDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, score_func_names, split):

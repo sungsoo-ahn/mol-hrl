@@ -113,10 +113,15 @@ class AutoEncoderModule(pl.LightningModule):
             codes = q.rsample()
         elif self.hparams.ae_type == "cae":
             p, q = None, None
-            codes = F.normalize(encoder_out[0], p=2, dim=1)
+            if isinstance(encoder_out, list):
+                encoder_out = encoder_out[0]
+
+            codes = F.normalize(encoder_out, p=2, dim=1)
+        
         elif self.hparams.ae_type == "sae":
             p, q = None, None
             codes = F.normalize(encoder_out, p=2, dim=1)
+        
         else:
             p, q = None, None
             codes = encoder_out
@@ -128,9 +133,9 @@ class AutoEncoderModule(pl.LightningModule):
 
     def compute_loss(self, decoder_out, encoder_out, batched_target_data, p, q, codes):
         statistics = OrderedDict()
-        statistics["loss/recon"] = self.decoder.compute_loss(decoder_out, batched_target_data)
+        loss_recon = statistics["loss/recon"] = self.decoder.compute_loss(decoder_out, batched_target_data)
         statistics.update(self.decoder.compute_statistics(decoder_out, batched_target_data))
-        loss = statistics["loss/recon"]
+        loss = loss_recon.clone()
         if self.hparams.ae_type == "vae":
             vae_loss, vae_statistics = self.compute_vae_reg_loss(p, q, codes)
             loss += self.hparams.vae_coef * vae_loss

@@ -14,13 +14,13 @@ class GraphDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
         if self.mutate:
-            smiles = mutate(smiles)
-            
-        try:
+            mutated_smiles = mutate(smiles)
+            try:
+                pyg_data = pyg_from_string(mutated_smiles)
+            except:
+                pyg_data = pyg_from_string(smiles)
+        else:
             pyg_data = pyg_from_string(smiles)
-        except:
-            print(smiles)
-            assert False
 
         return pyg_data
 

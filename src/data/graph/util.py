@@ -55,7 +55,7 @@ def get_bond_feature(bond_type):
 
 
 def pyg_from_string(string):
-    mol = Chem.MolFromSmiles(string)
+    mol = Chem.MolFromSmiles(string, sanitize=True)
 
     # atoms
     num_atom_features = 2  # atom type,  chirality tag
