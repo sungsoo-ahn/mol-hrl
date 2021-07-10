@@ -1,12 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="graph2seq_ae"
+TAG="sae_vmf1"
 
 python train_ae.py \
---ae_type ae \
---encoder_type graph \
---dm_type graph2seq \
+--ae_type sae \
+--sae_vmf_scale 5.0 \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

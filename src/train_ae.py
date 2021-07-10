@@ -5,12 +5,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
 from ae.module import AutoEncoderModule
-from ae.datamodule import AutoEncoderDataModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     AutoEncoderModule.add_args(parser)
-    AutoEncoderDataModule.add_args(parser)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--gradient_clip_val", type=float, default=0.0)
     parser.add_argument("--checkpoint_path", type=str, default="")
@@ -23,7 +21,6 @@ if __name__ == "__main__":
     if len(hparams.tag) > 0:
         neptune_logger.append_tags(hparams.tag)
 
-    datamodule = AutoEncoderDataModule(hparams)
     model = AutoEncoderModule(hparams)
 
     checkpoint_callback = ModelCheckpoint(monitor="train/loss/total")
@@ -35,7 +32,7 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback],
         gradient_clip_val=hparams.gradient_clip_val,
     )
-    trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model)
 
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
     if hparams.checkpoint_path != "":

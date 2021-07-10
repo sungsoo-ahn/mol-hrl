@@ -20,7 +20,7 @@ class LinearRegressionModel(torch.nn.Module):
     def neg_score(self, x):
         return -self.linear(x).squeeze(1)
 
-def train_linear(regression_model, train_codes, train_scores, val_codes, val_scores, run):
+def train_linear(regression_model, train_codes, train_scores, val_codes, val_scores, score_func_name, run):
     regression_model = regression_model.cuda()
     optimizer = torch.optim.Adam(regression_model.parameters(), lr=1e-3)
     
@@ -42,7 +42,7 @@ def train_linear(regression_model, train_codes, train_scores, val_codes, val_sco
             loss.backward()
             optimizer.step()
             
-            run["lso_linear/train/loss/mse"].log(loss.item())
+            run[f"lso_linear/{score_func_name}/train/loss/mse"].log(loss.item())
 
         regression_model.eval()
         avg_loss = 0.0
@@ -55,7 +55,7 @@ def train_linear(regression_model, train_codes, train_scores, val_codes, val_sco
             loss = F.mse_loss(out, scores).mean()
             avg_loss += loss / len(val_dataloader)
         
-        run["lso_linear/val/loss/mse"].log(avg_loss)
+        run[f"lso_linear/{score_func_name}/val/loss/mse"].log(avg_loss)
 
 def run_lso_linear(model, score_func_name, run):
     model.eval()
@@ -67,5 +67,5 @@ def run_lso_linear(model, score_func_name, run):
     val_scores = (val_scores - train_scores.mean()) / train_scores.std()
     
     regression_model = LinearRegressionModel(train_codes.size(1))
-    train_linear(regression_model, train_codes, train_scores, val_codes, val_scores, run)
+    train_linear(regression_model, train_codes, train_scores, val_codes, val_scores, score_func_name, run)
     run_lso(model, regression_model, train_codes, train_scores, score_func_name, run)

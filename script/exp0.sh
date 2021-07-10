@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="seq2seq_ae"
+TAG="ae"
 
 python train_ae.py \
 --ae_type ae \

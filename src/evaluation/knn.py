@@ -37,9 +37,8 @@ def compute_code_dists(model):
             )
 
         with torch.no_grad():
-            encoder_out = model.compute_encoder_out(batched_input_data)
-            codes = model.compute_codes(encoder_out)[-1]
-
+            codes = model.ae.encode(batched_input_data)
+            
         codes_list.append(codes)
 
     codes = torch.cat(codes_list, dim=0)

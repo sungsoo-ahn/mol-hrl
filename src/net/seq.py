@@ -120,14 +120,12 @@ class SeqDecoder(nn.Module):
 
         return out
 
-    def compute_loss(self, logits, targets):
+    def compute_recon_loss(self, logits, targets):
         loss = compute_sequence_cross_entropy(logits, targets)
-        return loss
-
-    def compute_statistics(self, logits, targets):
         elemwise_acc, acc = compute_sequence_accuracy(logits, targets)
-        statistics = {"elemwise_acc": elemwise_acc, "acc": acc}
-        return statistics
+        statistics = {"loss/recon": loss, "acc/elem": elemwise_acc, "acc/seq": acc}
+        
+        return loss, statistics
 
     def decode(self, codes, deterministic):
         sample_size = codes.size(0)

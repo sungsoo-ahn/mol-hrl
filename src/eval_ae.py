@@ -27,8 +27,8 @@ if __name__ == "__main__":
         tags=args.tag,
     )
 
-    run_knn(model, [1, 5, 10, 50], run)
-    run_median(model, run)
-    for scoring_func_name in ["logp", "molwt", "tpsa"]:
+    #run_knn(model, [1, 5, 10, 50], run)
+    #run_median(model, run)
+    for scoring_func_name in ["penalized_logp"]:
         run_lso_linear(model, scoring_func_name, run)
         #run_lso_gp(model, scoring_func_name, run)

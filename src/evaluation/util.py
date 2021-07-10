@@ -31,8 +31,7 @@ def extract_codes(model, split):
             batched_data = batched_data.cuda()
             
         with torch.no_grad():
-            encoder_out = model.compute_encoder_out(batched_data)
-            _, _, batched_codes = model.compute_codes(encoder_out)
+            batched_codes = model.ae.encode(batched_data)
             
         codes.append(batched_codes.detach().cpu())
     
@@ -59,7 +58,7 @@ def run_lso(model, regression_model, train_codes, train_scores, scoring_func_nam
 
         if (step + 1) % 10 == 0:
             with torch.no_grad():
-                smiles_list = model.decoder.decode_smiles(codes.cuda(), deterministic=True)
+                smiles_list = model.ae.decoder.decode_smiles(codes.cuda(), deterministic=True)
 
             scores = torch.FloatTensor(score_func(smiles_list))
             clean_scores = scores[scores > corrupt_score + 1e-3]
