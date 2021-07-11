@@ -60,7 +60,7 @@ def extract_codes(model, split):
     codes = torch.cat(codes, dim=0)
     return codes
 
-def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1024, steps=5000):
+def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1024, steps=1000):
     # Prepare scoring function
     _, score_func, corrupt_score = get_scoring_func(score_func_name)
     
@@ -90,7 +90,7 @@ def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1
     codes.requires_grad = True
 
     # Run gradopt
-    lr = 1e-3
+    lr = 1e-4
     for step in tqdm(range(steps)):
         loss = regression_model.neg_score(codes).sum()
         codes_grad = torch.autograd.grad(loss, codes, retain_graph=False, create_graph=False)[0]
