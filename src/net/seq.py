@@ -56,7 +56,11 @@ class SeqEncoder(nn.Module):
             num_layers=hparams.seq_encoder_num_layers,
             bidirectional=True,
         )
-        self.decoder = nn.Linear(2 * hparams.seq_encoder_hidden_dim, hparams.code_dim)
+        self.decoder = torch.nn.Sequential(
+            nn.Linear(2 * hparams.seq_encoder_hidden_dim, hparams.code_dim),
+            nn.BatchNorm1d(hparams.code_dim),
+        )
+
         self.vocabulary = load_vocabulary(hparams.data_dir)
         self.tokenizer = load_tokenizer(hparams.data_dir)
 
