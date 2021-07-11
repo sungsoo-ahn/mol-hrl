@@ -89,7 +89,7 @@ def run_gradopt(model, regression_model_name, score_func_name, run, k=1024, step
     topk_idxs = torch.topk(train_scores, k=k, largest=False)[1] # Start from lowest
     codes = torch.nn.Parameter(train_codes[topk_idxs].cuda())
     codes.requires_grad = True
-    optimizer = torch.optim.SGD([codes], lr=1e-2)
+    optimizer = torch.optim.SGD([codes], lr=1e-3)
     
     # Run gradopt
     for step in tqdm(range(steps)):
