@@ -31,6 +31,6 @@ if __name__ == "__main__":
     os.makedirs(log_dir, exist_ok=True)
     #run_knn(model, [1, 5, 10, 50], run)
     #run_median(model, run)
-    for scoring_func_name in ["penalized_logp"]:
+    for scoring_func_name in ["logp"]:
         run_gradopt(model, "linear", scoring_func_name, run, log_dir)
         #run_lso_gp(model, scoring_func_name, run)

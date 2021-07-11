@@ -13,7 +13,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 
-RUN_NAMES = ["MOLREP-63"]
+RUN_NAMES = [
+    "MOLREP-80", 
+    "MOLREP-81", 
+    "MOLREP-82", 
+    "MOLREP-83", 
+    "MOLREP-84", 
+    "MOLREP-85", 
+    "MOLREP-86", 
+    "MOLREP-87"
+    ]
 SCORING_FUNC_NAME = "penalized_logp"
 MARKERS = ['o', '.', ',', 'x', '+', 'v', '^', '<', '>', 's', 'd']
 
@@ -48,7 +57,7 @@ if __name__ == "__main__":
     _, scoring_func, corrupt_score = get_scoring_func(SCORING_FUNC_NAME)
     for run_name in RUN_NAMES:
         scores_log = []
-        for smiles_list in run_results[run_name]["smiles_log"]:
+        for smiles_list in run_results[run_name]["smiles_log"][:50]:
             score_list = scoring_func(smiles_list)
             for idx, score in enumerate(score_list):
                 if score < corrupt_score + 1e-3:
@@ -104,7 +113,7 @@ if __name__ == "__main__":
 
         #plt.plot(np.array(score_list), np.array(sa_list), MARKERS[-1], label=run_name)
     
-        pareto_pts = is_pareto_efficient(np.array([score_list, sa_list]).T)
+        pareto_pts = is_pareto_efficient(np.array([score_list, qed_list]).T)
         plt.plot(pareto_pts[:, 0], pareto_pts[:, 1], marker, label=run_name)
     
     plt.legend(numpoints=1)
