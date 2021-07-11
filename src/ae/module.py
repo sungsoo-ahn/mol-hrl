@@ -57,6 +57,9 @@ class AutoEncoder(nn.Module):
         codes = self.encoder(batched_input_data)
         return codes
 
+    def project(self, encoder_out, batched_target_data=None):
+        return encoder_out
+
 class SphericalAutoEncoder(AutoEncoder):
     @staticmethod
     def add_args(parser):
