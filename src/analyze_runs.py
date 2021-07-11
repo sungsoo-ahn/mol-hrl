@@ -102,7 +102,7 @@ if __name__ == "__main__":
             sa_list.append(sa)
             qed_list.append(qed)
 
-        plt.plot(np.array(score_list), np.array(sa_list), MARKERS[-1], label=run_name)
+        #plt.plot(np.array(score_list), np.array(sa_list), MARKERS[-1], label=run_name)
     
         pareto_pts = is_pareto_efficient(np.array([score_list, sa_list]).T)
         plt.plot(pareto_pts[:, 0], pareto_pts[:, 1], marker, label=run_name)

@@ -60,7 +60,7 @@ def extract_codes(model, split):
     codes = torch.cat(codes, dim=0)
     return codes
 
-def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1024, steps=100):
+def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1024, steps=5000):
     # Prepare scoring function
     _, score_func, corrupt_score = get_scoring_func(score_func_name)
     
