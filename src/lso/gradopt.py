@@ -11,27 +11,31 @@ from data.score.factory import get_scoring_func
 from lso.nn import train_nn
 #from lso.gp import train_gp
 
-def extract_batched_codes(model, batched_data, attack_steps=0, attack_epsilon=1e-2):
+def extract_batched_codes(model, batched_data, attack_steps, attack_epsilon):
     statistics = dict()
     with torch.no_grad():
         batched_codes = model.ae.encode(batched_data)
     
     # Finetune codes
-    batched_codes.requires_grad = True
+    model.ae.decoder.train()
     for _ in range(attack_steps):
+        batched_codes = batched_codes.detach()
+        batched_codes.requires_grad = True
         out = model.ae.decoder(batched_data, batched_codes)
         loss, statistics = model.ae.decoder.compute_recon_loss(out, batched_data)
         attack_grad = torch.autograd.grad(
             loss, batched_codes, retain_graph=False, create_graph=False
             )[0]
         
-        batched_codes = batched_codes - attack_epsilon * attack_grad
+        batched_codes = batched_codes - attack_epsilon * attack_grad.sign()
         batched_codes = model.ae.project(batched_codes, batched_data)
-    
+        
+        print(loss)
+        
     return batched_codes, statistics
 
 
-def extract_codes(model, split):
+def extract_codes(model, split, attack_steps, attack_epsilon):
     hparams = model.hparams
     if hparams.encoder_type == "seq":
         input_dataset_cls = SequenceDataset
@@ -54,13 +58,22 @@ def extract_codes(model, split):
         elif hparams.encoder_type == "graph":
             batched_data = batched_data.cuda()
             
-        batched_codes, _ = extract_batched_codes(model, batched_data)
+        batched_codes, statistics = extract_batched_codes(model, batched_data, attack_steps, attack_epsilon)
         codes.append(batched_codes.detach().cpu())
     
     codes = torch.cat(codes, dim=0)
-    return codes
+    return codes, statistics
 
-def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1024, steps=5000):
+def run_gradopt(
+    model, 
+    regression_model_name, 
+    score_func_name, 
+    attack_steps, 
+    attack_epsilon, 
+    run, 
+    k=1024, 
+    steps=5000
+    ):
     # Prepare scoring function
     _, score_func, corrupt_score = get_scoring_func(score_func_name)
     
@@ -70,8 +83,10 @@ def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1
     
     # Extract codes
     model.eval()
-    train_codes = extract_codes(model, "train_labeled")
-    val_codes = extract_codes(model, "val")
+    train_codes, statistics = extract_codes(model, "train_labeled", attack_steps, attack_epsilon)
+    run["train/acc/code"] = statistics["acc/code"]
+    val_codes = extract_codes(model, "val", attack_steps, attack_epsilon)
+    run["val/acc/code"] = statistics["acc/code"]
     
     # Train regression model on the extracted codes
     if regression_model_name in ["linear", "mlp"]:

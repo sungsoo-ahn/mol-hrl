@@ -16,6 +16,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint_path")
     parser.add_argument("--tag", type=str, default="notag")
+    parser.add_argument("--gradopt_attack_steps", type=int, default=0)
+    parser.add_argument("--gradopt_attack_epsilon", type=int, default=1e-2)
     args = parser.parse_args()
 
     model = AutoEncoderModule.load_from_checkpoint(args.checkpoint_path)
@@ -31,6 +33,13 @@ if __name__ == "__main__":
     os.makedirs(log_dir, exist_ok=True)
     #run_knn(model, [1, 5, 10, 50], run)
     #run_median(model, run)
-    for scoring_func_name in ["logp"]:
-        run_gradopt(model, "linear", scoring_func_name, run, log_dir)
+    for scoring_func_name in ["penalized_logp"]:
+        run_gradopt(
+            model, 
+            "linear", 
+            scoring_func_name, 
+            args.gradopt_attack_steps, 
+            args.gradopt_attack_epsilon, 
+            run
+            )
         #run_lso_gp(model, scoring_func_name, run)

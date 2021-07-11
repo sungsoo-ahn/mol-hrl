@@ -170,7 +170,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--lr", type=float, default=1e-3)
 
         # Common - data
-        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
+        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
         parser.add_argument("--batch_size", type=int, default=128)
         parser.add_argument("--num_workers", type=int, default=8)
 

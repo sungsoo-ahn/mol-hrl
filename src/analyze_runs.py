@@ -14,17 +14,17 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 
 RUN_NAMES = [
-    "MOLREP-80", 
-    "MOLREP-81", 
-    "MOLREP-82", 
-    "MOLREP-83", 
-    "MOLREP-84", 
-    "MOLREP-85", 
-    "MOLREP-86", 
-    "MOLREP-87"
+    "MOLREP-105", 
+    "MOLREP-106", 
+    "MOLREP-107", 
+    "MOLREP-108", 
+    "MOLREP-109", 
+    "MOLREP-110", 
+    "MOLREP-111", 
+    "MOLREP-112"
     ]
-SCORING_FUNC_NAME = "penalized_logp"
-MARKERS = ['o', '.', ',', 'x', '+', 'v', '^', '<', '>', 's', 'd']
+SCORING_FUNC_NAME = "logp"
+MARKERS = ['o', '.', 'x', '+', 'v', '^', '<', '>', 's', 'd']
 
 def is_pareto_efficient(scores):
     costs = -scores
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     _, scoring_func, corrupt_score = get_scoring_func(SCORING_FUNC_NAME)
     for run_name in RUN_NAMES:
         scores_log = []
-        for smiles_list in run_results[run_name]["smiles_log"][:50]:
+        for smiles_list in run_results[run_name]["smiles_log"]:
             score_list = scoring_func(smiles_list)
             for idx, score in enumerate(score_list):
                 if score < corrupt_score + 1e-3:
