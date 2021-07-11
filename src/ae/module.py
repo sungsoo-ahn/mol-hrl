@@ -85,7 +85,7 @@ class SphericalAutoEncoder(AutoEncoder):
 
         return codes, loss, statistics
 
-    def project(self, encoder_out, batched_target_data):
+    def project(self, encoder_out, batched_target_data=None):
         if self.hparams.sae_vmf_scale > 0.0:
             loc = F.normalize(encoder_out, p=2, dim=1)
             scale = torch.full(

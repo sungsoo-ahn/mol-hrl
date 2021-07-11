@@ -8,7 +8,7 @@ from ae.module import AutoEncoderModule
 
 from evaluation.knn import run_knn
 from evaluation.median import run_median
-from evaluation.lso_linear import run_lso_linear
+from lso.gradopt import run_gradopt
 #from evaluation.lso_gp import run_lso_gp
 
 if __name__ == "__main__":
@@ -30,5 +30,5 @@ if __name__ == "__main__":
     #run_knn(model, [1, 5, 10, 50], run)
     #run_median(model, run)
     for scoring_func_name in ["penalized_logp"]:
-        run_lso_linear(model, scoring_func_name, run)
+        run_gradopt(model, "linear", scoring_func_name, run)
         #run_lso_gp(model, scoring_func_name, run)

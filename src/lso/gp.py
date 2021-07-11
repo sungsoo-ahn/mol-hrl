@@ -9,7 +9,6 @@ from gpytorch.kernels import ScaleKernel, RBFKernel, InducingPointKernel
 from gpytorch.distributions import MultivariateNormal
 
 from data.score.dataset import load_scores
-from evaluation.util import extract_codes, run_lso
 
 class GPRegressionModel(gpytorch.models.ExactGP):
     tag="gp"
