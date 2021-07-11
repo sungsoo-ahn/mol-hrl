@@ -84,9 +84,9 @@ def run_gradopt(
     # Extract codes
     model.eval()
     train_codes, statistics = extract_codes(model, "train_labeled", attack_steps, attack_epsilon)
-    run["train/acc/code"] = statistics["acc/code"]
+    #run["train/acc/code"] = statistics["acc/code"]
     val_codes = extract_codes(model, "val", attack_steps, attack_epsilon)
-    run["val/acc/code"] = statistics["acc/code"]
+    #run["val/acc/code"] = statistics["acc/code"]
     
     # Train regression model on the extracted codes
     if regression_model_name in ["linear", "mlp"]:
