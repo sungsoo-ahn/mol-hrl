@@ -1,6 +1,7 @@
 from tqdm import tqdm
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset
 from torch.utils.data.dataloader import DataLoader
@@ -8,11 +9,16 @@ from torch.utils.data.dataloader import DataLoader
 from data.score.dataset import load_scores
 from evaluation.util import extract_codes, run_lso
 
-class LinearRegressionModel(torch.nn.Module):
+class LinearRegressionModel(nn.Module):
     tag="linear"
     def __init__(self, code_dim):
         super(LinearRegressionModel, self).__init__()
-        self.linear = torch.nn.Linear(code_dim, 1)
+        self.linear = nn.Sequential(
+            nn.Linear(code_dim, code_dim),
+            nn.ReLU(),
+            nn.Linear(code_dim, 1)
+        )
+        #torch.nn.Linear(code_dim, 1)
 
     def forward(self, x):
         return self.linear(x).squeeze(1)
