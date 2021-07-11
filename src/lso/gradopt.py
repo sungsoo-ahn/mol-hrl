@@ -60,7 +60,7 @@ def extract_codes(model, split):
     codes = torch.cat(codes, dim=0)
     return codes
 
-def run_gradopt(model, regression_model_name, score_func_name, run, k=1024, steps=1000):
+def run_gradopt(model, regression_model_name, score_func_name, run, log_dir, k=1024, steps=100):
     # Prepare scoring function
     _, score_func, corrupt_score = get_scoring_func(score_func_name)
     
@@ -85,27 +85,24 @@ def run_gradopt(model, regression_model_name, score_func_name, run, k=1024, step
     
     # Prepare code optimization
     train_scores = train_score_dataset.tsrs.squeeze(1)
-    print(train_scores.size())
     topk_idxs = torch.topk(train_scores, k=k, largest=False)[1] # Start from lowest
-    codes = torch.nn.Parameter(train_codes[topk_idxs].cuda())
+    codes = train_codes[topk_idxs].cuda()
     codes.requires_grad = True
-    optimizer = torch.optim.SGD([codes], lr=1e-3)
-    
+
     # Run gradopt
+    lr = 1e-3
     for step in tqdm(range(steps)):
         loss = regression_model.neg_score(codes).sum()
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        codes_grad = torch.autograd.grad(loss, codes, retain_graph=False, create_graph=False)[0]
         
         # Project to e.g., hypersphere
+        codes.data = codes.data - lr * codes_grad.sign()
         codes.data = model.ae.project(codes).data
         
         if (step + 1) % 10 == 0:
             with torch.no_grad():
                 smiles_list = model.ae.decoder.decode_smiles(codes.cuda(), deterministic=True)
-
+            
             scores = torch.FloatTensor(score_func(smiles_list))
             clean_scores = scores[scores > corrupt_score + 1e-3]
             clean_ratio = clean_scores.size(0) / scores.size(0)
@@ -122,3 +119,5 @@ def run_gradopt(model, regression_model_name, score_func_name, run, k=1024, step
 
             for key, val in statistics.items():
                 run[f"lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
+
+            run["smiles"].log(",".join(smiles_list))

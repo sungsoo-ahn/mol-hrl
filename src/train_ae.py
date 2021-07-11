@@ -12,14 +12,13 @@ if __name__ == "__main__":
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--gradient_clip_val", type=float, default=0.0)
     parser.add_argument("--checkpoint_path", type=str, default="")
-    parser.add_argument("--tag", nargs="+", type=str, default=[])
+    parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
         project_name="sungsahn0215/molrep", experiment_name="train_ae", params=vars(hparams),
     )
-    if len(hparams.tag) > 0:
-        neptune_logger.append_tags(hparams.tag)
+    neptune_logger.append_tags([hparams.tag])
 
     model = AutoEncoderModule(hparams)
 
