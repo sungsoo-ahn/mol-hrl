@@ -9,7 +9,7 @@ from data.score.dataset import ScoreDataset
 from data.score.factory import get_scoring_func
 
 from lso.nn import train_nn
-from lso.gp import train_gp
+#from lso.gp import train_gp
 
 def extract_batched_codes(model, batched_data, attack_steps=0, attack_epsilon=1e-2):
     statistics = dict()
