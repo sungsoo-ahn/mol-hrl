@@ -1,11 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="sae_uniform1"
+TAG="sae_attack1"
 
 python train_ae.py \
 --ae_type sae \
---sae_uniform_loss_coef 1e-2 \
+--sae_attack_steps 3 \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

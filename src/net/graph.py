@@ -81,6 +81,9 @@ class GraphEncoder(torch.nn.Module):
             torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
         )
 
+        self.cond_embedding = torch.nn.Embedding(5, hparams.code_dim)
+        
+
     def forward(self, batched_data):
         x, edge_index, edge_attr = (
             batched_data.x,
@@ -99,7 +102,30 @@ class GraphEncoder(torch.nn.Module):
         out = self.projector(h)
         out = global_mean_pool(out, batched_data.batch)
         return out
+    
+    def forward_cond(self, batched_data, cond):
+        x, edge_index, edge_attr = (
+            batched_data.x,
+            batched_data.edge_index,
+            batched_data.edge_attr,
+        )
 
+        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
+
+        for layer in range(self.num_layers):
+            h = self.gnns[layer](h, edge_index, edge_attr)
+            h = self.batch_norms[layer](h)
+            if layer < self.num_layers - 1:
+                h = F.relu(h)
+
+        out = self.projector(h)
+        out = global_mean_pool(out, batched_data.batch)
+    
+        out0 = self.projector(h + self.cond_embedding(cond))
+        out0 = global_mean_pool(out0, batched_data.batch)
+        
+        return out, out0
+    
     def encode_smiles(self, smiles_list, device):
         data_list = [pyg_from_string(smiles) for smiles in smiles_list]
         batched_sequence_data = GraphDataset.collate_fn(data_list)

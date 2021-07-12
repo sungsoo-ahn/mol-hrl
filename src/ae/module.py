@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch_geometric.nn import global_mean_pool
 import pytorch_lightning as pl
 
 from hyperspherical_vae.distributions.von_mises_fisher import VonMisesFisher
@@ -12,7 +13,7 @@ from net.seq import SeqEncoder, SeqDecoder
 from net.graph import GraphEncoder
 from data.util import ZipDataset
 from data.seq.dataset import SequenceDataset
-from data.graph.dataset import GraphDataset
+from data.graph.dataset import GraphDataset, RelationalGraphDataset
 
 class AutoEncoder(nn.Module):
     def __init__(self, hparams):
@@ -63,7 +64,6 @@ class AutoEncoder(nn.Module):
 class SphericalAutoEncoder(AutoEncoder):
     @staticmethod
     def add_args(parser):
-        parser.add_argument("--sae_vmf_scale", type=float, default=0.0)
         parser.add_argument("--sae_norm_loss_coef", type=float, default=0.01)
         parser.add_argument("--sae_uniform_loss_coef", type=float, default=0.0)
         parser.add_argument("--sae_attack_steps", type=int, default=0)
@@ -89,17 +89,13 @@ class SphericalAutoEncoder(AutoEncoder):
         return codes, loss, statistics
 
     def project(self, encoder_out, batched_target_data=None):
-        if self.hparams.sae_vmf_scale > 0.0:
-            loc = F.normalize(encoder_out, p=2, dim=1)
-            scale = torch.full(
-                (encoder_out.size(0), 1), self.hparams.sae_vmf_scale, device=encoder_out.device
-                )
-            m = VonMisesFisher(loc, scale)
-            codes = m.rsample()
+        codes = F.normalize(encoder_out, p=2, dim=1)
+        
+        if batched_target_data is not None:
+            with torch.set_grad_enabled(True):
+                if not self.training:
+                    self.decoder.train()
 
-        elif self.hparams.sae_attack_steps > 0:
-            codes = F.normalize(encoder_out, p=2, dim=1)
-            if self.training:
                 attack_codes = codes.clone()
                 for _ in range(self.hparams.sae_attack_steps):
                     attack_codes = attack_codes.detach()
@@ -112,14 +108,14 @@ class SphericalAutoEncoder(AutoEncoder):
                         attack_loss, attack_codes, retain_graph=False, create_graph=False
                         )[0]
                     attack_codes = (
-                        attack_codes + self.hparams.sae_attack_epsilon * codes_grad.sign()
+                        attack_codes - self.hparams.sae_attack_epsilon * codes_grad.sign()
                     )
                     attack_codes = F.normalize(attack_codes, p=2, dim=-1)
 
-                codes = codes + (attack_codes - codes.detach())
+                if not self.training:
+                    self.decoder.eval()
 
-        else:
-            codes = F.normalize(encoder_out, p=2, dim=1)
+                codes = codes + (attack_codes - codes.detach())
 
         return codes
 
@@ -129,6 +125,47 @@ class SphericalAutoEncoder(AutoEncoder):
         
         return codes
 
+class RelationalAutoEncoder(AutoEncoder):
+    def __init__(self, hparams):
+        super(AutoEncoder, self).__init__()
+        self.hparams = hparams
+        if hparams.encoder_type == "seq":
+            self.encoder = SeqEncoder(hparams)
+        elif hparams.encoder_type == "graph":
+            self.encoder = GraphEncoder(hparams)
+
+        if hparams.decoder_type == "seq":
+            self.decoder = SeqDecoder(hparams)
+
+        self.projector = nn.Linear(hparams.code_dim, hparams.code_dim)
+        
+    def update_encoder_loss(self, batched_data, loss, statistics):
+        batched_input_data, _ = batched_data
+        batched_input_data0, batched_input_data1, action_feats = batched_input_data 
+        
+        codes, codes0 = self.encoder.forward_cond(batched_input_data0, action_feats)
+        codes1 = self.encoder(batched_input_data1)
+
+        codes = F.normalize(codes)
+
+        out0 = F.normalize(codes0, p=2, dim=1)
+        out1 = F.normalize(codes1, p=2, dim=1)
+        logits = out0 @ out1.T
+        labels = torch.arange(out0.size(0), device = logits.device)
+        relational_loss = F.cross_entropy(logits, labels)
+
+        loss += relational_loss
+        statistics["loss/relational"] = relational_loss
+
+        return codes, loss, statistics
+        
+    def encode(self, batched_input_data):
+        out = self.encoder(batched_input_data)
+        codes = F.normalize(out, p=2, dim=-1)
+        return codes
+
+    def project(self, encoder_out, batched_target_data=None):
+        return F.normalize(encoder_out, p=2 ,dim=-1)
 
 class AutoEncoderModule(pl.LightningModule):
     def __init__(self, hparams):
@@ -136,11 +173,14 @@ class AutoEncoderModule(pl.LightningModule):
         hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
     
-        if hparams.encoder_type == "seq":
+        if hparams.ae_type == "rae":
+            self.train_input_dataset = RelationalGraphDataset(hparams.data_dir, "train")
+            self.val_input_dataset = RelationalGraphDataset(hparams.data_dir, "val")
+            
+        elif hparams.encoder_type == "seq":
             self.train_input_dataset = SequenceDataset(hparams.data_dir, "train")
             self.val_input_dataset = SequenceDataset(hparams.data_dir, "val")
-            hparams.num_vocabs = len(self.train_input_dataset.vocabulary)
-
+            
         elif hparams.encoder_type == "graph":
             self.train_input_dataset = GraphDataset(hparams.data_dir, "train")
             self.val_input_dataset = GraphDataset(hparams.data_dir, "val")
@@ -157,8 +197,8 @@ class AutoEncoderModule(pl.LightningModule):
             self.ae = AutoEncoder(hparams)
         elif hparams.ae_type == "sae":
             self.ae = SphericalAutoEncoder(hparams)
-
-        
+        elif hparams.ae_type == "rae":
+            self.ae = RelationalAutoEncoder(hparams)
 
     @staticmethod
     def add_args(parser):
@@ -170,7 +210,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--lr", type=float, default=1e-3)
 
         # Common - data
-        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
+        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
         parser.add_argument("--batch_size", type=int, default=128)
         parser.add_argument("--num_workers", type=int, default=8)
 

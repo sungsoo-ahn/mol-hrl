@@ -1,11 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="sae_vmf0"
+TAG="sae_attack2"
 
 python train_ae.py \
 --ae_type sae \
---sae_vmf_scale 0.1 \
+--sae_attack_steps 5 \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

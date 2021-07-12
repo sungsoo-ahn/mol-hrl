@@ -9,7 +9,7 @@ from ae.module import AutoEncoderModule
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     AutoEncoderModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=50)
+    parser.add_argument("--max_epochs", type=int, default=200)
     parser.add_argument("--gradient_clip_val", type=float, default=0.0)
     parser.add_argument("--checkpoint_path", type=str, default="")
     parser.add_argument("--tag", type=str, default="notag")
