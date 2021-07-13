@@ -135,4 +135,5 @@ def run_gradopt(
             for key, val in statistics.items():
                 run[f"lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
 
-            run["smiles"].log(",".join(smiles_list))
+            for idx, smiles in enumerate(smiles_list):
+                run[f"smiles/{idx:04d}"].log(smiles)

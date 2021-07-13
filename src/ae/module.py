@@ -146,6 +146,40 @@ class RelationalAutoEncoder(AutoEncoder):
         codes, codes0 = self.encoder.forward_cond(batched_input_data0, action_feats)
         codes1 = self.encoder(batched_input_data1)
 
+        out0 = F.normalize(self.projector(codes0), p=2, dim=1)
+        out1 = F.normalize(self.projector(codes1), p=2, dim=1)
+        logits = out0 @ out1.T
+        labels = torch.arange(out0.size(0), device = logits.device)
+        relational_loss = F.cross_entropy(logits, labels)
+
+        loss += relational_loss
+        statistics["loss/relational"] = relational_loss
+
+        return codes, loss, statistics
+        
+    def encode(self, batched_input_data):
+        codes = self.encoder(batched_input_data)
+        return codes
+
+class SphericalRelationalAutoEncoder(AutoEncoder):
+    def __init__(self, hparams):
+        super(AutoEncoder, self).__init__()
+        self.hparams = hparams
+        if hparams.encoder_type == "seq":
+            self.encoder = SeqEncoder(hparams)
+        elif hparams.encoder_type == "graph":
+            self.encoder = GraphEncoder(hparams)
+
+        if hparams.decoder_type == "seq":
+            self.decoder = SeqDecoder(hparams)
+
+    def update_encoder_loss(self, batched_data, loss, statistics):
+        batched_input_data, _ = batched_data
+        batched_input_data0, batched_input_data1, action_feats = batched_input_data 
+        
+        codes, codes0 = self.encoder.forward_cond(batched_input_data0, action_feats)
+        codes1 = self.encoder(batched_input_data1)
+
         codes = F.normalize(codes)
 
         out0 = F.normalize(codes0, p=2, dim=1)
@@ -173,7 +207,7 @@ class AutoEncoderModule(pl.LightningModule):
         hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
     
-        if hparams.ae_type == "rae":
+        if hparams.ae_type in ["srae", "rae"]:
             self.train_input_dataset = RelationalGraphDataset(hparams.data_dir, "train")
             self.val_input_dataset = RelationalGraphDataset(hparams.data_dir, "train_labeled")
             
@@ -199,6 +233,8 @@ class AutoEncoderModule(pl.LightningModule):
             self.ae = SphericalAutoEncoder(hparams)
         elif hparams.ae_type == "rae":
             self.ae = RelationalAutoEncoder(hparams)
+        elif hparams.ae_type == "srae":
+            self.ae = SphericalRelationalAutoEncoder(hparams)
 
     @staticmethod
     def add_args(parser):
@@ -206,7 +242,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--ae_type", type=str, default="ae")
         parser.add_argument("--encoder_type", type=str, default="seq")
         parser.add_argument("--decoder_type", type=str, default="seq")
-        parser.add_argument("--code_dim", type=int, default=256)
+        parser.add_argument("--code_dim", type=int, default=1024)
         parser.add_argument("--lr", type=float, default=1e-3)
 
         # Common - data
@@ -215,7 +251,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--num_workers", type=int, default=8)
 
         # GraphEncoder specific
-        parser.add_argument("--graph_encoder_hidden_dim", type=int, default=256)
+        parser.add_argument("--graph_encoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--graph_encoder_num_layers", type=int, default=5)
 
         # SeqEncoder specific
@@ -224,7 +260,7 @@ class AutoEncoderModule(pl.LightningModule):
 
         # SecDecoder specific
         parser.add_argument("--seq_decoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--seq_decoder_num_layers", type=int, default=3)
+        parser.add_argument("--seq_decoder_num_layers", type=int, default=2)
         parser.add_argument("--seq_decoder_dropout", type=float, default=0.0)
         parser.add_argument("--seq_decoder_max_length", type=int, default=81)
 

@@ -1,12 +1,10 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="sae2"
+TAG="rae"
 
 python train_ae.py \
---ae_type sae \
---seq_decoder_num_layers 2 \
---seq_decoder_dropout 0.0 \
+--ae_type rae \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

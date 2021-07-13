@@ -14,14 +14,8 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 
 RUN_NAMES = [
-    "MOLREP-105", 
-    "MOLREP-106", 
-    "MOLREP-107", 
-    "MOLREP-108", 
-    "MOLREP-109", 
-    "MOLREP-110", 
-    "MOLREP-111", 
-    "MOLREP-112"
+    "MOLREP-170", 
+    "MOLREP-171",
     ]
 SCORING_FUNC_NAME = "logp"
 MARKERS = ['o', '.', 'x', '+', 'v', '^', '<', '>', 's', 'd']
@@ -58,6 +52,7 @@ if __name__ == "__main__":
     for run_name in RUN_NAMES:
         scores_log = []
         for smiles_list in run_results[run_name]["smiles_log"]:
+            print(len(smiles_list))
             score_list = scoring_func(smiles_list)
             for idx, score in enumerate(score_list):
                 if score < corrupt_score + 1e-3:
@@ -81,7 +76,7 @@ if __name__ == "__main__":
                     sa_list.append(None)
                     qed_list.append(None)
                 else:
-                    sa_list.append(sa_scoring_func(smiles))
+                    sa_list.append(0.0)
                     qed_list.append(qed_scoring_func(smiles))
 
             sa_log.append(sa_list)
@@ -111,10 +106,10 @@ if __name__ == "__main__":
             sa_list.append(sa)
             qed_list.append(qed)
 
-        #plt.plot(np.array(score_list), np.array(sa_list), MARKERS[-1], label=run_name)
-    
-        pareto_pts = is_pareto_efficient(np.array([score_list, qed_list]).T)
-        plt.plot(pareto_pts[:, 0], pareto_pts[:, 1], marker, label=run_name)
+        plt.plot(np.array(score_list), np.array(qed_list), MARKERS[-1], label=run_name)
+
+        #pareto_pts = is_pareto_efficient(np.array([score_list, qed_list]).T)
+        #plt.plot(pareto_pts[:, 0], pareto_pts[:, 1], marker, label=run_name)
     
     plt.legend(numpoints=1)
     plt.savefig("./tmp.png")
