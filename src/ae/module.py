@@ -260,7 +260,7 @@ class AutoEncoderModule(pl.LightningModule):
 
         # SecDecoder specific
         parser.add_argument("--seq_decoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--seq_decoder_num_layers", type=int, default=2)
+        parser.add_argument("--seq_decoder_num_layers", type=int, default=3)
         parser.add_argument("--seq_decoder_dropout", type=float, default=0.0)
         parser.add_argument("--seq_decoder_max_length", type=int, default=81)
 
