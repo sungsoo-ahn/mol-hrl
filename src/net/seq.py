@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.functional import dropout
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
 from data.seq.util import (
@@ -94,6 +95,7 @@ class SeqDecoder(nn.Module):
             hparams.seq_decoder_hidden_dim,
             batch_first=True,
             num_layers=hparams.seq_decoder_num_layers,
+            dropout=hparams.seq_decoder_dropout,
         )
         self.decoder = nn.Linear(hparams.seq_decoder_hidden_dim, hparams.num_vocabs)
         self.max_length = hparams.seq_decoder_max_length

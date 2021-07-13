@@ -67,7 +67,7 @@ class SphericalAutoEncoder(AutoEncoder):
         parser.add_argument("--sae_norm_loss_coef", type=float, default=0.01)
         parser.add_argument("--sae_uniform_loss_coef", type=float, default=0.0)
         parser.add_argument("--sae_attack_steps", type=int, default=0)
-        parser.add_argument("--sae_attack_epsilon", type=float, default=1e-2)
+        parser.add_argument("--sae_attack_epsilon", type=float, default=1e-1)
         return parser
 
     def update_encoder_loss(self, batched_data, loss, statistics):
@@ -108,10 +108,10 @@ class SphericalAutoEncoder(AutoEncoder):
                         attack_loss, attack_codes, retain_graph=False, create_graph=False
                         )[0]
                     attack_codes = (
-                        attack_codes - self.hparams.sae_attack_epsilon * codes_grad.sign()
+                        attack_codes - self.hparams.sae_attack_epsilon * codes_grad
                     )
                     attack_codes = F.normalize(attack_codes, p=2, dim=-1)
-
+                
                 if not self.training:
                     self.decoder.eval()
 
@@ -175,19 +175,19 @@ class AutoEncoderModule(pl.LightningModule):
     
         if hparams.ae_type == "rae":
             self.train_input_dataset = RelationalGraphDataset(hparams.data_dir, "train")
-            self.val_input_dataset = RelationalGraphDataset(hparams.data_dir, "val")
+            self.val_input_dataset = RelationalGraphDataset(hparams.data_dir, "train_labeled")
             
         elif hparams.encoder_type == "seq":
             self.train_input_dataset = SequenceDataset(hparams.data_dir, "train")
-            self.val_input_dataset = SequenceDataset(hparams.data_dir, "val")
+            self.val_input_dataset = SequenceDataset(hparams.data_dir, "train_labeled")
             
         elif hparams.encoder_type == "graph":
             self.train_input_dataset = GraphDataset(hparams.data_dir, "train")
-            self.val_input_dataset = GraphDataset(hparams.data_dir, "val")
+            self.val_input_dataset = GraphDataset(hparams.data_dir, "train_labeled")
 
         if hparams.decoder_type == "seq":
             self.train_target_dataset = SequenceDataset(hparams.data_dir, "train")
-            self.val_target_dataset = SequenceDataset(hparams.data_dir, "val")
+            self.val_target_dataset = SequenceDataset(hparams.data_dir, "train_labeled")
             hparams.num_vocabs = len(self.train_target_dataset.vocabulary)
 
         self.train_dataset = ZipDataset(self.train_input_dataset, self.train_target_dataset)
@@ -225,6 +225,7 @@ class AutoEncoderModule(pl.LightningModule):
         # SecDecoder specific
         parser.add_argument("--seq_decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--seq_decoder_num_layers", type=int, default=3)
+        parser.add_argument("--seq_decoder_dropout", type=float, default=0.0)
         parser.add_argument("--seq_decoder_max_length", type=int, default=81)
 
         # AutoEncoder specific
