@@ -253,8 +253,12 @@ class AutoEncoderModule(pl.LightningModule):
             self.val_input_dataset = GraphDataset(hparams.data_dir, "train_labeled")
 
         if hparams.decoder_type == "seq":
-            self.train_target_dataset = SequenceDataset(hparams.data_dir, "train")
-            self.val_target_dataset = SequenceDataset(hparams.data_dir, "train_labeled")
+            self.train_target_dataset = SequenceDataset(
+                hparams.data_dir, "train", use_random_smiles=hparams.use_random_smiles
+                )
+            self.val_target_dataset = SequenceDataset(
+                hparams.data_dir, "train_labeled", use_random_smiles=hparams.use_random_smiles
+                )
             hparams.num_vocabs = len(self.train_target_dataset.vocabulary)
 
         self.train_dataset = ZipDataset(self.train_input_dataset, self.train_target_dataset)
@@ -297,6 +301,8 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--seq_decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--seq_decoder_num_layers", type=int, default=3)
         parser.add_argument("--seq_decoder_max_length", type=int, default=81)
+
+        parser.add_argument("--use_random_smiles", action="store_true")
 
         # AutoEncoder specific
         AutoEncoder.add_args(parser)
