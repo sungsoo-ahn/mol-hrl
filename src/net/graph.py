@@ -102,7 +102,26 @@ class GraphEncoder(torch.nn.Module):
         out = self.projector(h)
         out = global_mean_pool(out, batched_data.batch)
         return out
-    
+
+    def forward_reps(self, batched_data):
+        x, edge_index, edge_attr = (
+            batched_data.x,
+            batched_data.edge_index,
+            batched_data.edge_attr,
+        )
+
+        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
+
+        for layer in range(self.num_layers):
+            h = self.gnns[layer](h, edge_index, edge_attr)
+            h = self.batch_norms[layer](h)
+            if layer < self.num_layers - 1:
+                h = F.relu(h)
+
+        noderep = self.projector(h)
+        graphrep = global_mean_pool(noderep, batched_data.batch)
+        return graphrep, noderep
+
     def forward_cond(self, batched_data, cond):
         x, edge_index, edge_attr = (
             batched_data.x,

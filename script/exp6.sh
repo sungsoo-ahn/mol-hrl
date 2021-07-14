@@ -1,12 +1,12 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="sae_seq_uni0"
+TAG="rae_graph_norel"
 
 python train_ae.py \
---ae_type sae \
---encoder_type seq \
---sae_uniform_loss_coef 0.01 \
+--ae_type rae \
+--norel \
+--encoder_type graph \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

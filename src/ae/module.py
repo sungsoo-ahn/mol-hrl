@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch_geometric.nn import global_mean_pool
+import torch_geometric
 import pytorch_lightning as pl
 
 from hyperspherical_vae.distributions.von_mises_fisher import VonMisesFisher
@@ -14,6 +14,11 @@ from net.graph import GraphEncoder
 from data.util import ZipDataset
 from data.seq.dataset import SequenceDataset
 from data.graph.dataset import GraphDataset, RelationalGraphDataset
+
+def cycle_index(num, shift):
+    arr = torch.arange(num) + shift
+    arr[-shift:] = torch.arange(shift)
+    return arr
 
 class AutoEncoder(nn.Module):
     def __init__(self, hparams):
@@ -116,13 +121,22 @@ class RelationalAutoEncoder(AutoEncoder):
             self.decoder = SeqDecoder(hparams)
 
         self.projector = nn.Linear(hparams.code_dim, hparams.code_dim)
-        
+    
+    @staticmethod
+    def add_args(parser):
+        parser.add_argument("--norel", action="store_true")
+        return parser
+
     def update_encoder_loss(self, batched_data, loss, statistics):
         batched_input_data, _ = batched_data
         batched_input_data0, batched_input_data1, action_feats = batched_input_data 
         
-        codes, codes0 = self.encoder.forward_cond(batched_input_data0, action_feats)
-        codes1 = self.encoder(batched_input_data1)
+        if self.hparams.norel:
+            codes = codes0 = self.encoder(batched_input_data0)
+            codes1 = self.encoder(batched_input_data1)
+        else:
+            codes, codes0 = self.encoder.forward_cond(batched_input_data0, action_feats)
+            codes1 = self.encoder(batched_input_data1)
 
         out0 = F.normalize(self.projector(codes0), p=2, dim=1)
         out1 = F.normalize(self.projector(codes1), p=2, dim=1)
@@ -143,13 +157,8 @@ class SphericalRelationalAutoEncoder(AutoEncoder):
     def __init__(self, hparams):
         super(AutoEncoder, self).__init__()
         self.hparams = hparams
-        if hparams.encoder_type == "seq":
-            self.encoder = SeqEncoder(hparams)
-        elif hparams.encoder_type == "graph":
-            self.encoder = GraphEncoder(hparams)
-
-        if hparams.decoder_type == "seq":
-            self.decoder = SeqDecoder(hparams)
+        self.encoder = GraphEncoder(hparams)
+        self.decoder = SeqDecoder(hparams)
 
     def update_encoder_loss(self, batched_data, loss, statistics):
         batched_input_data, _ = batched_data
@@ -168,6 +177,52 @@ class SphericalRelationalAutoEncoder(AutoEncoder):
 
         loss += relational_loss
         statistics["loss/relational"] = relational_loss
+
+        return codes, loss, statistics
+        
+    def encode(self, batched_input_data):
+        out = self.encoder(batched_input_data)
+        codes = F.normalize(out, p=2, dim=-1)
+        return codes
+
+    def project(self, encoder_out, batched_target_data=None):
+        return F.normalize(encoder_out, p=2 ,dim=-1)
+
+class DGIAutoEncoder(AutoEncoder):
+    def __init__(self, hparams):
+        super(AutoEncoder, self).__init__()
+        self.hparams = hparams
+        self.encoder = GraphEncoder(hparams)
+        self.decoder = SeqDecoder(hparams)
+        self.weight = nn.Parameter(torch.Tensor(hparams.code_dim, hparams.code_dim))
+        torch_geometric.nn.inits.uniform(self.weight.size(0), self.weight)
+
+    @staticmethod
+    def add_args(parser):
+        parser.add_argument("--dgi_loss_coef", type=float, default=0.1)
+        return parser
+
+    def update_encoder_loss(self, batched_data, loss, statistics):
+        batched_input_data, _ = batched_data
+        
+        codes, noderep = self.encoder.forward_reps(batched_input_data)
+        
+        graphrep = torch.sigmoid(codes)
+        positive_expanded_summary_emb = graphrep[batched_input_data.batch]
+        shifted_summary_emb = graphrep[cycle_index(len(graphrep), 1)]
+        negative_expanded_summary_emb = shifted_summary_emb[batched_input_data.batch]
+
+        positive_score = (positive_expanded_summary_emb @ self.weight) @ noderep.T
+        negative_score = (negative_expanded_summary_emb @ self.weight) @ noderep.T
+        
+
+        dgi_loss = (
+            F.binary_cross_entropy_with_logits(positive_score, torch.ones_like(positive_score)) 
+            + F.binary_cross_entropy_with_logits(negative_score, torch.zeros_like(negative_score))
+        )
+        
+        loss += self.hparams.dgi_loss_coef * dgi_loss
+        statistics["loss/dgi"] = dgi_loss
 
         return codes, loss, statistics
         
@@ -213,6 +268,8 @@ class AutoEncoderModule(pl.LightningModule):
             self.ae = RelationalAutoEncoder(hparams)
         elif hparams.ae_type == "srae":
             self.ae = SphericalRelationalAutoEncoder(hparams)
+        elif hparams.ae_type == "dgi_ae":
+            self.ae = DGIAutoEncoder(hparams)
 
     @staticmethod
     def add_args(parser):
@@ -247,6 +304,11 @@ class AutoEncoderModule(pl.LightningModule):
         # SAE specific
         SphericalAutoEncoder.add_args(parser)
 
+        #
+        RelationalAutoEncoder.add_args(parser)
+
+        #
+        DGIAutoEncoder.add_args(parser)
         return parser
 
     def train_dataloader(self):
