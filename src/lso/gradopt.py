@@ -1,3 +1,6 @@
+import os
+import pandas as pd
+
 from tqdm import tqdm
 import torch
 import torch.nn.functional as F
@@ -9,7 +12,9 @@ from data.score.dataset import ScoreDataset
 from data.score.factory import get_scoring_func
 
 from lso.nn import train_nn
-#from lso.gp import train_gp
+from lso.gp import train_gp
+
+from neptune.new.types import File
 
 def extract_batched_codes(model, batched_data, attack_steps, attack_epsilon):
     statistics = dict()
@@ -100,12 +105,15 @@ def run_gradopt(
     
     # Prepare code optimization
     train_scores = train_score_dataset.tsrs.squeeze(1)
-    topk_idxs = torch.topk(train_scores, k=k, largest=False)[1] # Start from lowest
+    topk_idxs = torch.topk(train_scores, k=k, largest=True)[1] # Start from largest
     codes = train_codes[topk_idxs].cuda()
     codes.requires_grad = True
 
     # Run gradopt
-    lr = 1e-4
+    lr = 1e-3
+
+    smiles_traj = []    
+
     for step in tqdm(range(steps)):
         loss = regression_model.neg_score(codes).sum()
         codes_grad = torch.autograd.grad(loss, codes, retain_graph=False, create_graph=False)[0]
@@ -135,5 +143,12 @@ def run_gradopt(
             for key, val in statistics.items():
                 run[f"lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
 
-            for idx, smiles in enumerate(smiles_list):
-                run[f"smiles/{idx:04d}"].log(smiles)
+            smiles_traj.append(smiles_list)
+    
+    df = pd.DataFrame(data=smiles_traj)
+    log_dir = run["log_dir"].fetch()
+    filename = os.path.join(
+        log_dir, f"gradopt_{regression_model_name}_{score_func_name}_smiles_traj.csv"
+        )
+    df.to_csv(filename)
+    run[f"gradopt_{regression_model_name}_{score_func_name}_smiles_traj"].upload(File(filename))

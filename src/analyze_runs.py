@@ -1,3 +1,4 @@
+import pandas as pd
 import os, sys
 from collections import defaultdict
 import neptune.new as neptune
@@ -14,8 +15,7 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 
 RUN_NAMES = [
-    "MOLREP-170", 
-    "MOLREP-171",
+    "MOLREP-223", 
     ]
 SCORING_FUNC_NAME = "logp"
 MARKERS = ['o', '.', 'x', '+', 'v', '^', '<', '>', 's', 'd']
@@ -43,70 +43,43 @@ if __name__ == "__main__":
             project="sungsahn0215/molrep",
             run=run_name
             )
-        smiles_log = run["smiles"].fetch_values()["value"].tolist()
-        smiles_log = [text.split(",") for text in smiles_log]
-        run_results[run_name]["smiles_log"] = smiles_log
+        run["gradopt_linear_penalized_logp_smiles_traj"].download("tmp.csv")
+        run_results[run_name]["smiles_raw"] = pd.read_csv("tmp.csv")
+        
 
     # Compute actual scores
     _, scoring_func, corrupt_score = get_scoring_func(SCORING_FUNC_NAME)
     for run_name in RUN_NAMES:
-        scores_log = []
-        for smiles_list in run_results[run_name]["smiles_log"]:
-            print(len(smiles_list))
-            score_list = scoring_func(smiles_list)
-            for idx, score in enumerate(score_list):
-                if score < corrupt_score + 1e-3:
-                    score_list[idx] = None
-            
-            scores_log.append(score_list)
+        seen_smiles = []
+        for idx in range(1024):
+            seen_smiles.extend(run_results[run_name]["smiles_raw"][f"{idx}"])
+        
+        seen_smiles = list(set(seen_smiles))
+        scores = scoring_func(seen_smiles)
+        
+        smiles_list = [
+            smiles for score, smiles in zip(scores, seen_smiles) if score > corrupt_score + 1e-3
+            ]
+        scores_list = [score for score in scores if score > corrupt_score + 1e-3]
 
-        run_results[run_name][SCORING_FUNC_NAME] = scores_log
+        run_results[run_name]["smiles"] = smiles_list
+        run_results[run_name][SCORING_FUNC_NAME] = scores_list
 
     # Compute sascore
     sa_scoring_func = lambda smiles: sascorer.calculateScore(Chem.MolFromSmiles(smiles))
     qed_scoring_func = get_scoring_func("qed")[0]
     for run_name in RUN_NAMES:
-        smiles_log = run_results[run_name]["smiles_log"]
-        score_log = run_results[run_name][SCORING_FUNC_NAME]
-        sa_log, qed_log = [], []
-        for smiles_list, score_list in zip(smiles_log, score_log):
-            sa_list, qed_list = [], []
-            for smiles, score in zip(smiles_list, score_list):
-                if score is None:
-                    sa_list.append(None)
-                    qed_list.append(None)
-                else:
-                    sa_list.append(0.0)
-                    qed_list.append(qed_scoring_func(smiles))
-
-            sa_log.append(sa_list)
-            qed_log.append(qed_list)
+        smiles_list = run_results[run_name]["smiles"]
+        run_results[run_name]["sa"] = [sa_scoring_func(smiles) for smiles in smiles_list]
+        run_results[run_name]["qed"] = [qed_scoring_func(smiles) for smiles in smiles_list]
         
-        run_results[run_name]["sa"] = sa_log
-        run_results[run_name]["qed"] = qed_log
-
-    def unravel_list(target_log):
-        target_log = [x for xx in target_log for x in xx]
-        return target_log
-
     for run_name, marker in zip(RUN_NAMES, MARKERS):
-        smiles_log = unravel_list(run_results[run_name]["smiles_log"]) 
-        score_log = unravel_list(run_results[run_name][SCORING_FUNC_NAME])
-        sa_log = unravel_list(run_results[run_name]["sa"])
-        qed_log = unravel_list(run_results[run_name]["qed"])
+        smiles_list = run_results[run_name]["smiles"]
+        score_list = run_results[run_name][SCORING_FUNC_NAME]
+        sa_list = run_results[run_name]["sa"]
+        qed_list = run_results[run_name]["qed"]
 
-        score_list = []
-        sa_list = []
-        qed_list = []
-        for smiles, score, sa, qed in zip(smiles_log, score_log, sa_log, qed_log):
-            if score is None:
-                continue
-
-            score_list.append(score)
-            sa_list.append(sa)
-            qed_list.append(qed)
-
-        plt.plot(np.array(score_list), np.array(qed_list), MARKERS[-1], label=run_name)
+        plt.plot(np.array(score_list), np.array(sa_list), MARKERS[-1], label=run_name)
 
         #pareto_pts = is_pareto_efficient(np.array([score_list, qed_list]).T)
         #plt.plot(pareto_pts[:, 0], pareto_pts[:, 1], marker, label=run_name)

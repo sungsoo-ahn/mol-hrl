@@ -66,8 +66,7 @@ class SphericalAutoEncoder(AutoEncoder):
     def add_args(parser):
         parser.add_argument("--sae_norm_loss_coef", type=float, default=0.01)
         parser.add_argument("--sae_uniform_loss_coef", type=float, default=0.0)
-        parser.add_argument("--sae_attack_steps", type=int, default=0)
-        parser.add_argument("--sae_attack_epsilon", type=float, default=1e-1)
+        parser.add_argument("--sae_vmf_scale", type=float, default=0.0)
         return parser
 
     def update_encoder_loss(self, batched_data, loss, statistics):
@@ -90,32 +89,11 @@ class SphericalAutoEncoder(AutoEncoder):
 
     def project(self, encoder_out, batched_target_data=None):
         codes = F.normalize(encoder_out, p=2, dim=1)
-        
-        if batched_target_data is not None:
-            with torch.set_grad_enabled(True):
-                if not self.training:
-                    self.decoder.train()
 
-                attack_codes = codes.clone()
-                for _ in range(self.hparams.sae_attack_steps):
-                    attack_codes = attack_codes.detach()
-                    attack_codes.requires_grad = True
-                    attack_decoder_out = self.decoder(batched_target_data, attack_codes)
-                    attack_loss, _ = self.decoder.compute_recon_loss(
-                        attack_decoder_out, batched_target_data
-                        )
-                    codes_grad = torch.autograd.grad(
-                        attack_loss, attack_codes, retain_graph=False, create_graph=False
-                        )[0]
-                    attack_codes = (
-                        attack_codes - self.hparams.sae_attack_epsilon * codes_grad
-                    )
-                    attack_codes = F.normalize(attack_codes, p=2, dim=-1)
-                
-                if not self.training:
-                    self.decoder.eval()
-
-                codes = codes + (attack_codes - codes.detach())
+        if self.training and self.hparams.sae_vmf_scale > 0.0:
+            scale = torch.full((codes.size(0), 1), self.hparams.sae_vmf_scale, device=codes.device)
+            m = VonMisesFisher(codes, scale)
+            codes = m.rsample()
 
         return codes
 
@@ -261,7 +239,6 @@ class AutoEncoderModule(pl.LightningModule):
         # SecDecoder specific
         parser.add_argument("--seq_decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--seq_decoder_num_layers", type=int, default=3)
-        parser.add_argument("--seq_decoder_dropout", type=float, default=0.0)
         parser.add_argument("--seq_decoder_max_length", type=int, default=81)
 
         # AutoEncoder specific

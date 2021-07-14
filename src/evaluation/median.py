@@ -33,10 +33,10 @@ def run_median(model, run):
     fp1s = [get_fp(mol) for mol in mol1s]
     
     model.eval()
-    out = model.encoder.encode_smiles(smiles_list0, model.device)
-    _, _, codes0 = model.compute_codes(out)
-    out = model.encoder.encode_smiles(smiles_list1, model.device)
-    _, _, codes1 = model.compute_codes(out)
+    out = model.ae.encoder.encode_smiles(smiles_list0, model.device)
+    _, _, codes0 = model.ae.project(out)
+    out = model.ae.encoder.encode_smiles(smiles_list1, model.device)
+    _, _, codes1 = model.ae.project(out)
     
     for alpha in tqdm(np.linspace(0.0, 1.0, num=1000)):
         codes = alpha * codes0 + (1-alpha) * codes1
