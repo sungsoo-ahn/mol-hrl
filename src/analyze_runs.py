@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-whitegrid')
 
 RUN_NAMES = [
-    "MOLREP-223", 
+    "MOLREP-280", 
+    "MOLREP-283", 
     ]
 SCORING_FUNC_NAME = "logp"
 MARKERS = ['o', '.', 'x', '+', 'v', '^', '<', '>', 's', 'd']
@@ -79,10 +80,10 @@ if __name__ == "__main__":
         sa_list = run_results[run_name]["sa"]
         qed_list = run_results[run_name]["qed"]
 
-        plt.plot(np.array(score_list), np.array(sa_list), MARKERS[-1], label=run_name)
+        plt.plot(np.array(score_list), np.array(qed_list), MARKERS[-1], label=run_name)
 
         #pareto_pts = is_pareto_efficient(np.array([score_list, qed_list]).T)
         #plt.plot(pareto_pts[:, 0], pareto_pts[:, 1], marker, label=run_name)
     
-    plt.legend(numpoints=1)
+    #plt.legend(numpoints=1)
     plt.savefig("./tmp.png")
