@@ -5,11 +5,12 @@ import pytorch_lightning as pl
 
 import neptune.new as neptune
 
-from ae.module import AutoEncoderModule
+from module import AutoEncoderModule
 
 from evaluation.knn import run_knn
 from evaluation.median import run_median
 from lso.gradopt import run_gradopt
+from lso.bo import run_bo
 #from evaluation.lso_gp import run_lso_gp
 
 if __name__ == "__main__":
@@ -35,21 +36,22 @@ if __name__ == "__main__":
     #run_knn(model, [1, 5, 10, 50], run)
     #run_median(model, run)
     for scoring_func_name in ["penalized_logp"]:
-        run_gradopt(
-            model, 
-            "linear", 
-            scoring_func_name, 
-            args.gradopt_attack_steps, 
-            args.gradopt_attack_epsilon, 
-            run
-            )
+        #run_gradopt(
+        #    model, 
+        #    "linear", 
+        #    scoring_func_name, 
+        #    args.gradopt_attack_steps, 
+        #    args.gradopt_attack_epsilon, 
+        #    run
+        #    )
+        #
+        #run_gradopt(
+        #    model, 
+        #    "gp", 
+        #    scoring_func_name, 
+        #    args.gradopt_attack_steps, 
+        #    args.gradopt_attack_epsilon, 
+        #    run
+        #    )
         
-        run_gradopt(
-            model, 
-            "gp", 
-            scoring_func_name, 
-            args.gradopt_attack_steps, 
-            args.gradopt_attack_epsilon, 
-            run
-            )
-        
+        run_bo(model, scoring_func_name, run)

@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
-from ae.module import AutoEncoderModule
+from module import AutoEncoderModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

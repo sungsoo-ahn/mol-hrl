@@ -20,23 +20,7 @@ def extract_batched_codes(model, batched_data, attack_steps, attack_epsilon):
     statistics = dict()
     with torch.no_grad():
         batched_codes = model.ae.encode(batched_data)
-    
-    ## Finetune codes
-    #model.ae.decoder.train()
-    #for _ in range(attack_steps):
-    #    batched_codes = batched_codes.detach()
-    #    batched_codes.requires_grad = True
-    #    out = model.ae.decoder(batched_data, batched_codes)
-    #    loss, statistics = model.ae.decoder.compute_recon_loss(out, batched_data)
-    #    attack_grad = torch.autograd.grad(
-    #        loss, batched_codes, retain_graph=False, create_graph=False
-    #        )[0]
-    #    
-    #    batched_codes = batched_codes - attack_epsilon * attack_grad.sign()
-    #    batched_codes = model.ae.project(batched_codes, batched_data)
-    #    
-    #    print(loss)
-        
+            
     return batched_codes, statistics
 
 
