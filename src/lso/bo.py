@@ -49,9 +49,9 @@ def extract_codes(model, split):
 
 def run_bo(model, score_func_name, run):
     #
-    BATCH_SIZE = 128
+    BATCH_SIZE = 1
     NUM_RESTARTS = 10
-    RAW_SAMPLES = 128
+    RAW_SAMPLES = 256
 
     seed=1
     torch.manual_seed(seed)
@@ -107,7 +107,7 @@ def run_bo(model, score_func_name, run):
         new_scores = score(new_codes).to(device)
         return new_codes, new_scores
     
-    N_BATCH = 50
+    N_BATCH = 1024
     MC_SAMPLES = 2048
     
     # call helper function to initialize model
@@ -126,7 +126,9 @@ def run_bo(model, score_func_name, run):
         # define the qNEI acquisition module using a QMC sampler
         qmc_sampler = SobolQMCNormalSampler(num_samples=MC_SAMPLES, seed=seed)
         qEI = qExpectedImprovement(
-            model=model, sampler=qmc_sampler, best_f=standardize(train_scores).max()
+            model=model, 
+            sampler=qmc_sampler, 
+            best_f=torch.quantile(standardize(train_scores), q=0.9)
             )
 
         # optimize and get new observation

@@ -15,7 +15,7 @@ RUN pip install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.8.1+c
 RUN pip install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.8.1+cu111.html
 RUN pip install torch-geometric
 
-RUN pip install gpytorch
+RUN conda install botorch -c pytorch -c gpytorch
 
 RUN pip install selfies
 

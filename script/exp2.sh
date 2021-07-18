@@ -1,24 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="rae_graph"
+TAG="ae_graph"
 
 python train_ae.py \
---ae_type rae \
+--ae_type ae \
 --encoder_type graph \
+--graph_encoder_num_layers 9 \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag $TAG
-
-python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
-
-CHECKPOINT_DIR="../resource/checkpoint"
-TAG="rae_graph_random"
-
-python train_ae.py \
---ae_type rae \
---encoder_type graph \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---use_random_smiles \
 --tag $TAG
 
 python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
