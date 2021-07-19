@@ -81,7 +81,7 @@ class GraphEncoder(torch.nn.Module):
             torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
         )
 
-        self.cond_embedding = torch.nn.Embedding(5, hparams.code_dim)
+        self.cond_embedding = torch.nn.Embedding(5, hparams.graph_encoder_hidden_dim)
         
 
     def forward(self, batched_data):
