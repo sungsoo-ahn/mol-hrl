@@ -7,7 +7,7 @@ from data.graph.transform import pyg_mutate, pyg_mask
 
 
 class GraphDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, split, smiles_transform_type, graph_transform_type):
+    def __init__(self, data_dir, split, smiles_transform_type="none", graph_transform_type="none"):
         super(GraphDataset, self).__init__()
         self.smiles_list = load_smiles_list(data_dir, split)
         

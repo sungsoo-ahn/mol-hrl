@@ -13,7 +13,7 @@ from data.smiles.util import randomize_smiles, load_smiles_list
 from data.selfies.mutate import mutate
 
 class SequenceDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, split, smiles_transform_type, seq_transform_type):
+    def __init__(self, data_dir, split, smiles_transform_type="none", seq_transform_type="none"):
         super(SequenceDataset, self).__init__()
         self.smiles_list = load_smiles_list(data_dir, split)
         self.tokenizer = load_tokenizer(data_dir)
