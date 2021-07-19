@@ -107,7 +107,7 @@ def run_bo(model, score_func_name, run):
         new_scores = score(new_codes).to(device)
         return new_codes, new_scores
     
-    N_BATCH = 1024
+    N_BATCH = 8192
     MC_SAMPLES = 2048
     
     # call helper function to initialize model
