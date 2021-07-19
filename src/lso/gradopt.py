@@ -3,10 +3,8 @@ import pandas as pd
 
 from tqdm import tqdm
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from data.seq.dataset import SequenceDataset
 from data.graph.dataset import GraphDataset
 from data.score.dataset import ScoreDataset
 from data.score.factory import get_scoring_func
@@ -16,22 +14,9 @@ from lso.gp import train_gp
 
 from neptune.new.types import File
 
-def extract_batched_codes(model, batched_data, attack_steps, attack_epsilon):
-    statistics = dict()
-    with torch.no_grad():
-        batched_codes = model.ae.encode(batched_data)
-            
-    return batched_codes, statistics
-
-
-def extract_codes(model, split, attack_steps, attack_epsilon):
+def extract_codes(model, split):
     hparams = model.hparams
-    if hparams.encoder_type == "seq":
-        input_dataset_cls = SequenceDataset
-    elif hparams.encoder_type == "graph":
-        input_dataset_cls = GraphDataset
-
-    dataset = input_dataset_cls(hparams.data_dir, split=split)
+    dataset = GraphDataset(hparams.data_dir, split=split)
     dataloader = DataLoader(
         dataset,
         batch_size=hparams.batch_size,
@@ -42,16 +27,13 @@ def extract_codes(model, split, attack_steps, attack_epsilon):
 
     codes = []
     for batched_data in tqdm(dataloader):
-        if hparams.encoder_type == "seq":
-            batched_data = tuple([item.cuda() for item in batched_data])
-        elif hparams.encoder_type == "graph":
-            batched_data = batched_data.cuda()
-            
-        batched_codes, statistics = extract_batched_codes(model, batched_data, attack_steps, attack_epsilon)
+        batched_data = batched_data.cuda()    
+        with torch.no_grad():
+            batched_codes = model.ae.encoder(batched_data)
         codes.append(batched_codes.detach().cpu())
     
     codes = torch.cat(codes, dim=0)
-    return codes, statistics
+    return codes
 
 def run_gradopt(
     model, 
@@ -72,10 +54,8 @@ def run_gradopt(
     
     # Extract codes
     model.eval()
-    train_codes, statistics = extract_codes(model, "train_labeled", attack_steps, attack_epsilon)
-    #run["train/acc/code"] = statistics["acc/code"]
-    val_codes, statistics = extract_codes(model, "val", attack_steps, attack_epsilon)
-    #run["val/acc/code"] = statistics["acc/code"]
+    train_codes = extract_codes(model, "train_labeled")
+    val_codes = extract_codes(model, "val")
     
     # Train regression model on the extracted codes
     if regression_model_name in ["linear", "mlp"]:
@@ -104,8 +84,7 @@ def run_gradopt(
         
         # Project to e.g., hypersphere
         codes.data = codes.data - lr * codes_grad.sign()
-        codes.data = model.ae.project(codes).data
-        
+
         if (step + 1) % 10 == 0:
             with torch.no_grad():
                 smiles_list = model.ae.decoder.decode_smiles(codes.cuda(), deterministic=True)

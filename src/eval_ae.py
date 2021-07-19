@@ -30,28 +30,29 @@ if __name__ == "__main__":
         source_files=["*.py", "**/*.py"],
         tags=args.tag,
     )
+    run["tag"] = args.tag
     run["log_dir"] = log_dir = f"../resource/log/{args.tag}"
     os.makedirs(log_dir, exist_ok=True)
     
     #run_knn(model, [1, 5, 10, 50], run)
     #run_median(model, run)
     for scoring_func_name in ["penalized_logp"]:
-        #run_gradopt(
-        #    model, 
-        #    "linear", 
-        #    scoring_func_name, 
-        #    args.gradopt_attack_steps, 
-        #    args.gradopt_attack_epsilon, 
-        #    run
-        #    )
-        #
-        #run_gradopt(
-        #    model, 
-        #    "gp", 
-        #    scoring_func_name, 
-        #    args.gradopt_attack_steps, 
-        #    args.gradopt_attack_epsilon, 
-        #    run
-        #    )
+        run_gradopt(
+            model, 
+            "linear", 
+            scoring_func_name, 
+            args.gradopt_attack_steps, 
+            args.gradopt_attack_epsilon, 
+            run
+            )
+        
+        run_gradopt(
+            model, 
+            "gp", 
+            scoring_func_name, 
+            args.gradopt_attack_steps, 
+            args.gradopt_attack_epsilon, 
+            run
+            )
         
         run_bo(model, scoring_func_name, run)

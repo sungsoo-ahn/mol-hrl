@@ -1,26 +1,15 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="sae_graph_uni0"
+TAG="con_ae_mutate"
 
 python train_ae.py \
---ae_type sae \
---encoder_type graph \
---sae_uniform_loss_coef 0.01 \
+--ae_type con_ae \
+--input_graph_transform_type mutate \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
-
-CHECKPOINT_DIR="../resource/checkpoint"
-TAG="sae_graph_uni0_random"
-
-python train_ae.py \
---ae_type sae \
---encoder_type graph \
---sae_uniform_loss_coef 0.01 \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---use_random_smiles \
---tag $TAG
-
-python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
+for i in 1 2 3 4 5
+do
+    python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
+done

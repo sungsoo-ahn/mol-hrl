@@ -7,6 +7,8 @@ DELETE_BOND=2
 ADD_ATOM=3
 DELETE_ATOM=4
 
+MASK_RATE = 0.1
+
 def add_random_edge(edge_index, edge_attr, node0, node1):
     edge_index = torch.cat([edge_index, torch.tensor([[node0, node1], [node1, node0]])], dim=1)
     edge_attr01 = torch.tensor([random.choice(range(6)), random.choice(range(3))]).unsqueeze(0)
@@ -73,6 +75,20 @@ def pyg_mutate(data):
         action_feat[node] = DELETE_ATOM
 
     new_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
-    #new_data.coalesce()
-    
+
     return new_data, action_feat
+
+def pyg_mask(data):
+    num_nodes = data.x.size(0)
+    num_edges = data.edge_index.size(1)
+    
+    x = data.x.clone()
+    edge_index = data.edge_index.clone()
+    edge_attr = data.edge_attr.clone()
+
+    mask_idx = random.sample(range(num_nodes), k=int(MASK_RATE * num_nodes))
+    x[mask_idx]= 0
+
+    new_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
+    return new_data
+    

@@ -87,7 +87,11 @@ class SeqEncoder(nn.Module):
 class SeqDecoder(nn.Module):
     def __init__(self, hparams):
         super(SeqDecoder, self).__init__()
-        self.encoder = nn.Embedding(hparams.num_vocabs, hparams.seq_decoder_hidden_dim)
+        self.vocabulary = load_vocabulary(hparams.data_dir)
+        self.tokenizer = load_tokenizer(hparams.data_dir)
+        num_vocabs = len(self.vocabulary)
+        
+        self.encoder = nn.Embedding(num_vocabs, hparams.seq_decoder_hidden_dim)
         self.code_encoder = nn.Linear(hparams.code_dim, hparams.seq_decoder_hidden_dim)
         self.lstm = nn.LSTM(
             hparams.seq_decoder_hidden_dim,
@@ -95,12 +99,10 @@ class SeqDecoder(nn.Module):
             batch_first=True,
             num_layers=hparams.seq_decoder_num_layers,
         )
-        self.decoder = nn.Linear(hparams.seq_decoder_hidden_dim, hparams.num_vocabs)
+        self.decoder = nn.Linear(hparams.seq_decoder_hidden_dim, num_vocabs)
         self.max_length = hparams.seq_decoder_max_length
 
-        self.vocabulary = load_vocabulary(hparams.data_dir)
-        self.tokenizer = load_tokenizer(hparams.data_dir)
-
+        
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
 

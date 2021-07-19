@@ -13,27 +13,29 @@ from data.smiles.util import randomize_smiles, load_smiles_list
 from data.selfies.mutate import mutate
 
 class SequenceDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, split, use_random_smiles=False, mask_rate=0.0, mutate=False):
+    def __init__(self, data_dir, split, smiles_transform_type, seq_transform_type):
         super(SequenceDataset, self).__init__()
         self.smiles_list = load_smiles_list(data_dir, split)
         self.tokenizer = load_tokenizer(data_dir)
         self.vocabulary = load_vocabulary(data_dir)
-        self.use_random_smiles = use_random_smiles
-        self.mask_rate = mask_rate
-        self.mutate = mutate
+
+        if smiles_transform_type == "none":
+            self.smiles_transform = lambda smiles: smiles
+        elif smiles_transform_type == "randomize_order":
+            self.smiles_transform = randomize_smiles
+            print("warning smiles randomization is meaningless")
+        
+        if seq_transform_type == "none":
+            self.seq_transform = lambda seq: seq
+        elif seq_transform_type == "mask":
+            self.seq_transform = lambda seq: mask_sequence(seq, 0.1)
 
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
-        if self.mutate:
-            smiles = mutate(smiles)
-
-        if self.use_random_smiles:
-            smiles = randomize_smiles(smiles)
-
+        smiles = self.smiles_transform(smiles)
+        
         sequence = sequence_from_string(smiles, self.tokenizer, self.vocabulary)
-        if self.mask_rate > 0.0:
-            sequence = mask_sequence(sequence, self.mask_rate)
-
+        sequence = self.seq_transform(sequence)
         length = sequence.size(0)
 
         return sequence, torch.tensor(length)

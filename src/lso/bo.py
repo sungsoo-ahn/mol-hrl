@@ -17,12 +17,7 @@ from data.graph.dataset import GraphDataset
 
 def extract_codes(model, split):
     hparams = model.hparams
-    if hparams.encoder_type == "seq":
-        input_dataset_cls = SequenceDataset
-    elif hparams.encoder_type == "graph":
-        input_dataset_cls = GraphDataset
-
-    dataset = input_dataset_cls(hparams.data_dir, split=split)
+    dataset = GraphDataset(hparams.data_dir, split=split)
     dataloader = DataLoader(
         dataset,
         batch_size=hparams.batch_size,
@@ -33,13 +28,9 @@ def extract_codes(model, split):
 
     codes = []
     for batched_data in dataloader:
-        if hparams.encoder_type == "seq":
-            batched_data = tuple([item.cuda() for item in batched_data])
-        elif hparams.encoder_type == "graph":
-            batched_data = batched_data.cuda()
-
+        batched_data = batched_data.cuda()
         with torch.no_grad():
-            batched_codes = model.ae.encode(batched_data)
+            batched_codes = model.ae.encoder(batched_data)
             
         codes.append(batched_codes.detach().cpu())
     
@@ -49,32 +40,43 @@ def extract_codes(model, split):
 
 def run_bo(model, score_func_name, run):
     #
-    BATCH_SIZE = 1
+    BATCH_SIZE = 10
     NUM_RESTARTS = 10
     RAW_SAMPLES = 256
+    N_BATCH = 50
+    MC_SAMPLES = 2048
 
-    seed=1
-    torch.manual_seed(seed)
-    ae = model.ae.cuda()
+    #seed=1
+    #torch.manual_seed(seed)
+    model = model.cuda()
+    model.eval()
+    ae = model.ae
     device = model.device
+    
+    #
+    dataset_codes = extract_codes(model, "train")
+    dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").tsrs
     
     # setup scoring function
     _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
-    invalid_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").tsrs.min()
+    invalid_scores = dataset_scores.min()
     def score(codes):
         smiles_list = ae.decoder.decode_smiles(codes.to(device), deterministic=True)
         scores = torch.FloatTensor(smiles_score_func(smiles_list))
         scores[scores < corrupt_score + 1] = invalid_scores
         return scores.unsqueeze(1)
         
-    # initialize 
-    train_codes = extract_codes(model, "train_labeled")[:1024].to(device)
-    train_scores = score(train_codes).to(device)
-    best_score = train_scores.max().item()
-    code_dim = train_codes.size(0)
-    bounds = [train_codes.min(dim=1)[0], train_codes.max(dim=1)[0]]
+    # initialize
+    train_idxs = torch.topk(dataset_scores.squeeze(1), k=1000)[1]
+    train_scores = dataset_scores[train_idxs].to(device)
+    train_codes = dataset_codes[train_idxs].to(device)
 
-    #
+    #train_codes = extract_codes(model, "train_labeled")[:1024].to(device)
+    #train_scores = score(train_codes).to(device)
+
+    best_score = train_scores.max().item()
+    code_dim = train_codes.size(1)
+    bounds = [torch.min(train_codes, dim=0)[0], torch.max(train_codes, dim=0)[0]]
     def get_fitted_model(train_codes, train_scores, state_dict=None):
         # initialize and fit model
         model = SingleTaskGP(
@@ -107,15 +109,12 @@ def run_bo(model, score_func_name, run):
         new_scores = score(new_codes).to(device)
         return new_codes, new_scores
     
-    N_BATCH = 8192
-    MC_SAMPLES = 2048
-    
     # call helper function to initialize model
     best_observed = [best_score]
     state_dict = None
     
     run["best_observed"].log(best_score)
-    for iteration in tqdm(range(N_BATCH)):    
+    for _ in tqdm(range(N_BATCH)):
         # fit the model
         model = get_fitted_model(
             train_codes, 
@@ -124,19 +123,19 @@ def run_bo(model, score_func_name, run):
         )
         
         # define the qNEI acquisition module using a QMC sampler
-        qmc_sampler = SobolQMCNormalSampler(num_samples=MC_SAMPLES, seed=seed)
+        qmc_sampler = SobolQMCNormalSampler(num_samples=MC_SAMPLES)
         qEI = qExpectedImprovement(
             model=model, 
             sampler=qmc_sampler, 
-            best_f=torch.quantile(standardize(train_scores), q=0.9)
+            best_f=standardize(train_scores).max()
             )
 
         # optimize and get new observation
         new_codes, new_scores = optimize_acqf_and_get_observation(qEI)
 
         # update training points
-        train_codes = torch.cat((train_codes, new_codes))
-        train_scores = torch.cat((train_scores, new_scores))
+        train_codes = torch.cat([train_codes, new_codes], dim=0)
+        train_scores = torch.cat([train_scores, new_scores], dim=0)
 
         # update progress
         best_value = train_scores.max().item()
@@ -145,3 +144,9 @@ def run_bo(model, score_func_name, run):
         state_dict = model.state_dict()
 
         run["best_observed"].log(best_value)
+        run["observed"].log(new_scores.max().item())
+
+    train_scores = train_scores.squeeze(1)
+    run["top1"] = torch.topk(train_scores, k=1)[0].mean()
+    run["top10"] = torch.topk(train_scores, k=10)[0].mean()
+    run["top100"] = torch.topk(train_scores, k=100)[0].mean()
