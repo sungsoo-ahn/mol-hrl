@@ -281,7 +281,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--ae_type", type=str, default="ae")
         parser.add_argument("--encoder_type", type=str, default="seq")
         parser.add_argument("--decoder_type", type=str, default="seq")
-        parser.add_argument("--code_dim", type=int, default=1024)
+        parser.add_argument("--code_dim", type=int, default=256)
         parser.add_argument("--lr", type=float, default=1e-3)
 
         # Common - data
