@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="selfie"
+TAG="selfie2selfie"
 
 python train.py \
 --autoencoder_type base \

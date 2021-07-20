@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="selfie"
+TAG="contrastive_mutate"
 
 python train.py \
 --autoencoder_type contrastive \

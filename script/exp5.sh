@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="selfie"
+TAG="relational_mutate"
 
 python train.py \
 --autoencoder_type relational \
