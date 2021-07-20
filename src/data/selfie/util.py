@@ -1,3 +1,5 @@
+import pandas as pd
+
 def get_selfie_and_smiles_encodings_for_dataset(file_path):
     """
     Returns encoding, alphabet and length of largest molecule in SMILES and

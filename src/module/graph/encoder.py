@@ -54,6 +54,7 @@ class GINConv(MessagePassing):
 class GraphEncoder(torch.nn.Module):
     def __init__(self, hparams):
         super(GraphEncoder, self).__init__()
+        self.hparams = hparams
         self.num_layers = hparams.graph_encoder_num_layers
 
         if self.num_layers < 2:
@@ -82,7 +83,6 @@ class GraphEncoder(torch.nn.Module):
         )
 
         self.cond_embedding = torch.nn.Embedding(5, hparams.graph_encoder_hidden_dim)
-        
 
     def forward(self, batched_data):
         x, edge_index, edge_attr = (
@@ -150,3 +150,11 @@ class GraphEncoder(torch.nn.Module):
         batched_sequence_data = GraphDataset.collate_fn(data_list)
         batched_sequence_data = batched_sequence_data.to(device)
         return self(batched_sequence_data)
+
+    def get_dataset(self, split):
+        return GraphDataset(
+            self.hparams.data_dir,
+            split,
+            self.hparams.input_smiles_transform_type,
+            self.hparams.input_graph_transform_type
+        )

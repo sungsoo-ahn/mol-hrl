@@ -1,15 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="ae_mutate"
+TAG="selfie"
 
-python train_ae.py \
---ae_type ae \
---input_graph_transform_type mutate \
+python train.py \
+--autoencoder_type base \
+--decoder_type selfie \
+--input_graph_transform_type mask \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-for i in 1 2 3 4 5
-do
-    python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
-done
+python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG

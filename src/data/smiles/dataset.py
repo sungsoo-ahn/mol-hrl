@@ -1,20 +1,19 @@
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from data.seq.util import (
-    SmilesTokenizer, 
+from data.smiles.vocab import (
     load_vocabulary, 
     load_tokenizer, 
     sequence_from_string, 
     PAD_ID,
     MASK_ID,
 )
-from data.smiles.util import randomize_smiles, load_smiles_list
-from data.selfies.mutate import mutate
+from data.smiles.util import load_smiles_list
+from data.smiles.transform import randomize
 
-class SequenceDataset(torch.utils.data.Dataset):
+class SmilesDataset(torch.utils.data.Dataset):
     def __init__(self, data_dir, split, smiles_transform_type="none", seq_transform_type="none"):
-        super(SequenceDataset, self).__init__()
+        super(SmilesDataset, self).__init__()
         self.smiles_list = load_smiles_list(data_dir, split)
         self.tokenizer = load_tokenizer(data_dir)
         self.vocabulary = load_vocabulary(data_dir)
@@ -22,9 +21,8 @@ class SequenceDataset(torch.utils.data.Dataset):
         if smiles_transform_type == "none":
             self.smiles_transform = lambda smiles: smiles
         elif smiles_transform_type == "randomize_order":
-            self.smiles_transform = randomize_smiles
-            print("warning smiles randomization is meaningless")
-        
+            self.smiles_transform = randomize
+            
         if seq_transform_type == "none":
             self.seq_transform = lambda seq: seq
         elif seq_transform_type == "mask":

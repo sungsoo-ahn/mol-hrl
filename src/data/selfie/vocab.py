@@ -3,9 +3,9 @@ Vocabulary helper class
 """
 
 from data.smiles.util import load_smiles_list
-import re
 import numpy as np
 import torch
+import selfies as sf
 
 START_TOKEN = "<SOS>"
 END_TOKEN = "<EOS>"
@@ -16,13 +16,12 @@ END_ID = 1
 PAD_ID = 0
 MASK_ID = 3
 
-class Vocabulary:
+class SelfieVocabulary:
     def __init__(self):
         self._tokens = dict()
         self._current_id = 0
         self.update([PAD_TOKEN, END_TOKEN, START_TOKEN, MASK_TOKEN])
-        self.update(["p"])
-
+        
     def __getitem__(self, token_or_id):
         return self._tokens[token_or_id]
 
@@ -79,16 +78,10 @@ class Vocabulary:
         return [t for t in self._tokens if isinstance(t, str)]
 
 
-class SmilesTokenizer:
-    REGEXP = re.compile(
-        "(\[|\]|Br?|Cl?|Si?|Se?|se?|@@?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
-    )
-
-    def tokenize(self, data):
-        tokens = self.REGEXP.split(data)
-        tokens = tokens[1::2]
+class SelfieTokenizer:
+    def tokenize(self, selfie):
+        tokens = [i for i in sf.split_selfies(selfie)]
         tokens = [START_TOKEN] + tokens + [END_TOKEN]
-
         return tokens
 
     def untokenize(self, tokens):
@@ -97,28 +90,31 @@ class SmilesTokenizer:
 
         return "".join(tokens[1:-1])
 
-def create_vocabulary(smiles_list, tokenizer):
+def create_selfie_vocabulary(smiles_list, tokenizer):
     tokens = set()
     for smi in smiles_list:
-        cur_tokens = tokenizer.tokenize(smi)
+        selfie = sf.encoder(smi)
+        cur_tokens = tokenizer.tokenize(selfie)
         tokens.update(cur_tokens)
 
-    vocabulary = Vocabulary()
+    vocabulary = SelfieVocabulary()
     vocabulary.update(sorted(tokens))
     return vocabulary
 
-def load_tokenizer(data_dir):
-    return SmilesTokenizer()
+def load_selfie_tokenizer(data_dir):
+    return SelfieTokenizer()
 
-def load_vocabulary(data_dir):
-    tokenizer = load_tokenizer(data_dir)
+def load_selfie_vocabulary(data_dir):
+    tokenizer = load_selfie_tokenizer(data_dir)
     smiles_list = load_smiles_list(data_dir, "full")
-    vocabulary = create_vocabulary(smiles_list, tokenizer)
+    vocabulary = create_selfie_vocabulary(smiles_list, tokenizer)
     return vocabulary
 
-def sequence_from_string(string, tokenizer, vocabulary):
-    return torch.tensor(vocabulary.encode(tokenizer.tokenize(string)))
+def selfie_sequence_from_smiles(smiles, tokenizer, vocabulary):
+    selfie = sf.encoder(smiles)
+    return torch.tensor(vocabulary.encode(tokenizer.tokenize(selfie)))
 
-
-def string_from_sequence(sequence, tokenizer, vocabulary):
-    return tokenizer.untokenize(vocabulary.decode(sequence.squeeze(0).tolist()))
+def smiles_from_selfie_sequence(sequence, tokenizer, vocabulary):
+    selfie = tokenizer.untokenize(vocabulary.decode(sequence.squeeze(0).tolist()))
+    smiles = sf.decoder(selfie)
+    return smiles

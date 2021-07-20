@@ -4,14 +4,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
-from module import AutoEncoderModule
+from module.pl_autoencoder import AutoEncoderModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     AutoEncoderModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=100)
+    parser.add_argument("--max_epochs", type=int, default=1)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
-    parser.add_argument("--checkpoint_path", type=str, default="")
+    parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default.pth")
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
@@ -34,5 +34,5 @@ if __name__ == "__main__":
     trainer.fit(model)
 
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
-    if hparams.checkpoint_path != "":
-        trainer.save_checkpoint(hparams.checkpoint_path)
+        
+    trainer.save_checkpoint(hparams.checkpoint_path)

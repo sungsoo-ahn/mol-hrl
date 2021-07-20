@@ -1,14 +1,12 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="ae"
+TAG="smiles"
 
-python train_ae.py \
---ae_type ae \
+python train.py \
+--autoencoder_type base \
+--decoder_type smiles \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-for i in 1 2 3 4 5
-do
-    python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
-done
+python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG

@@ -1,14 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="ae_dgi"
+TAG="selfie"
 
-python train_ae.py \
---ae_type dgi_ae \
+python train.py \
+--autoencoder_type base \
+--encoder_type selfie \
+--decoder_type selfie \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
-for i in 1 2 3 4 5
-do
-    python eval_ae.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
-done
+python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG

@@ -1,9 +1,9 @@
 import torch
 import torch_geometric
 from data.graph.util import pyg_from_string
-from data.selfies.mutate import mutate
-from data.smiles.util import load_smiles_list, randomize_smiles
-from data.graph.transform import pyg_mutate, pyg_mask
+from data.smiles.util import load_smiles_list
+from data.smiles.transform import randomize
+from data.graph.transform import mutate, mask
 
 
 class GraphDataset(torch.utils.data.Dataset):
@@ -14,15 +14,15 @@ class GraphDataset(torch.utils.data.Dataset):
         if smiles_transform_type == "none":
             self.smiles_transform = lambda smiles: smiles
         elif smiles_transform_type == "randomize_order":
-            self.smiles_transform = randomize_smiles
+            self.smiles_transform = randomize
             print("warning smiles randomization is meaningless")
         
         if graph_transform_type == "none":
             self.graph_transform = lambda graph: graph
         elif graph_transform_type == "mask":
-            self.graph_transform = pyg_mask
+            self.graph_transform = mask
         elif graph_transform_type == "mutate":
-            self.graph_transform = lambda graph: pyg_mutate(graph)[0]
+            self.graph_transform = lambda graph: mutate(graph)
 
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
@@ -99,7 +99,7 @@ class RelationalGraphDataset(GraphDataset):
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
         pyg_data = pyg_from_string(smiles)
-        mutate_pyg_data, action_feat = pyg_mutate(pyg_data)
+        mutate_pyg_data, action_feat = mutate(pyg_data, return_relation=True)
 
         return pyg_data, mutate_pyg_data, action_feat
 

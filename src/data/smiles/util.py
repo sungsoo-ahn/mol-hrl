@@ -43,13 +43,6 @@ def load_smiles_list(root_dir, split):
     elif split == "train_labeled":
         return [smiles_list[idx] for idx in train_idxs[:int(len(smiles_list) * 0.1)]]
 
-
-def randomize_smiles(smiles):
-    mol = Chem.MolFromSmiles(smiles)
-    smiles = Chem.MolToSmiles(mol, canonical=False, doRandom=True, isomericSmiles=False)
-    return smiles
-
-
 def is_valid_smiles(smiles):
     mol = canonicalize(smiles)
     if mol is None or len(mol) == 0:

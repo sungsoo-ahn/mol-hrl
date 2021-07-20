@@ -1,3 +1,5 @@
+from data.selfie.dataset import SelfieDataset
+from data.smiles.dataset import SmilesDataset
 import os
 import pandas as pd
 
@@ -16,7 +18,13 @@ from neptune.new.types import File
 
 def extract_codes(model, split):
     hparams = model.hparams
-    dataset = GraphDataset(hparams.data_dir, split=split)
+    if hparams.encoder_type == "graph":
+        dataset = GraphDataset(hparams.data_dir, split=split)
+    elif hparams.encoder_type == "smiles":
+        dataset = SmilesDataset(hparams.data_dir, split=split)
+    elif hparams.encoder_type == "selfie":
+        dataset = SelfieDataset(hparams.data_dir, split=split)
+
     dataloader = DataLoader(
         dataset,
         batch_size=hparams.batch_size,
@@ -27,9 +35,13 @@ def extract_codes(model, split):
 
     codes = []
     for batched_data in tqdm(dataloader):
-        batched_data = batched_data.cuda()    
+        try:
+            batched_data = batched_data.cuda()    
+        except:
+            batched_data = [i.cuda() for i in batched_data]
+            
         with torch.no_grad():
-            batched_codes = model.ae.encoder(batched_data)
+            batched_codes = model.autoencoder.encoder(batched_data)
         codes.append(batched_codes.detach().cpu())
     
     codes = torch.cat(codes, dim=0)
@@ -39,11 +51,9 @@ def run_gradopt(
     model, 
     regression_model_name, 
     score_func_name, 
-    attack_steps, 
-    attack_epsilon, 
     run, 
     k=1024, 
-    steps=5000
+    steps=1000
     ):
     # Prepare scoring function
     _, score_func, corrupt_score = get_scoring_func(score_func_name)
@@ -76,7 +86,7 @@ def run_gradopt(
     # Run gradopt
     lr = 1e-3
 
-    smiles_traj = []    
+    smiles_traj, scores_traj = [], []    
 
     for step in tqdm(range(steps)):
         loss = regression_model.neg_score(codes).sum()
@@ -87,27 +97,26 @@ def run_gradopt(
 
         if (step + 1) % 10 == 0:
             with torch.no_grad():
-                smiles_list = model.ae.decoder.decode_smiles(codes.cuda(), deterministic=True)
+                smiles_list = model.autoencoder.decoder.sample_smiles(codes.cuda(), argmax=True)
             
+            smiles_traj.append(smiles_list)
             scores = torch.FloatTensor(score_func(smiles_list))
+            scores_traj.append(scores)
+            
+            scores_traj_max = torch.stack(scores_traj, dim=0).max(dim=0)[0]
+            
+            statistics = dict()
+            statistics["score/mean"] = scores_traj_max.mean()
+            statistics["score/std"] = scores_traj_max.std()    
+
             clean_scores = scores[scores > corrupt_score + 1e-3]
             clean_ratio = clean_scores.size(0) / scores.size(0)
-
-            statistics = dict()
-            statistics["loss"] = loss
             statistics["clean_ratio"] = clean_ratio
-            if clean_ratio > 1e-6:
-                statistics["score/max"] = clean_scores.max()
-                statistics["score/mean"] = clean_scores.mean()
-            else:
-                statistics["score/max"] = 0.0
-                statistics["score/mean"] = 0.0
 
             for key, val in statistics.items():
                 run[f"lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
 
-            smiles_traj.append(smiles_list)
-    
+
     df = pd.DataFrame(data=smiles_traj)
     log_dir = run["log_dir"].fetch()
     filename = os.path.join(

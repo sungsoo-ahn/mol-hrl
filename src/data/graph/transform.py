@@ -15,7 +15,7 @@ def add_random_edge(edge_index, edge_attr, node0, node1):
     edge_attr = torch.cat([edge_attr, edge_attr01, edge_attr01], dim=0)
     return edge_index, edge_attr
 
-def pyg_mutate(data):
+def mutate(data, return_relation=False):
     num_nodes = data.x.size(0)
     num_edges = data.edge_index.size(1)
     
@@ -76,9 +76,12 @@ def pyg_mutate(data):
 
     new_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 
-    return new_data, action_feat
+    if return_relation:
+        return new_data, action_feat
+    else:
+        return new_data
 
-def pyg_mask(data):
+def mask(data):
     num_nodes = data.x.size(0)
     num_edges = data.edge_index.size(1)
     

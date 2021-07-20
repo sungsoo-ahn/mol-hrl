@@ -2,16 +2,15 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
-from data.seq.util import (
+from data.smiles.vocab import (
     START_ID,
     END_ID,
     PAD_ID,
     load_tokenizer,
     load_vocabulary,
-    sequence_from_string,
     string_from_sequence,
 )
-from data.seq.dataset import SequenceDataset
+from data.smiles.dataset import SmilesDataset
 
 
 def compute_sequence_accuracy(logits, batched_sequence_data):
@@ -24,9 +23,9 @@ def compute_sequence_accuracy(logits, batched_sequence_data):
     correct = preds == targets
     correct[targets == PAD_ID] = True
     elem_acc = correct[targets != 0].float().mean()
-    seq_acc = correct.view(batch_size, -1).all(dim=1).float().mean()
+    sequence_acc = correct.view(batch_size, -1).all(dim=1).float().mean()
 
-    return elem_acc, seq_acc
+    return elem_acc, sequence_acc
 
 
 def compute_sequence_cross_entropy(logits, batched_sequence_data):
@@ -44,63 +43,24 @@ def compute_sequence_cross_entropy(logits, batched_sequence_data):
 
     return loss
 
-
-class SeqEncoder(nn.Module):
+class SmilesDecoder(nn.Module):
     def __init__(self, hparams):
-        super(SeqEncoder, self).__init__()
-        self.encoder = nn.Embedding(hparams.num_vocabs, hparams.seq_encoder_hidden_dim)
-        self.lstm = nn.LSTM(
-            hparams.seq_encoder_hidden_dim,
-            hparams.seq_encoder_hidden_dim,
-            batch_first=True,
-            num_layers=hparams.seq_encoder_num_layers,
-            bidirectional=True,
-        )
-        self.decoder = nn.Linear(2 * hparams.seq_encoder_hidden_dim, hparams.code_dim)
-
-        self.vocabulary = load_vocabulary(hparams.data_dir)
-        self.tokenizer = load_tokenizer(hparams.data_dir)
-
-    def forward(self, batched_sequence_data):
-        sequences, lengths = batched_sequence_data
-        out = self.encoder(sequences)
-        out = pack_padded_sequence(
-            out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False
-        )
-        _, (h, _) = self.lstm(out, None)
-        out = torch.cat([h[-2], h[-1]], 1)
-        out = self.decoder(out)
-
-        return out
-
-    def encode_smiles(self, smiles_list, device):
-        sequences = [
-            sequence_from_string(smiles, self.tokenizer, self.vocabulary) for smiles in smiles_list
-        ]
-        lengths = [torch.tensor(sequence.size(0)) for sequence in sequences]
-        data_list = list(zip(sequences, lengths))
-        batched_sequence_data = SequenceDataset.collate_fn(data_list)
-        batched_sequence_data = [item.to(device) for item in batched_sequence_data]
-        return self(batched_sequence_data)
-
-
-class SeqDecoder(nn.Module):
-    def __init__(self, hparams):
-        super(SeqDecoder, self).__init__()
+        super(SmilesDecoder, self).__init__()
+        self.hparams = hparams
         self.vocabulary = load_vocabulary(hparams.data_dir)
         self.tokenizer = load_tokenizer(hparams.data_dir)
         num_vocabs = len(self.vocabulary)
         
-        self.encoder = nn.Embedding(num_vocabs, hparams.seq_decoder_hidden_dim)
-        self.code_encoder = nn.Linear(hparams.code_dim, hparams.seq_decoder_hidden_dim)
+        self.encoder = nn.Embedding(num_vocabs, hparams.sequence_decoder_hidden_dim)
+        self.code_encoder = nn.Linear(hparams.code_dim, hparams.sequence_decoder_hidden_dim)
         self.lstm = nn.LSTM(
-            hparams.seq_decoder_hidden_dim,
-            hparams.seq_decoder_hidden_dim,
+            hparams.sequence_decoder_hidden_dim,
+            hparams.sequence_decoder_hidden_dim,
             batch_first=True,
-            num_layers=hparams.seq_decoder_num_layers,
+            num_layers=hparams.sequence_decoder_num_layers,
         )
-        self.decoder = nn.Linear(hparams.seq_decoder_hidden_dim, num_vocabs)
-        self.max_length = hparams.seq_decoder_max_length
+        self.decoder = nn.Linear(hparams.sequence_decoder_hidden_dim, num_vocabs)
+        self.max_length = hparams.sequence_decoder_max_length
 
         
     def forward(self, batched_sequence_data, codes):
@@ -130,7 +90,7 @@ class SeqDecoder(nn.Module):
         
         return loss, statistics
 
-    def decode(self, codes, deterministic):
+    def sample(self, codes, argmax):
         sample_size = codes.size(0)
         sequences = [torch.full((sample_size, 1), START_ID, dtype=torch.long).cuda()]
         hidden = None
@@ -144,7 +104,7 @@ class SeqDecoder(nn.Module):
             logit = self.decoder(out)
 
             prob = torch.softmax(logit, dim=2)
-            if deterministic == True:
+            if argmax == True:
                 tth_sequences = torch.argmax(logit, dim=2)
             else:
                 distribution = Categorical(probs=prob)
@@ -162,8 +122,8 @@ class SeqDecoder(nn.Module):
 
         return sequences, lengths
 
-    def decode_smiles(self, codes, deterministic):
-        sequences, lengths = self.decode(codes, deterministic)
+    def sample_smiles(self, codes, argmax):
+        sequences, lengths = self.sample(codes, argmax)
         sequences = sequences.cpu()
         lengths = lengths.cpu()
         sequences = [sequence[:length] for sequence, length in zip(sequences, lengths)]
@@ -173,24 +133,10 @@ class SeqDecoder(nn.Module):
         ]
         return smiles_list
 
-
-"""
-def rnn_sample_large(model, codes, start_id, end_id, max_length, sample_size, batch_size):
-    num_sampling = sample_size // batch_size
-    sequences = []
-    lengths = []
-    log_probs = []
-    for _ in range(num_sampling):
-        batch_sequences, batch_lengths, batch_log_probs = model.sample(
-            codes, start_id, end_id, max_length
-        )
-        sequences.append(batch_sequences)
-        lengths.append(batch_lengths)
-        log_probs.append(batch_log_probs)
-
-    sequences = torch.cat(sequences, dim=0)
-    lengths = torch.cat(lengths, dim=0)
-    log_probs = torch.cat(log_probs, dim=0)
-
-    return sequences, lengths, log_probs
-"""
+    def get_dataset(self, split):
+        return SmilesDataset(
+            self.hparams.data_dir, 
+            split, 
+            self.hparams.input_smiles_transform_type, 
+            self.hparams.input_sequence_transform_type,
+            )
