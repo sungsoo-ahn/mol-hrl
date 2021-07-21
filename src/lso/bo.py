@@ -77,7 +77,7 @@ def run_bo(model, score_func_name, run):
         scores[scores < corrupt_score + 1] = invalid_scores
         return scores.unsqueeze(1)
         
-    for rep_id in range(NUM_REPS):    
+    for rep_id in range(NUM_REPS):
         # initialize
         train_idxs = torch.topk(dataset_scores.squeeze(1), k=1000)[1]
         train_scores = dataset_scores[train_idxs].to(device)

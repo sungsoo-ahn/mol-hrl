@@ -75,10 +75,11 @@ class ContrastiveAutoEncoder(BaseAutoEncoder):
         return codes, loss, statistics
     
     def update_contrastive_loss(self, codes0, codes1, loss, statistics):
-        out0 = F.normalize(self.projector(codes0), p=2, dim=1)
-        out1 = F.normalize(self.projector(codes1), p=2, dim=1)
-        logits = torch.matmul(out0, out1.T)
-        labels = torch.arange(out0.size(0), device = logits.device)
+        #out0 = F.normalize(self.projector(codes0), p=2, dim=1)
+        #out1 = F.normalize(self.projector(codes1), p=2, dim=1)
+        #logits = torch.matmul(out0, out1.T)
+        logits = -torch.cdist(codes0, codes1, p=2)
+        labels = torch.arange(codes0.size(0), device = logits.device)
         contrastive_loss = F.cross_entropy(logits, labels)
         contrastive_acc = (torch.argmax(logits, dim=1) == labels).float().mean()
         loss += contrastive_loss
@@ -107,7 +108,21 @@ class RelationalAutoEncoder(ContrastiveAutoEncoder):
 
     def get_input_dataset(self, split):
         return RelationalGraphDataset(self.hparams.data_dir, split)
-    
+
+class DGIContrastiveAutoEncoder(BaseAutoEncoder):
+    def update_encoder_loss(self, batched_input_data, loss=0.0, statistics=dict()):
+        codes, noderep = self.encoder.forward_reps(batched_input_data)
+        logits = -torch.cdist(noderep, codes, p=2)
+        targets = batched_input_data.batch
+        contrastive_loss = F.cross_entropy(logits, targets)
+        contrastive_acc = (torch.argmax(logits, dim=1) == targets).float().mean()
+        loss += contrastive_loss
+        
+        statistics["loss/dgi_contrastive"] = contrastive_loss
+        statistics["loss/dgi_acc"] = contrastive_acc
+
+        return codes, loss, statistics
+
 class DGIAutoEncoder(BaseAutoEncoder):
     def __init__(self, hparams):
         super(DGIAutoEncoder, self).__init__(hparams)

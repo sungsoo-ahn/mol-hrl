@@ -85,8 +85,11 @@ class SelfieTokenizer:
         return tokens
 
     def untokenize(self, tokens):
-        if tokens[0] != START_TOKEN or tokens[-1] != END_TOKEN:
+        if tokens[0] != START_TOKEN:
             return ""
+        
+        if tokens[-1] != END_TOKEN:
+            return "".join(tokens[1:])
 
         return "".join(tokens[1:-1])
 

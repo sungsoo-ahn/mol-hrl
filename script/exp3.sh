@@ -1,13 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="denoising_mutate"
+TAG="selfie2selfie"
 
-#python train.py \
-#--autoencoder_type base \
-#--decoder_type selfie \
-#--input_graph_transform_type mutate \
-#--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag $TAG
+python train.py \
+--autoencoder_type base \
+--encoder_type selfie \
+--decoder_type selfie \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tag $TAG
 
 python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG

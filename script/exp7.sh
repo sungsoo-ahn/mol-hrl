@@ -1,12 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="selfie2selfie"
+TAG="smiles2smiles_denoising_mask"
 
 python train.py \
 --autoencoder_type base \
---encoder_type selfie \
---decoder_type selfie \
+--encoder_type smiles \
+--decoder_type smiles \
+--input_sequence_transform_type mask \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
