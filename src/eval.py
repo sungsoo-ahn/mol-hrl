@@ -34,17 +34,17 @@ if __name__ == "__main__":
     os.makedirs(log_dir, exist_ok=True)
     
     for scoring_func_name in ["penalized_logp"]:
-        #run_gradopt(
-        #    model, 
-        #    "linear", 
-        #    scoring_func_name, 
-        #    run
-        #    )
-        #run_gradopt(
-        #    model, 
-        #    "gp", 
-        #    scoring_func_name, 
-        #    run
-        #    )
+        run_gradopt(
+            model, 
+            "linear", 
+            scoring_func_name, 
+            run
+            )
+        run_gradopt(
+            model, 
+            "gp", 
+            scoring_func_name, 
+            run
+            )
         
         run_bo(model, scoring_func_name, run)
