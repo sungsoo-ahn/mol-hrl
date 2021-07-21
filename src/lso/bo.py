@@ -59,25 +59,25 @@ def run_bo(model, score_func_name, run):
     NUM_REPS = 5
 
     #seed=1
-    for rep_id in range(NUM_REPS):
-        model = model.cuda()
-        model.eval()
-        ae = model.autoencoder
-        device = model.device
+    model = model.cuda()
+    model.eval()
+    ae = model.autoencoder
+    device = model.device
         
-        #
-        dataset_codes = extract_codes(model, "train")
-        dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").tsrs
+    #
+    dataset_codes = extract_codes(model, "train")
+    dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").tsrs
+
+    # setup scoring function
+    _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
+    invalid_scores = dataset_scores.min()
+    def score(codes):
+        smiles_list = ae.decoder.sample_smiles(codes.to(device), argmax=True)
+        scores = torch.FloatTensor(smiles_score_func(smiles_list))
+        scores[scores < corrupt_score + 1] = invalid_scores
+        return scores.unsqueeze(1)
         
-        # setup scoring function
-        _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
-        invalid_scores = dataset_scores.min()
-        def score(codes):
-            smiles_list = ae.decoder.sample_smiles(codes.to(device), argmax=True)
-            scores = torch.FloatTensor(smiles_score_func(smiles_list))
-            scores[scores < corrupt_score + 1] = invalid_scores
-            return scores.unsqueeze(1)
-            
+    for rep_id in range(NUM_REPS):    
         # initialize
         train_idxs = torch.topk(dataset_scores.squeeze(1), k=1000)[1]
         train_scores = dataset_scores[train_idxs].to(device)

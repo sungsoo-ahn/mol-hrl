@@ -40,7 +40,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--encoder_type", type=str, default="graph")
         parser.add_argument("--decoder_type", type=str, default="smiles")
         parser.add_argument("--code_dim", type=int, default=256)
-        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--lr", type=float, default=1e-4)
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
