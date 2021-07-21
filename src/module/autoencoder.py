@@ -141,8 +141,8 @@ class ContrastiveAutoEncoder(BaseAutoEncoder):
         return codes, loss, statistics
     
     def update_contrastive_loss(self, codes0, codes1, loss, statistics):
-        out0 = F.normalize(self.projector(codes0), p=2, dim=1)
-        out1 = F.normalize(self.projector(codes1), p=2, dim=1)
+        out0 = F.normalize(codes0, p=2, dim=1)
+        out1 = F.normalize(codes1, p=2, dim=1)
         logits = torch.matmul(out0, out1.T)
         #logits = -torch.cdist(codes0, codes1, p=2)
         labels = torch.arange(codes0.size(0), device = logits.device)
@@ -178,8 +178,8 @@ class RelationalAutoEncoder(ContrastiveAutoEncoder):
 class DGIContrastiveAutoEncoder(BaseAutoEncoder):
     def update_encoder_loss(self, batched_input_data, loss=0.0, statistics=dict()):
         codes, noderep = self.encoder.forward_reps(batched_input_data)
-        out0 = F.normalize(self.projector(noderep), p=2, dim=1)
-        out1 = F.normalize(self.projector(codes), p=2, dim=1)
+        out0 = F.normalize(noderep, p=2, dim=1)
+        out1 = F.normalize(codes, p=2, dim=1)
         logits = torch.matmul(out0, out1.T)
         targets = batched_input_data.batch
         contrastive_loss = F.cross_entropy(logits, targets)
