@@ -6,6 +6,8 @@ import torch.nn.functional as F
 import torch_geometric
 
 from data.graph.dataset import RelationalGraphDataset, ContrastiveGraphDataset
+from data.util import ZipDataset
+from data.smiles.dataset import SmilesDataset
 
 from module.graph.encoder import GraphEncoder
 from module.smiles.encoder import SmilesEncoder
@@ -62,6 +64,70 @@ class BaseAutoEncoder(nn.Module):
     def get_target_dataset(self, split):
         return self.decoder.get_dataset(split)
     
+
+class StyleAutoEncoder(BaseAutoEncoder):
+    def __init__(self, hparams):
+        super(BaseAutoEncoder, self).__init__()
+        self.hparams = hparams
+        self.encoder = get_encoder(hparams)
+        self.decoder = get_decoder(hparams)
+        
+    def update_loss(self, batched_data):
+        batched_input_data, _ = batched_data
+        batched_input_data0, batched_input_data1 = batched_input_data
+        batched_target_data0, batched_target_data1 = batched_input_data
+
+        code0 = self.encoder(batched_input_data0)
+        code1 = self.encoder(batched_input_data1)
+
+        code00, code01 = torch.chunk(code0, chunks=2, dim=1)
+        code10, code11 = torch.chunk(code1, chunks=2, dim=1)
+
+        merge_code0 = torch.cat([code00, code11], dim=1)
+        merge_code1 = torch.cat([code10, code01], dim=1)
+
+        decoder_out0 = self.decoder(batched_target_data0, code0)
+        decoder_out1 = self.decoder(batched_target_data1, code1)
+        decoder_merge_out0 = self.decoder(batched_target_data0, merge_code0)
+        decoder_merge_out1 = self.decoder(batched_target_data1, merge_code1)
+
+        loss0, recon_statistics0 = self.decoder.compute_recon_loss(
+            decoder_out0, batched_target_data0
+            )
+        loss1, recon_statistics1 = self.decoder.compute_recon_loss(
+            decoder_out1, batched_target_data1
+            )
+        merge_loss0, merge_recon_statistics0 = self.decoder.compute_recon_loss(
+            decoder_merge_out0, batched_target_data0
+            )
+        merge_loss1, merge_recon_statistics1 = self.decoder.compute_recon_loss(
+            decoder_merge_out1, batched_target_data1
+            )
+
+        loss = loss0 + loss1 + merge_loss0 + merge_loss1
+        statistics = dict()
+        for key in recon_statistics0:
+            statistics[f"code0/{key}"] = recon_statistics0[key]
+        for key in recon_statistics1:
+            statistics[f"code1/{key}"] = recon_statistics1[key]
+        for key in merge_recon_statistics0:
+            statistics[f"merge_code0/{key}"] = merge_recon_statistics0[key]
+        for key in merge_recon_statistics1:
+            statistics[f"merge_code1/{key}"] = merge_recon_statistics1[key]
+
+        return loss, statistics
+    
+    def get_input_dataset(self, split):
+        return ZipDataset(
+            SmilesDataset(self.hparams.data_dir, split, smiles_transform_type="randomize_order"),
+            SmilesDataset(self.hparams.data_dir, split, smiles_transform_type="randomize_order"),
+            )
+        #self.encoder.get_dataset(split)
+    
+    def get_target_dataset(self, split):
+        return self.decoder.get_dataset(split)
+    
+
 class ContrastiveAutoEncoder(BaseAutoEncoder):
     def __init__(self, hparams):
         super(ContrastiveAutoEncoder, self).__init__(hparams)
@@ -75,10 +141,10 @@ class ContrastiveAutoEncoder(BaseAutoEncoder):
         return codes, loss, statistics
     
     def update_contrastive_loss(self, codes0, codes1, loss, statistics):
-        #out0 = F.normalize(self.projector(codes0), p=2, dim=1)
-        #out1 = F.normalize(self.projector(codes1), p=2, dim=1)
-        #logits = torch.matmul(out0, out1.T)
-        logits = -torch.cdist(codes0, codes1, p=2)
+        out0 = F.normalize(self.projector(codes0), p=2, dim=1)
+        out1 = F.normalize(self.projector(codes1), p=2, dim=1)
+        logits = torch.matmul(out0, out1.T)
+        #logits = -torch.cdist(codes0, codes1, p=2)
         labels = torch.arange(codes0.size(0), device = logits.device)
         contrastive_loss = F.cross_entropy(logits, labels)
         contrastive_acc = (torch.argmax(logits, dim=1) == labels).float().mean()
@@ -112,7 +178,9 @@ class RelationalAutoEncoder(ContrastiveAutoEncoder):
 class DGIContrastiveAutoEncoder(BaseAutoEncoder):
     def update_encoder_loss(self, batched_input_data, loss=0.0, statistics=dict()):
         codes, noderep = self.encoder.forward_reps(batched_input_data)
-        logits = -torch.cdist(noderep, codes, p=2)
+        out0 = F.normalize(self.projector(noderep), p=2, dim=1)
+        out1 = F.normalize(self.projector(codes), p=2, dim=1)
+        logits = torch.matmul(out0, out1.T)
         targets = batched_input_data.batch
         contrastive_loss = F.cross_entropy(logits, targets)
         contrastive_acc = (torch.argmax(logits, dim=1) == targets).float().mean()

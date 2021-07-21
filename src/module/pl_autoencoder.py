@@ -5,7 +5,12 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
 from module.autoencoder import (
-    BaseAutoEncoder, ContrastiveAutoEncoder, DGIContrastiveAutoEncoder, RelationalAutoEncoder, DGIAutoEncoder
+    BaseAutoEncoder, 
+    ContrastiveAutoEncoder, 
+    DGIContrastiveAutoEncoder, 
+    RelationalAutoEncoder, 
+    DGIAutoEncoder,
+    StyleAutoEncoder
 )
 from data.util import ZipDataset
 
@@ -21,6 +26,7 @@ class AutoEncoderModule(pl.LightningModule):
             "relational": RelationalAutoEncoder,
             "dgi": DGIAutoEncoder,
             "dgi_contrastive": DGIContrastiveAutoEncoder,
+            "style": StyleAutoEncoder,
         }[hparams.autoencoder_type]
         self.autoencoder = autoencoder_class(hparams)
 
@@ -39,7 +45,7 @@ class AutoEncoderModule(pl.LightningModule):
         # Common - model
         parser.add_argument("--autoencoder_type", type=str, default="base")
         parser.add_argument("--encoder_type", type=str, default="graph")
-        parser.add_argument("--decoder_type", type=str, default="selfie")
+        parser.add_argument("--decoder_type", type=str, default="smiles")
         parser.add_argument("--code_dim", type=int, default=256)
         parser.add_argument("--lr", type=float, default=1e-4)
 

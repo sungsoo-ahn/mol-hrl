@@ -106,8 +106,8 @@ def run_gradopt(
             scores_traj_max = torch.stack(scores_traj, dim=0).max(dim=0)[0]
             
             statistics = dict()
-            statistics["score/mean"] = scores_traj_max.mean()
-            statistics["score/std"] = scores_traj_max.std()    
+            statistics["score"] = scores_traj_max.max()
+            #statistics["score/std"] = scores_traj_max.std()    
 
             clean_scores = scores[scores > corrupt_score + 1e-3]
             clean_ratio = clean_scores.size(0) / scores.size(0)
