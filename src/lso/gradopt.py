@@ -55,6 +55,7 @@ def run_gradopt(
     k=1024, 
     steps=1000
     ):
+    num_reps = 5
     # Prepare scoring function
     _, score_func, corrupt_score = get_scoring_func(score_func_name)
     
@@ -67,60 +68,64 @@ def run_gradopt(
     train_codes = extract_codes(model, "train_labeled")
     val_codes = extract_codes(model, "val")
     
-    # Train regression model on the extracted codes
-    if regression_model_name in ["linear", "mlp"]:
-        regression_model = train_nn(
-            train_codes, val_codes, train_score_dataset, val_score_dataset, score_func_name, run
-            )
-    elif regression_model_name in ["gp"]:
-        regression_model = train_gp(
-            train_codes, val_codes, train_score_dataset, val_score_dataset, score_func_name, run
-        )
+    for rep in range(num_reps):
     
-    # Prepare code optimization
-    train_scores = train_score_dataset.tsrs.squeeze(1)
-    topk_idxs = torch.topk(train_scores, k=k, largest=True)[1] # Start from largest
-    codes = train_codes[topk_idxs].cuda()
-    codes.requires_grad = True
-
-    # Run gradopt
-    lr = 1e-3
-
-    smiles_traj, scores_traj = [], []    
-
-    for step in tqdm(range(steps)):
-        loss = regression_model.neg_score(codes).sum()
-        codes_grad = torch.autograd.grad(loss, codes, retain_graph=False, create_graph=False)[0]
+        # Train regression model on the extracted codes
+        if regression_model_name in ["linear", "mlp"]:
+            regression_model = train_nn(
+                train_codes, val_codes, train_score_dataset, val_score_dataset, score_func_name, run, rep
+                )
+        elif regression_model_name in ["gp"]:
+            regression_model = train_gp(
+                train_codes, val_codes, train_score_dataset, val_score_dataset, score_func_name, run, rep
+            )
         
-        # Project to e.g., hypersphere
-        codes.data = codes.data - lr * codes_grad.sign()
+        # Prepare code optimization
+        train_scores = train_score_dataset.tsrs.squeeze(1)
+        topk_idxs = torch.topk(train_scores, k=k, largest=True)[1] # Start from largest
+        codes = train_codes[topk_idxs].cuda()
+        codes.requires_grad = True
 
-        if (step + 1) % 10 == 0:
-            with torch.no_grad():
-                smiles_list = model.autoencoder.decoder.sample_smiles(codes.cuda(), argmax=True)
+        # Run gradopt
+        lr = 1e-3
+
+        smiles_traj, scores_traj = [], []    
+
+        
+        for step in tqdm(range(steps)):
+            loss = regression_model.neg_score(codes).sum()
+            codes_grad = torch.autograd.grad(loss, codes, retain_graph=False, create_graph=False)[0]
             
-            smiles_traj.append(smiles_list)
-            scores = torch.FloatTensor(score_func(smiles_list))
-            scores_traj.append(scores)
-            
-            scores_traj_max = torch.stack(scores_traj, dim=0).max(dim=0)[0]
-            
-            statistics = dict()
-            statistics["score"] = scores_traj_max.max()
-            #statistics["score/std"] = scores_traj_max.std()    
+            # Project to e.g., hypersphere
+            codes.data = codes.data - lr * codes_grad.sign()
 
-            clean_scores = scores[scores > corrupt_score + 1e-3]
-            clean_ratio = clean_scores.size(0) / scores.size(0)
-            statistics["clean_ratio"] = clean_ratio
+            if (step + 1) % 10 == 0:
+                with torch.no_grad():
+                    smiles_list = model.autoencoder.decoder.sample_smiles(codes.cuda(), argmax=True)
+                
+                smiles_traj.append(smiles_list)
+                scores = torch.FloatTensor(score_func(smiles_list))
+                scores_traj.append(scores)
+                
+                scores_traj_max = torch.stack(scores_traj, dim=0).max(dim=0)[0]
+                
+                statistics = dict()
+                statistics["rep{rep}/score"] = scores_traj_max.max()
+                #statistics["score/std"] = scores_traj_max.std()    
 
-            for key, val in statistics.items():
-                run[f"lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
+                clean_scores = scores[scores > corrupt_score + 1e-3]
+                clean_ratio = clean_scores.size(0) / scores.size(0)
+                statistics["rep{rep}/clean_ratio"] = clean_ratio
 
+                for key, val in statistics.items():
+                    run[f"rep{rep}/lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
 
-    df = pd.DataFrame(data=smiles_traj)
-    log_dir = run["log_dir"].fetch()
-    filename = os.path.join(
-        log_dir, f"gradopt_{regression_model_name}_{score_func_name}_smiles_traj.csv"
-        )
-    df.to_csv(filename)
-    run[f"gradopt_{regression_model_name}_{score_func_name}_smiles_traj"].upload(File(filename))
+        """
+        df = pd.DataFrame(data=smiles_traj)
+        log_dir = run["log_dir"].fetch()
+        filename = os.path.join(
+            log_dir, f"gradopt_{regression_model_name}_{score_func_name}_smiles_traj.csv"
+            )
+        df.to_csv(filename)
+        run[f"rep{rep}/gradopt_{regression_model_name}_{score_func_name}_smiles_traj"].upload(File(filename))
+        """

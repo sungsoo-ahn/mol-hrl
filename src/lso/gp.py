@@ -35,7 +35,7 @@ class GPRegressionModel(gpytorch.models.ExactGP):
         return -ei
 
 
-def train_gp(train_codes, val_codes, train_score_dataset, val_score_dataset, score_func_name, run):
+def train_gp(train_codes, val_codes, train_score_dataset, val_score_dataset, score_func_name, run, rep):
     train_scores = train_score_dataset.tsrs.squeeze(1)
     val_scores = val_score_dataset.tsrs.squeeze(1)
 
@@ -64,7 +64,7 @@ def train_gp(train_codes, val_codes, train_score_dataset, val_score_dataset, sco
         optimizer.step()
         torch.cuda.empty_cache()
 
-        run[f"lso_gp/{score_func_name}/train/loss/gp_mll"].log(loss.item())
+        run[f"rep{rep}/lso_gp/{score_func_name}/train/loss/gp_mll"].log(loss.item())
 
         if (step + 1) % 1 == 0:
             gp.eval()
@@ -76,7 +76,7 @@ def train_gp(train_codes, val_codes, train_score_dataset, val_score_dataset, sco
             with torch.no_grad():
                 preds = gp(val_codes)
                 
-            run[f"lso_gp/{score_func_name}/validation/loss/gp_mse"].log(
+            run[f"rep{rep}/lso_gp/{score_func_name}/validation/loss/gp_mse"].log(
                 torch.nn.functional.mse_loss(preds.mean, val_scores)
             )
 

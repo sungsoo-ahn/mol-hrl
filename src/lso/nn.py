@@ -24,6 +24,7 @@ def train_nn(
     val_score_dataset, 
     score_func_name, 
     run, 
+    rep,
     batch_size=256,
     lr=1e-3,
     epochs=100,
@@ -55,7 +56,7 @@ def train_nn(
             loss.backward()
             optimizer.step()
             
-            run[f"lso_linear/{score_func_name}/train/loss/mse"].log(loss.item())
+            run[f"rep{rep}/lso_linear/{score_func_name}/train/loss/mse"].log(loss.item())
 
         # Evaluation
         model.eval()
@@ -66,6 +67,6 @@ def train_nn(
             
             avg_loss += loss / len(val_dataloader)
         
-        run[f"lso_linear/{score_func_name}/val/loss/mse"].log(avg_loss)
+        run[f"rep{rep}/lso_linear/{score_func_name}/val/loss/mse"].log(avg_loss)
 
     return model
