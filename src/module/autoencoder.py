@@ -1,4 +1,5 @@
 from argparse import Namespace
+from data.score.dataset import ScoreDataset
 
 import torch
 import torch.nn as nn
@@ -63,6 +64,28 @@ class BaseAutoEncoder(nn.Module):
     
     def get_target_dataset(self, split):
         return self.decoder.get_dataset(split)
+    
+
+class SupervisedAutoEncoder(BaseAutoEncoder):
+    def __init__(self, hparams):
+        super(SupervisedAutoEncoder, self).__init__(hparams)
+        self.regressor = nn.Linear(hparams.code_dim, 1)
+
+    def update_encoder_loss(self, batched_input_data, loss=0.0, statistics=dict()):
+        batched_input_data0, target = batched_input_data
+        codes = self.encoder(batched_input_data0)
+        pred = self.regressor(codes)
+        mse_loss = F.mse_loss(pred, target)
+        loss += mse_loss
+        statistics["loss/mse"] = mse_loss
+
+        return codes, loss, statistics
+    
+    def get_input_dataset(self, split):
+        return ZipDataset(
+            self.encoder.get_dataset(split), 
+            ScoreDataset(self.hparams.data_dir, ["penalized_logp"], split),
+            )
     
 
 class StyleAutoEncoder(BaseAutoEncoder):

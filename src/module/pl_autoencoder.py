@@ -10,7 +10,8 @@ from module.autoencoder import (
     DGIContrastiveAutoEncoder, 
     RelationalAutoEncoder, 
     DGIAutoEncoder,
-    StyleAutoEncoder
+    StyleAutoEncoder,
+    SupervisedAutoEncoder
 )
 from data.util import ZipDataset
 
@@ -27,6 +28,7 @@ class AutoEncoderModule(pl.LightningModule):
             "dgi": DGIAutoEncoder,
             "dgi_contrastive": DGIContrastiveAutoEncoder,
             "style": StyleAutoEncoder,
+            "supervised": SupervisedAutoEncoder,
         }[hparams.autoencoder_type]
         self.autoencoder = autoencoder_class(hparams)
 
