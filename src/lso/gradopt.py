@@ -110,12 +110,12 @@ def run_gradopt(
                 scores_traj_max = torch.stack(scores_traj, dim=0).max(dim=0)[0]
                 
                 statistics = dict()
-                statistics["rep{rep}/score"] = scores_traj_max.max()
+                statistics[f"rep{rep}/score"] = scores_traj_max.max()
                 #statistics["score/std"] = scores_traj_max.std()    
 
                 clean_scores = scores[scores > corrupt_score + 1e-3]
                 clean_ratio = clean_scores.size(0) / scores.size(0)
-                statistics["rep{rep}/clean_ratio"] = clean_ratio
+                statistics[f"rep{rep}/clean_ratio"] = clean_ratio
 
                 for key, val in statistics.items():
                     run[f"rep{rep}/lso/gradopt/{regression_model_name}/{score_func_name}/{key}"].log(val)
