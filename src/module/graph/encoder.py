@@ -82,7 +82,17 @@ class GraphEncoder(torch.nn.Module):
             torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
         )
 
-        self.cond_embedding = torch.nn.Embedding(5, hparams.graph_encoder_hidden_dim)
+        self.cond_embedding0 = torch.nn.Embedding(5, hparams.graph_encoder_hidden_dim)
+        self.cond_embedding1 = torch.nn.Embedding(120, hparams.graph_encoder_hidden_dim)
+        self.cond_embedding2 = torch.nn.Embedding(3, hparams.graph_encoder_hidden_dim)
+        self.cond_embedding3 = torch.nn.Embedding(6, hparams.graph_encoder_hidden_dim)
+        self.cond_embedding4 = torch.nn.Embedding(3, hparams.graph_encoder_hidden_dim)
+
+        self.cond_projector = torch.nn.Sequential(
+            torch.nn.Linear(6 * hparams.graph_encoder_hidden_dim, hparams.graph_encoder_hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
+        )
 
     def forward(self, batched_data):
         x, edge_index, edge_attr = (
@@ -140,7 +150,16 @@ class GraphEncoder(torch.nn.Module):
         out = self.projector(h)
         out = global_mean_pool(out, batched_data.batch)
     
-        out0 = self.projector(h + self.cond_embedding(cond))
+        h = torch.cat([
+            h, 
+            self.cond_embedding0(cond[:, 0]),
+            self.cond_embedding1(cond[:, 1]),
+            self.cond_embedding2(cond[:, 2]),
+            self.cond_embedding3(cond[:, 3]),
+            self.cond_embedding4(cond[:, 4]),
+            ])
+
+        out0 = self.cond_projector(h)
         out0 = global_mean_pool(out0, batched_data.batch)
         
         return out, out0

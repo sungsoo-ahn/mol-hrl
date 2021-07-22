@@ -13,7 +13,7 @@ def add_random_edge(edge_index, edge_attr, node0, node1):
     edge_index = torch.cat([edge_index, torch.tensor([[node0, node1], [node1, node0]])], dim=1)
     edge_attr01 = torch.tensor([random.choice(range(6)), random.choice(range(3))]).unsqueeze(0)
     edge_attr = torch.cat([edge_attr, edge_attr01, edge_attr01], dim=0)
-    return edge_index, edge_attr
+    return edge_index, edge_attr, edge_attr01
 
 def mutate(data, return_relation=False):
     num_nodes = data.x.size(0)
@@ -24,14 +24,16 @@ def mutate(data, return_relation=False):
     edge_attr = data.edge_attr.clone()
         
     action = random.choice(range(1, 5))
+    action_feat = torch.zeros(num_nodes, 5, dtype=torch.long)
     if action == ADD_BOND:
         node0, node1 = random.sample(range(num_nodes), 2)
-        edge_index, edge_attr = add_random_edge(edge_index, edge_attr, node0, node1)
+        edge_index, edge_attr, edge_attr01 = add_random_edge(edge_index, edge_attr, node0, node1)
 
-        action_feat = torch.zeros(num_nodes, dtype=torch.long)
-        action_feat[node0] = ADD_BOND
-        action_feat[node1] = ADD_BOND
-        
+        action_feat[node0, 0] = ADD_BOND
+        action_feat[node1, 0] = ADD_BOND
+        action_feat[node0, 3:5] = edge_attr01
+        action_feat[node1, 3:5] = edge_attr01
+
     elif action == DELETE_BOND:
         edge0 = random.choice(range(num_edges))
         node0, node1 = data.edge_index[:, edge0].tolist()
@@ -44,9 +46,8 @@ def mutate(data, return_relation=False):
         edge_index = edge_index[:, edge_mask]
         edge_attr = edge_attr[edge_mask, :]
 
-        action_feat = torch.zeros(num_nodes, dtype=torch.long)
-        action_feat[node0] = DELETE_BOND
-        action_feat[node1] = DELETE_BOND
+        action_feat[node0, 0] = DELETE_BOND
+        action_feat[node1, 0] = DELETE_BOND
         
     elif action == ADD_ATOM:
         node_feat = torch.tensor([[random.choice(range(120)), random.choice(range(3))]])
@@ -54,10 +55,11 @@ def mutate(data, return_relation=False):
         
         node0 = num_nodes
         node1 = random.choice(range(num_nodes))
-        edge_index, edge_attr = add_random_edge(edge_index, edge_attr, node0, node1)
+        edge_index, edge_attr, edge_attr01 = add_random_edge(edge_index, edge_attr, node0, node1)
 
-        action_feat = torch.zeros(num_nodes, dtype=torch.long)
-        action_feat[node1] = ADD_ATOM
+        action_feat[node1, 0] = ADD_ATOM
+        action_feat[node1, 1:3] = node_feat
+        action_feat[node1, 3:5] = edge_attr01
 
     elif action == DELETE_ATOM:
         node = random.choice(range(num_nodes))
@@ -71,8 +73,7 @@ def mutate(data, return_relation=False):
 
         edge_index[edge_index > node] = edge_index[edge_index > node] - 1 
 
-        action_feat = torch.zeros(num_nodes, dtype=torch.long)
-        action_feat[node] = DELETE_ATOM
+        action_feat[node, 0] = DELETE_ATOM
 
     new_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 
