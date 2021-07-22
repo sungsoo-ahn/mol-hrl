@@ -157,7 +157,7 @@ class GraphEncoder(torch.nn.Module):
             self.cond_embedding2(cond[:, 2]),
             self.cond_embedding3(cond[:, 3]),
             self.cond_embedding4(cond[:, 4]),
-            ])
+            ], dim=1)
 
         out0 = self.cond_projector(h)
         out0 = global_mean_pool(out0, batched_data.batch)
