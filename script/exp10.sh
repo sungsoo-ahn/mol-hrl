@@ -1,11 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="smiles2smiles_style"
+TAG="graph2smiles_supervised"
 
 python train.py \
---autoencoder_type style \
---encoder_type smiles \
+--autoencoder_type supervised \
+--encoder_type graph \
 --decoder_type smiles \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
