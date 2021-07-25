@@ -100,7 +100,7 @@ def run_bo(model, score_func_name, run):
 
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll.to(device)
-            fit_gpytorch_model(mll)
+            fit_gpytorch_model(mll, max_retries=10)
             return model
 
         #
