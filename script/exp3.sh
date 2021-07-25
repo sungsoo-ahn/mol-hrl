@@ -5,7 +5,7 @@ TAG="codedim3"
 
 python train.py \
 --autoencoder_type base \
---code_dim 256
+--code_dim 256 \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
