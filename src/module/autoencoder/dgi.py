@@ -1,3 +1,4 @@
+from data.graph.util import smiles2graph
 from module.encoder.graph import GraphEncoder
 import torch
 import torch.nn.functional as F
@@ -36,6 +37,7 @@ class DGIAutoEncoder(BaseAutoEncoder):
         self.decoder = SequenceDecoder(hparams)
         self.dgi_mat = torch.nn.Parameter(torch.Tensor(hparams.code_dim, hparams.code_dim))
         torch_geometric.nn.inits.uniform(self.dgi_mat.size(0), self.dgi_mat)
+        self.transform = smiles2graph
 
     @staticmethod
     def add_args(parser):
