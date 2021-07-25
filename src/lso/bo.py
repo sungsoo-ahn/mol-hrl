@@ -86,9 +86,8 @@ def run_bo(model, score_func_name, run):
 
         best_score = train_scores.max().item()
         code_dim = train_codes.size(1)
-        bounds = [torch.min(train_codes, dim=0)[0], torch.max(train_codes, dim=0)[0]]
-
-        def get_fitted_model(train_codes, train_scores, state_dict=None):
+        
+        def get_fitted_model(train_codes, train_scores, bounds, state_dict=None):
             # initialize and fit model
             model = SingleTaskGP(
                 train_X=normalize(train_codes, bounds=bounds), 
@@ -104,7 +103,7 @@ def run_bo(model, score_func_name, run):
             return model
 
         #
-        def optimize_acqf_and_get_observation(acq_func):
+        def optimize_acqf_and_get_observation(acq_func, bounds):
             # optimize
             new_codes, _ = optimize_acqf(
                 acq_function=acq_func,
@@ -128,7 +127,10 @@ def run_bo(model, score_func_name, run):
         run["best_observed"].log(best_score)
         for _ in tqdm(range(N_BATCH)):
             # fit the model
-            model = get_fitted_model(train_codes, standardize(train_scores), state_dict=state_dict,)
+            bounds = [torch.min(train_codes, dim=0)[0], torch.max(train_codes, dim=0)[0]]
+            model = get_fitted_model(
+                train_codes, standardize(train_scores), bounds, state_dict=state_dict
+                )
 
             # define the qNEI acquisition module using a QMC sampler
             qmc_sampler = SobolQMCNormalSampler(num_samples=MC_SAMPLES)
@@ -137,7 +139,7 @@ def run_bo(model, score_func_name, run):
             )
 
             # optimize and get new observation
-            new_codes, new_scores = optimize_acqf_and_get_observation(qEI)
+            new_codes, new_scores = optimize_acqf_and_get_observation(qEI, bounds)
 
             # update training points
             train_codes = torch.cat([train_codes, new_codes], dim=0)
