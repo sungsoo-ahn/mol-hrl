@@ -1,22 +1,13 @@
-from data.graph.util import smiles2graph
 import torch
 import torch.nn as nn
 
-from data.graph.dataset import GraphDataset
-from data.graph.transform import mask
-from data.sequence.dataset import SequenceDataset
-
 from module.autoencoder.base import BaseAutoEncoder
-from module.encoder.graph import GraphEncoder
-from module.decoder.sequence import SequenceDecoder
 
 
 class VariationalAutoEncoder(BaseAutoEncoder):
     def __init__(self, hparams):
-        super(BaseAutoEncoder, self).__init__()
+        super(VariationalAutoEncoder, self).__init__(hparams)
         self.hparams = hparams
-        self.encoder = GraphEncoder(hparams)
-        self.decoder = SequenceDecoder(hparams)
         self.linear_mu = nn.Linear(hparams.code_dim, hparams.code_dim)
         self.linear_logvar = nn.Linear(hparams.code_dim, hparams.code_dim)
 

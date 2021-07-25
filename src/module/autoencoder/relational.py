@@ -5,6 +5,7 @@ from data.graph.dataset import GraphDataset
 from data.graph.util import smiles2graph
 from data.graph.transform import mutate
 from data.smiles.util import load_smiles_list
+from data.sequence.dataset import SequenceDataset
 
 from module.autoencoder.base import BaseAutoEncoder
 from module.autoencoder.contrastive import ContrastiveAutoEncoder
@@ -105,5 +106,10 @@ class RelationalAutoEncoder(ContrastiveAutoEncoder):
     def encode(self, batched_input_data):
         return self.encoder(batched_input_data)
 
-    #@staticmethod
-    #def collate(data_list):
+    @staticmethod
+    def collate(data_list):
+        input_data_list, target_data_list = zip(*data_list)
+        batched_input_data = RelationalGraphDataset.collate(input_data_list)
+        batched_target_data = SequenceDataset.collate(target_data_list)
+        return batched_input_data, batched_target_data
+
