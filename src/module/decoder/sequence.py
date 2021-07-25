@@ -2,15 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.distributions import Categorical
-from data.selfie.vocab import (
-    START_ID,
-    END_ID,
-    PAD_ID,
-    load_selfie_vocabulary, 
-    load_selfie_tokenizer, 
-    smiles_from_selfie_sequence, 
-)
-from data.selfie.dataset import SelfieDataset
+from data.sequence.vocab import START_ID, END_ID, PAD_ID
+from data.sequence.util import load_tokenizer, load_vocabulary, sequence2smiles
 
 
 def compute_sequence_accuracy(logits, batched_sequence_data):
@@ -43,14 +36,15 @@ def compute_sequence_cross_entropy(logits, batched_sequence_data):
 
     return loss
 
-class SelfiesDecoder(nn.Module):
+
+class SequenceDecoder(nn.Module):
     def __init__(self, hparams):
-        super(SelfiesDecoder, self).__init__()
+        super(SequenceDecoder, self).__init__()
         self.hparams = hparams
-        self.vocabulary = load_selfie_vocabulary(hparams.data_dir)
-        self.tokenizer = load_selfie_tokenizer(hparams.data_dir)
+        self.vocabulary = load_vocabulary(hparams.data_dir)
+        self.tokenizer = load_tokenizer(hparams.data_dir)
         num_vocabs = len(self.vocabulary)
-        
+
         self.encoder = nn.Embedding(num_vocabs, hparams.sequence_decoder_hidden_dim)
         self.code_encoder = nn.Linear(hparams.code_dim, hparams.sequence_decoder_hidden_dim)
         self.lstm = nn.LSTM(
@@ -62,7 +56,6 @@ class SelfiesDecoder(nn.Module):
         self.decoder = nn.Linear(hparams.sequence_decoder_hidden_dim, num_vocabs)
         self.max_length = hparams.sequence_decoder_max_length
 
-        
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
 
@@ -87,7 +80,7 @@ class SelfiesDecoder(nn.Module):
         loss = compute_sequence_cross_entropy(logits, targets)
         elemwise_acc, acc = compute_sequence_accuracy(logits, targets)
         statistics = {"loss/recon": loss, "acc/elem": elemwise_acc, "acc/seq": acc}
-        
+
         return loss, statistics
 
     def sample(self, codes, argmax):
@@ -128,15 +121,6 @@ class SelfiesDecoder(nn.Module):
         lengths = lengths.cpu()
         sequences = [sequence[:length] for sequence, length in zip(sequences, lengths)]
         smiles_list = [
-            smiles_from_selfie_sequence(sequence, self.tokenizer, self.vocabulary)
-            for sequence in sequences
+            sequence2smiles(sequence, self.tokenizer, self.vocabulary) for sequence in sequences
         ]
         return smiles_list
-
-    def get_dataset(self, split):
-        return SelfieDataset(
-            self.hparams.data_dir, 
-            split, 
-            self.hparams.input_smiles_transform_type, 
-            self.hparams.input_sequence_transform_type,
-            )

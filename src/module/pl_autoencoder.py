@@ -4,31 +4,31 @@ import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
-from module.autoencoder import (
-    BaseAutoEncoder, 
-    ContrastiveAutoEncoder, 
-    DGIContrastiveAutoEncoder, 
-    RelationalAutoEncoder, 
-    DGIAutoEncoder,
-    StyleAutoEncoder,
-    SupervisedAutoEncoder
-)
+from module.autoencoder.base import BaseAutoEncoder
+from module.autoencoder.contrastive import ContrastiveAutoEncoder
+from module.autoencoder.seq2seq import Seq2SeqAutoEncoder
+from module.autoencoder.relational import RelationalAutoEncoder
+from module.autoencoder.dgi import DGIAutoEncoder
+from module.autoencoder.supervised import SupervisedAutoEncoder
+from module.autoencoder.variational import VariationalAutoEncoder
+
 from data.util import ZipDataset
+
 
 class AutoEncoderModule(pl.LightningModule):
     def __init__(self, hparams):
         super(AutoEncoderModule, self).__init__()
         hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
-        
+
         autoencoder_class = {
             "base": BaseAutoEncoder,
             "contrastive": ContrastiveAutoEncoder,
             "relational": RelationalAutoEncoder,
             "dgi": DGIAutoEncoder,
-            "dgi_contrastive": DGIContrastiveAutoEncoder,
-            "style": StyleAutoEncoder,
             "supervised": SupervisedAutoEncoder,
+            "variational": VariationalAutoEncoder,
+            "seq2seq": Seq2SeqAutoEncoder,
         }[hparams.autoencoder_type]
         self.autoencoder = autoencoder_class(hparams)
 
@@ -55,15 +55,17 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
         parser.add_argument("--batch_size", type=int, default=256)
         parser.add_argument("--num_workers", type=int, default=8)
+
+        #parser.add_argument("--input_smiles_transform_type", type=str, default="none")
+        #parser.add_argument("--input_sequence_transform_type", type=str, default="none")
+        parser.add_argument("--input_graph_mask", action="store_true")
+        parser.add_argument("--input_graph_fragment_contract", action="store_true")
+        parser.add_argument("--input_graph_subgraph", action="store_true")
         
-        parser.add_argument("--input_smiles_transform_type", type=str, default="none")
-        parser.add_argument("--input_sequence_transform_type", type=str, default="none")
-        parser.add_argument("--input_graph_transform_type", type=str, default="none")
-        
-        parser.add_argument("--target_smiles_transform_type", type=str, default="none")
-        parser.add_argument("--target_sequence_transform_type", type=str, default="none")
-        parser.add_argument("--target_graph_transform_type", type=str, default="none")
-        
+        #parser.add_argument("--target_smiles_transform_type", type=str, default="none")
+        #parser.add_argument("--target_sequence_transform_type", type=str, default="none")
+        #parser.add_argument("--target_graph_transform_type", type=str, default="none")
+
         # GraphEncoder specific
         parser.add_argument("--graph_encoder_hidden_dim", type=int, default=256)
         parser.add_argument("--graph_encoder_num_layers", type=int, default=5)
@@ -76,7 +78,11 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--sequence_decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--sequence_decoder_num_layers", type=int, default=3)
         parser.add_argument("--sequence_decoder_max_length", type=int, default=120)
-
+        
+        
+        DGIAutoEncoder.add_args(parser)
+        VariationalAutoEncoder.add_args(parser)
+        
         return parser
 
     def train_dataloader(self):
@@ -84,7 +90,7 @@ class AutoEncoderModule(pl.LightningModule):
             self.train_dataset,
             batch_size=self.hparams.batch_size,
             shuffle=True,
-            collate_fn=self.train_dataset.collate_fn,
+            collate_fn=self.autoencoder.collate,
             num_workers=self.hparams.num_workers,
         )
 
@@ -93,7 +99,7 @@ class AutoEncoderModule(pl.LightningModule):
             self.val_dataset,
             batch_size=self.hparams.batch_size,
             shuffle=False,
-            collate_fn=self.val_dataset.collate_fn,
+            collate_fn=self.autoencoder.collate,
             num_workers=self.hparams.num_workers,
         )
 

@@ -5,7 +5,7 @@ from torch_geometric.nn import global_mean_pool
 import torch.nn.functional as F
 
 from data.graph.dataset import GraphDataset
-from data.graph.util import pyg_from_string
+from data.graph.util import smiles2graph
 
 num_atom_type = 120
 num_chirality_tag = 3
@@ -82,18 +82,6 @@ class GraphEncoder(torch.nn.Module):
             torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
         )
 
-        self.cond_embedding0 = torch.nn.Embedding(5, hparams.graph_encoder_hidden_dim)
-        self.cond_embedding1 = torch.nn.Embedding(120, hparams.graph_encoder_hidden_dim)
-        self.cond_embedding2 = torch.nn.Embedding(3, hparams.graph_encoder_hidden_dim)
-        self.cond_embedding3 = torch.nn.Embedding(6, hparams.graph_encoder_hidden_dim)
-        self.cond_embedding4 = torch.nn.Embedding(3, hparams.graph_encoder_hidden_dim)
-
-        self.cond_projector = torch.nn.Sequential(
-            torch.nn.Linear(6 * hparams.graph_encoder_hidden_dim, hparams.graph_encoder_hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
-        )
-
     def forward(self, batched_data):
         x, edge_index, edge_attr = (
             batched_data.x,
@@ -113,67 +101,8 @@ class GraphEncoder(torch.nn.Module):
         out = global_mean_pool(out, batched_data.batch)
         return out
 
-    def forward_reps(self, batched_data):
-        x, edge_index, edge_attr = (
-            batched_data.x,
-            batched_data.edge_index,
-            batched_data.edge_attr,
-        )
-
-        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
-
-        for layer in range(self.num_layers):
-            h = self.gnns[layer](h, edge_index, edge_attr)
-            h = self.batch_norms[layer](h)
-            if layer < self.num_layers - 1:
-                h = F.relu(h)
-
-        noderep = self.projector(h)
-        graphrep = global_mean_pool(noderep, batched_data.batch)
-        return graphrep, noderep
-
-    def forward_cond(self, batched_data, cond):
-        x, edge_index, edge_attr = (
-            batched_data.x,
-            batched_data.edge_index,
-            batched_data.edge_attr,
-        )
-
-        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
-
-        for layer in range(self.num_layers):
-            h = self.gnns[layer](h, edge_index, edge_attr)
-            h = self.batch_norms[layer](h)
-            if layer < self.num_layers - 1:
-                h = F.relu(h)
-
-        out = self.projector(h)
-        out = global_mean_pool(out, batched_data.batch)
-    
-        h = torch.cat([
-            h, 
-            self.cond_embedding0(cond[:, 0]),
-            self.cond_embedding1(cond[:, 1]),
-            self.cond_embedding2(cond[:, 2]),
-            self.cond_embedding3(cond[:, 3]),
-            self.cond_embedding4(cond[:, 4]),
-            ], dim=1)
-
-        out0 = self.cond_projector(h)
-        out0 = global_mean_pool(out0, batched_data.batch)
-        
-        return out, out0
-    
     def encode_smiles(self, smiles_list, device):
-        data_list = [pyg_from_string(smiles) for smiles in smiles_list]
+        data_list = [smiles2graph(smiles) for smiles in smiles_list]
         batched_sequence_data = GraphDataset.collate_fn(data_list)
         batched_sequence_data = batched_sequence_data.to(device)
         return self(batched_sequence_data)
-
-    def get_dataset(self, split):
-        return GraphDataset(
-            self.hparams.data_dir,
-            split,
-            self.hparams.input_smiles_transform_type,
-            self.hparams.input_graph_transform_type
-        )

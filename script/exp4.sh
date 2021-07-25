@@ -1,13 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="graph2smiles_contrastive_mutate"
+TAG="variational"
 
 python train.py \
---autoencoder_type contrastive \
---encoder_type graph \
---decoder_type smiles \
---input_graph_transform_type mutate \
+--autoencoder_type variational \
+--code_dim 256
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

@@ -1,12 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="selfie2selfie"
+TAG="codedim3"
 
 python train.py \
 --autoencoder_type base \
---encoder_type selfie \
---decoder_type selfie \
+--code_dim 256
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

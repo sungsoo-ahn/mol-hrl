@@ -34,5 +34,5 @@ if __name__ == "__main__":
     trainer.fit(model)
 
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
-        
+
     trainer.save_checkpoint(hparams.checkpoint_path)

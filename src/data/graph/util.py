@@ -54,8 +54,8 @@ def get_bond_feature(bond_type):
     return edge_feature
 
 
-def pyg_from_string(string):
-    mol = Chem.MolFromSmiles(string, sanitize=True)
+def smiles2graph(smiles):
+    mol = Chem.MolFromSmiles(smiles, sanitize=True)
 
     # atoms
     num_atom_features = 2  # atom type,  chirality tag
@@ -95,37 +95,3 @@ def pyg_from_string(string):
     pyg = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 
     return pyg
-
-
-def string_from_pyg(pyg):
-    data_x, data_edge_index, data_edge_attr = pyg.x, pyg.edge_index, pyg.edge_attr
-
-    mol = Chem.RWMol()
-
-    # atoms
-    atom_features = data_x.cpu().numpy()
-    num_atoms = atom_features.shape[0]
-    for i in range(num_atoms):
-        atomic_num_idx, chirality_tag_idx = atom_features[i]
-        atomic_num = allowable_features["possible_atomic_num_list"][atomic_num_idx]
-        chirality_tag = allowable_features["possible_chirality_list"][chirality_tag_idx]
-        atom = Chem.Atom(atomic_num)
-        atom.SetChiralTag(chirality_tag)
-        mol.AddAtom(atom)
-
-    # bonds
-    edge_index = data_edge_index.cpu().numpy()
-    edge_attr = data_edge_attr.cpu().numpy()
-    num_bonds = edge_index.shape[1]
-    for j in range(0, num_bonds, 2):
-        begin_idx = int(edge_index[0, j])
-        end_idx = int(edge_index[1, j])
-        bond_type_idx, bond_dir_idx = edge_attr[j]
-        bond_type = allowable_features["possible_bonds"][bond_type_idx]
-        bond_dir = allowable_features["possible_bond_dirs"][bond_dir_idx]
-        mol.AddBond(begin_idx, end_idx, bond_type)
-        # set bond direction
-        new_bond = mol.GetBondBetweenAtoms(begin_idx, end_idx)
-        new_bond.SetBondDir(bond_dir)
-
-    return mol

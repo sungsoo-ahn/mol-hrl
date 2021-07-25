@@ -1,41 +1,25 @@
 import torch
 import torch_geometric
-from data.graph.util import pyg_from_string
+from data.graph.util import smiles2graph
 from data.smiles.util import load_smiles_list
-from data.smiles.transform import randomize
-from data.graph.transform import mutate, mask
 
 
 class GraphDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, split, smiles_transform_type="none", graph_transform_type="none"):
+    def __init__(self, data_dir, split, transform=smiles2graph):
         super(GraphDataset, self).__init__()
         self.smiles_list = load_smiles_list(data_dir, split)
-        
-        if smiles_transform_type == "none":
-            self.smiles_transform = lambda smiles: smiles
-        elif smiles_transform_type == "randomize_order":
-            self.smiles_transform = randomize
-            print("warning smiles randomization is meaningless")
-        
-        if graph_transform_type == "none":
-            self.graph_transform = lambda graph: graph
-        elif graph_transform_type == "mask":
-            self.graph_transform = mask
-        elif graph_transform_type == "mutate":
-            self.graph_transform = lambda graph: mutate(graph)
+        self.transform = transform
 
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
-        smiles = self.smiles_transform(smiles)
-        graph = pyg_from_string(smiles)
-        graph = self.graph_transform(graph)
-        return graph 
+        graph = self.transform(smiles)
+        return graph
 
     def __len__(self):
         return len(self.smiles_list)
 
     @staticmethod
-    def collate_fn(data_list):
+    def collate(data_list):
         keys = [set(data.keys) for data in data_list]
         keys = list(set.union(*keys))
 
@@ -68,50 +52,3 @@ class GraphDataset(torch.utils.data.Dataset):
         batch = batch.contiguous()
 
         return batch
-
-class ContrastiveGraphDataset(GraphDataset):
-    def __getitem__(self, idx):
-        smiles0 = self.smiles_list[idx]
-        smiles1 = self.smiles_transform(smiles0)
-        
-        graph0 = pyg_from_string(smiles0)
-        graph1 = pyg_from_string(smiles1)
-
-        graph1 = self.graph_transform(graph1)
-        return graph0, graph1
-    
-    @staticmethod
-    def collate_fn(data_list):
-        pyg_data_list0, pyg_data_list1 = list(zip(*data_list))
-        batched_pyg_data0 = (
-            super(ContrastiveGraphDataset, ContrastiveGraphDataset).collate_fn(pyg_data_list0)
-        )
-        batched_pyg_data1 = (
-            super(ContrastiveGraphDataset, ContrastiveGraphDataset).collate_fn(pyg_data_list1)
-        )
-        
-        return batched_pyg_data0, batched_pyg_data1
-        
-class RelationalGraphDataset(GraphDataset):
-    def __init__(self, data_dir, split):
-        self.smiles_list = load_smiles_list(data_dir, split)
-        
-    def __getitem__(self, idx):
-        smiles = self.smiles_list[idx]
-        pyg_data = pyg_from_string(smiles)
-        mutate_pyg_data, action_feat = mutate(pyg_data, return_relation=True)
-
-        return pyg_data, mutate_pyg_data, action_feat
-
-    def __len__(self):
-        return len(self.smiles_list)
-
-    @staticmethod
-    def collate_fn(data_list):
-        pyg_data_list, mutate_pyg_data_list, action_feat_list = list(zip(*data_list))
-        batched_pyg_data = super(RelationalGraphDataset, RelationalGraphDataset).collate_fn(pyg_data_list)
-        batched_mutate_pyg_data = super(RelationalGraphDataset, RelationalGraphDataset).collate_fn(mutate_pyg_data_list)
-        action_feats = torch.cat(action_feat_list, dim=0)
-        
-        return batched_pyg_data, batched_mutate_pyg_data, action_feats
-        

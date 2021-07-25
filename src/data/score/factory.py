@@ -174,13 +174,14 @@ def get_scoring_func(name, num_workers=32):
 
     elif name == "qed":
         objective = RdkitScoringFunction(descriptor=qed)
-    
+
     elif name == "tpsa":
         objective = RdkitScoringFunction(descriptor=tpsa)
-    
-    #print(objective.corrupt_score)
+
+    # print(objective.corrupt_score)
     objective.corrupt_score = -1e6
     float_score = lambda smiles: float(objective.score(smiles))
+
     def parallel_scoring_func(smiles_list):
         scores = Parallel(num_workers)(delayed(float_score)(smiles) for smiles in smiles_list)
 

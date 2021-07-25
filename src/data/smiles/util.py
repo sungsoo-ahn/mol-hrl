@@ -15,11 +15,12 @@ def get_pseudorandom_split_idxs(size, split_ratios):
 
     return train_idxs, vali_idxs
 
+
 def load_smiles_list(root_dir, split):
     smiles_list_path = os.path.join(root_dir, "smiles_list.txt")
     with open(smiles_list_path, "r") as f:
         smiles_list = f.read().splitlines()
-    
+
     train_idxs_path = os.path.join(root_dir, "train_idxs.pth")
     vali_idxs_path = os.path.join(root_dir, "vali_idxs.pth")
 
@@ -41,7 +42,8 @@ def load_smiles_list(root_dir, split):
     elif split == "val":
         return [smiles_list[idx] for idx in vali_idxs]
     elif split == "train_labeled":
-        return [smiles_list[idx] for idx in train_idxs[:int(len(smiles_list) * 0.1)]]
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.1)]]
+
 
 def is_valid_smiles(smiles):
     mol = canonicalize(smiles)
