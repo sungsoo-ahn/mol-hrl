@@ -84,6 +84,7 @@ class AutoEncoderModule(pl.LightningModule):
         
         DGIAutoEncoder.add_args(parser)
         VariationalAutoEncoder.add_args(parser)
+        SupervisedAutoEncoder.add_args(parser)
         
         return parser
 

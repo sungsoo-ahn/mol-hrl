@@ -51,7 +51,8 @@ class ScoreDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.tsrs[idx]
 
-    def collate(self, data_list):
+    @staticmethod
+    def collate(data_list):
         return torch.stack(data_list, dim=0)
 
     def normalize(self, tsrs):

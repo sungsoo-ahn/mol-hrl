@@ -3,6 +3,7 @@ import torch.nn.functional as F
 
 from module.autoencoder.base import BaseAutoEncoder
 from data.util import ZipDataset
+from data.sequence.dataset import SequenceDataset 
 from data.score.dataset import ScoreDataset
 from data.graph.dataset import GraphDataset
 
@@ -30,4 +31,13 @@ class SupervisedAutoEncoder(BaseAutoEncoder):
         return ZipDataset(
             GraphDataset(self.hparams.data_dir, split),
             ScoreDataset(self.hparams.data_dir, ["penalized_logp"], split),
+        )
+
+    @staticmethod
+    def collate(data_list):
+        input_data_list, target_data_list = zip(*data_list)
+        graph_data_list, score_data_list = zip(*input_data_list)
+        return (
+            (GraphDataset.collate(graph_data_list), ScoreDataset.collate(score_data_list)), 
+            SequenceDataset.collate(target_data_list)
         )
