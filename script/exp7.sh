@@ -1,10 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="variational"
+TAG="contrastive_mask"
 
 python train.py \
---autoencoder_type variational \
+--autoencoder_type contrastive \
+--input_graph_mask \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 
