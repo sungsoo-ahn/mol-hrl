@@ -21,8 +21,8 @@ class BaseAutoEncoder(nn.Module):
             self.transform = lambda smiles: mask(smiles2graph(smiles))
         elif hparams.input_graph_subgraph:
             self.transform = subgraph
-        elif hparams.input_graph_mutate:
-            self.transform = lambda smiles: mutate(smiles2graph(smiles))
+        #elif hparams.input_graph_mutate:
+        #    self.transform = lambda smiles: mutate(smiles2graph(smiles))
         else:
             self.transform=smiles2graph
 

@@ -93,7 +93,8 @@ def mask(data):
     edge_index = data.edge_index.clone()
     edge_attr = data.edge_attr.clone()
 
-    mask_idx = random.sample(range(num_nodes), k=int(MASK_RATE * num_nodes))
+    mask_idx = random.sample(range(num_nodes), k=1)
+    #k=int(MASK_RATE * num_nodes))
     x[mask_idx, 0] = 0
 
     true_x = data.x[:, 0]

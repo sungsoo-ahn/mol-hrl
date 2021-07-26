@@ -18,6 +18,8 @@ from data.score.dataset import ScoreDataset
 from data.graph.dataset import GraphDataset
 from data.sequence.dataset import SequenceDataset
 
+from data.smiles.util import is_valid_smiles
+
 def extract_codes(model, split):
     hparams = model.hparams
     if hparams.encoder_type == "graph":
@@ -56,7 +58,7 @@ def run_bo(model, score_func_name, run):
     RAW_SAMPLES = 256
     N_BATCH = 50
     MC_SAMPLES = 2048
-    NUM_REPS = 10
+    NUM_REPS = 5
 
     # seed=1
     model = model.cuda()
@@ -66,7 +68,8 @@ def run_bo(model, score_func_name, run):
 
     #
     dataset_codes = extract_codes(model, "train")
-    dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").tsrs
+    dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").raw_tsrs
+    print(dataset_scores.max())
 
     # setup scoring function
     _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
@@ -74,8 +77,9 @@ def run_bo(model, score_func_name, run):
 
     def score(codes):
         smiles_list = ae.decoder.sample_smiles(codes.to(device), argmax=True)
-        scores = torch.FloatTensor(smiles_score_func(smiles_list))
-        scores[scores < corrupt_score + 1] = invalid_scores
+        scores = smiles_score_func(smiles_list)
+        scores = torch.FloatTensor(scores)
+        scores[scores < corrupt_score + 1e-6] = invalid_scores
         return scores.unsqueeze(1)
 
     top1s, top10s, top100s = [], [], []

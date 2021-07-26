@@ -29,6 +29,24 @@ if __name__ == "__main__":
     run["log_dir"] = log_dir = f"../resource/log/{args.tag}"
     os.makedirs(log_dir, exist_ok=True)
 
-    for scoring_func_name in ["penalized_logp", "logp", "molwt", "qed", "tpsa"]:
+    for scoring_func_name in [
+        "penalized_logp", 
+        "logp", 
+        "molwt", 
+        "qed", 
+        "tpsa",
+        "camphor_menthol",
+        "tadalafil_sildenafil",
+        "osimertinib",
+        "fexofenadine",
+        "ranolazine",
+        "perindopril",
+        "amlodipine",
+        "sitagliptin",
+        "zaleplon",
+        #"valsartan_smarts",
+        #"decoration_hop",
+        #"scaffold_hop",
+        ]:
         #run_gradopt(model, "linear", scoring_func_name, run)
         run_bo(model, scoring_func_name, run)

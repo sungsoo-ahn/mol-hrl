@@ -1,4 +1,5 @@
 from argparse import Namespace
+from module.autoencoder.relational_abl import RelationalAblAutoEncoder
 from module.autoencoder.masking import MaskingAutoEncoder
 
 import torch
@@ -26,6 +27,7 @@ class AutoEncoderModule(pl.LightningModule):
             "base": BaseAutoEncoder,
             "contrastive": ContrastiveAutoEncoder,
             "relational": RelationalAutoEncoder,
+            "relational_abl": RelationalAblAutoEncoder,
             "dgi": DGIAutoEncoder,
             "supervised": SupervisedAutoEncoder,
             "variational": VariationalAutoEncoder,
