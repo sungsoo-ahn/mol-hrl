@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from gpytorch.kernels import LinearKernel
 from gpytorch.mlls.exact_marginal_log_likelihood import ExactMarginalLogLikelihood
 from botorch import fit_gpytorch_model
+from botorch.optim.fit import fit_gpytorch_torch
 from botorch.optim import optimize_acqf
 from botorch.models import SingleTaskGP
 from botorch.utils.transforms import standardize, normalize, unnormalize
@@ -99,7 +100,7 @@ def run_bo(model, score_func_name, run):
 
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll.to(device)
-            fit_gpytorch_model(mll, max_retries=10)
+            fit_gpytorch_model(mll, optimizer=fit_gpytorch_torch, max_retries=10)
             return model
 
         #
