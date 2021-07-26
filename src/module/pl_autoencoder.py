@@ -55,7 +55,7 @@ class AutoEncoderModule(pl.LightningModule):
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
-        parser.add_argument("--batch_size", type=int, default=128)
+        parser.add_argument("--batch_size", type=int, default=256)
         parser.add_argument("--num_workers", type=int, default=8)
 
         #parser.add_argument("--input_smiles_transform_type", type=str, default="none")
