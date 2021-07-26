@@ -10,14 +10,6 @@ class ContrastiveAutoEncoder(BaseAutoEncoder):
     def __init__(self, hparams):
         super(ContrastiveAutoEncoder, self).__init__(hparams)
         self.projector = torch.nn.Linear(hparams.code_dim, hparams.code_dim)
-        
-        if hparams.input_graph_fragment_contract:
-            self.transform = fragment_contract
-        elif hparams.input_graph_mask:
-            self.transform = lambda smiles: mask(smiles2graph(smiles))
-        elif hparams.input_graph_subgraph:
-            self.transform = subgraph
-        
 
     def update_encoder_loss(self, batched_input_data, loss=0.0, statistics=dict()):
         batched_input_data0, batched_input_data1 = batched_input_data

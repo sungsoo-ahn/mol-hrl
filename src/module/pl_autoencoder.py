@@ -63,6 +63,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--input_graph_mask", action="store_true")
         parser.add_argument("--input_graph_fragment_contract", action="store_true")
         parser.add_argument("--input_graph_subgraph", action="store_true")
+        parser.add_argument("--input_graph_mutate", action="store_true")
         
         #parser.add_argument("--target_smiles_transform_type", type=str, default="none")
         #parser.add_argument("--target_sequence_transform_type", type=str, default="none")

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="denoising1"
+TAG="contrastive"
 
 python train.py \
---autoencoder_type base \
---input_graph_fragment_contract \
+--autoencoder_type contrastive \
+--input_graph_mutate \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag $TAG
 

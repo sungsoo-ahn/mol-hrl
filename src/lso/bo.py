@@ -160,10 +160,9 @@ def run_bo(model, score_func_name, run):
         top10s.append(torch.topk(train_scores, k=10)[0].mean().item())
         top100s.append(torch.topk(train_scores, k=100)[0].mean().item())
         
-        run[f"top1/avg"] = np.mean(top1s)
-        run[f"top10/avg"] = np.mean(top10s)
-        run[f"top100/avg"] = np.mean(top100s)
-
-        run[f"top1/std"] = np.std(top1s)
-        run[f"top10/std"] = np.std(top10s)
-        run[f"top100/std"] = np.std(top100s)
+        run[f"{score_func_name}/top1/avg"] = np.mean(top1s)
+        run[f"{score_func_name}/top10/avg"] = np.mean(top10s)
+        run[f"{score_func_name}/top100/avg"] = np.mean(top100s)
+        run[f"{score_func_name}/top1/std"] = np.std(top1s)
+        run[f"{score_func_name}/top10/std"] = np.std(top10s)
+        run[f"{score_func_name}/top100/std"] = np.std(top100s)
