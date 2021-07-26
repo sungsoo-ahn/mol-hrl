@@ -93,7 +93,7 @@ def run_bo(model, score_func_name, run):
             model = SingleTaskGP(
                 train_X=normalize(train_codes, bounds=bounds), 
                 train_Y=train_scores,
-                #covar_module=LinearKernel()
+                covar_module=LinearKernel()
             )
             if state_dict is not None:
                 model.load_state_dict(state_dict)
