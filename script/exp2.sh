@@ -1,12 +1,12 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="codedim2"
+TAG="denoising0"
 
-#python train.py \
-#--autoencoder_type base \
-#--code_dim 128 \
-#--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag $TAG
+python train.py \
+--autoencoder_type base \
+--input_graph_mask \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tag $TAG
 
 python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
