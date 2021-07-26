@@ -93,14 +93,15 @@ def run_bo(model, score_func_name, run):
             model = SingleTaskGP(
                 train_X=normalize(train_codes, bounds=bounds), 
                 train_Y=train_scores,
-                covar_module=LinearKernel()
+                #covar_module=LinearKernel()
             )
             if state_dict is not None:
                 model.load_state_dict(state_dict)
 
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
             mll.to(device)
-            fit_gpytorch_model(mll, optimizer=fit_gpytorch_torch, max_retries=10)
+            #fit_gpytorch_model(mll, optimizer=fit_gpytorch_torch, max_retries=10)
+            fit_gpytorch_model(mll, max_retries=10)
             return model
 
         #
@@ -125,7 +126,7 @@ def run_bo(model, score_func_name, run):
         best_observed = [best_score]
         state_dict = None
 
-        run["best_observed"].log(best_score)
+        run[f"{score_func_name}/rep{rep_id}/best_observed"].log(best_score)
         for _ in tqdm(range(N_BATCH)):
             # fit the model
             bounds = [torch.min(train_codes, dim=0)[0], torch.max(train_codes, dim=0)[0]]
@@ -152,8 +153,8 @@ def run_bo(model, score_func_name, run):
 
             state_dict = model.state_dict()
 
-            run[f"rep{rep_id}/best_observed"].log(best_value)
-            run[f"rep{rep_id}/observed"].log(new_scores.max().item())
+            run[f"{score_func_name}/rep{rep_id}/best_observed"].log(best_value)
+            run[f"{score_func_name}/rep{rep_id}/observed"].log(new_scores.max().item())
 
         train_scores = train_scores.squeeze(1)
         top1s.append(torch.topk(train_scores, k=1)[0].mean().item())
