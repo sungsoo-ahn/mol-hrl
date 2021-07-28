@@ -56,7 +56,7 @@ def run_bo(model, score_func_name, run):
     BATCH_SIZE = 10
     NUM_RESTARTS = 10
     RAW_SAMPLES = 256
-    N_BATCH = 50
+    N_BATCH = 200
     MC_SAMPLES = 2048
     NUM_REPS = 5
 

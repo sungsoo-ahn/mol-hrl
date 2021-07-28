@@ -21,6 +21,10 @@ if __name__ == "__main__":
     neptune_logger.append_tags([hparams.tag])
 
     model = AutoEncoderModule(hparams)
+    try:
+        model.load_from_checkpoint(hparams.checkpoint_path)
+    except:
+        pass
 
     checkpoint_callback = ModelCheckpoint(monitor="train/loss/total")
     trainer = pl.Trainer(
