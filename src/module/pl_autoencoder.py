@@ -76,7 +76,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--graph_encoder_num_layers", type=int, default=5)
 
         # SequentialEncoder specific
-        parser.add_argument("--sequence_encoder_hidden_dim", type=int, default=1024)
+        parser.add_argument("--sequence_encoder_hidden_dim", type=int, default=2048)
         parser.add_argument("--sequence_encoder_num_layers", type=int, default=3)
 
         # SequentialDecoder specific
