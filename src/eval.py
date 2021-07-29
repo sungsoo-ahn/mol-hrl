@@ -12,6 +12,7 @@ from lso.bo import run_bo
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default.pth")
+    parser.add_argument("--bo_covar_module", type=str, default="rbf")
     parser.add_argument("--tag", type=str, default="notag")
     args = parser.parse_args()
 
@@ -49,4 +50,4 @@ if __name__ == "__main__":
         #"scaffold_hop",
         ]:
         #run_gradopt(model, "linear", scoring_func_name, run)
-        run_bo(model, scoring_func_name, run)
+        run_bo(model, scoring_func_name, run, args.bo_covar_module)

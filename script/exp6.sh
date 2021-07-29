@@ -9,4 +9,5 @@ TAG="denoising_mask"
 #--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 #--tag $TAG
 
+python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag "${TAG}_linear"
 python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG

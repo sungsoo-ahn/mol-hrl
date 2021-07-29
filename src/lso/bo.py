@@ -51,7 +51,7 @@ def extract_codes(model, split):
     return codes
 
 
-def run_bo(model, score_func_name, run):
+def run_bo(model, score_func_name, run, covar_module):
     #
     BATCH_SIZE = 10
     NUM_RESTARTS = 10
@@ -69,12 +69,13 @@ def run_bo(model, score_func_name, run):
     #
     dataset_codes = extract_codes(model, "train")
     dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").raw_tsrs
-    print(dataset_scores.max())
-
+    
     # setup scoring function
     _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
     invalid_scores = dataset_scores.min()
 
+    code_dim = dataset_codes.size(1)
+        
     def score(codes):
         smiles_list = ae.decoder.sample_smiles(codes.to(device), argmax=True)
         scores = smiles_score_func(smiles_list)
@@ -82,50 +83,59 @@ def run_bo(model, score_func_name, run):
         scores[scores < corrupt_score + 1e-6] = invalid_scores
         return scores.unsqueeze(1)
 
-    top1s, top10s, top100s = [], [], []
-    for rep_id in range(NUM_REPS):
+    def get_fitted_model(train_codes, train_scores, bounds, state_dict=None):
+        # initialize and fit model
+        if covar_module == "rbf":
+            model = SingleTaskGP(
+                train_X=normalize(train_codes, bounds=bounds), 
+                train_Y=train_scores,
+            )
+            
+        elif covar_module == "linear":
+            model = SingleTaskGP(
+                train_X=normalize(train_codes, bounds=bounds), 
+                train_Y=train_scores,
+                covar_module=LinearKernel()
+            )
+
+        if state_dict is not None:
+            model.load_state_dict(state_dict)
+
+        mll = ExactMarginalLogLikelihood(model.likelihood, model)
+        mll.to(device)
+        if covar_module == "rbf":
+            fit_gpytorch_model(mll, max_retries=10)
+        elif covar_module == "linear":
+            fit_gpytorch_model(mll, optimizer=fit_gpytorch_torch, max_retries=10)
+
+        return model
+
+    #
+    def optimize_acqf_and_get_observation(acq_func, bounds):
+        # optimize
+        new_codes, _ = optimize_acqf(
+            acq_function=acq_func,
+            bounds=torch.stack(
+                [torch.zeros(code_dim, device=device), torch.ones(code_dim, device=device),]
+            ),
+            q=BATCH_SIZE,
+            num_restarts=NUM_RESTARTS,
+            raw_samples=RAW_SAMPLES,
+        )
+
+        # observe new values
+        new_codes = unnormalize(new_codes, bounds=bounds).to(device)
+        new_scores = score(new_codes).to(device)
+        return new_codes, new_scores
+
+    def run_single_bo(rep_id):
         # initialize
         train_idxs = torch.topk(dataset_scores.squeeze(1), k=1000)[1]
         train_scores = dataset_scores[train_idxs].to(device)
         train_codes = dataset_codes[train_idxs].to(device)
 
         best_score = train_scores.max().item()
-        code_dim = train_codes.size(1)
         
-        def get_fitted_model(train_codes, train_scores, bounds, state_dict=None):
-            # initialize and fit model
-            model = SingleTaskGP(
-                train_X=normalize(train_codes, bounds=bounds), 
-                train_Y=train_scores,
-                #covar_module=LinearKernel()
-            )
-            if state_dict is not None:
-                model.load_state_dict(state_dict)
-
-            mll = ExactMarginalLogLikelihood(model.likelihood, model)
-            mll.to(device)
-            #fit_gpytorch_model(mll, optimizer=fit_gpytorch_torch, max_retries=10)
-            fit_gpytorch_model(mll, max_retries=10)
-            return model
-
-        #
-        def optimize_acqf_and_get_observation(acq_func, bounds):
-            # optimize
-            new_codes, _ = optimize_acqf(
-                acq_function=acq_func,
-                bounds=torch.stack(
-                    [torch.zeros(code_dim, device=device), torch.ones(code_dim, device=device),]
-                ),
-                q=BATCH_SIZE,
-                num_restarts=NUM_RESTARTS,
-                raw_samples=RAW_SAMPLES,
-            )
-
-            # observe new values
-            new_codes = unnormalize(new_codes, bounds=bounds).to(device)
-            new_scores = score(new_codes).to(device)
-            return new_codes, new_scores
-
         # call helper function to initialize model
         best_observed = [best_score]
         state_dict = None
@@ -161,13 +171,29 @@ def run_bo(model, score_func_name, run):
             run[f"{score_func_name}/rep{rep_id}/observed"].log(new_scores.max().item())
 
         train_scores = train_scores.squeeze(1)
-        top1s.append(torch.topk(train_scores, k=1)[0].mean().item())
-        top10s.append(torch.topk(train_scores, k=10)[0].mean().item())
-        top100s.append(torch.topk(train_scores, k=100)[0].mean().item())
+        top1 = torch.topk(train_scores, k=1)[0].mean().item()
+        top10 = torch.topk(train_scores, k=10)[0].mean().item()
+        top100 = torch.topk(train_scores, k=100)[0].mean().item()
         
-        run[f"{score_func_name}/top1/avg"] = np.mean(top1s)
-        run[f"{score_func_name}/top10/avg"] = np.mean(top10s)
-        run[f"{score_func_name}/top100/avg"] = np.mean(top100s)
-        run[f"{score_func_name}/top1/std"] = np.std(top1s)
-        run[f"{score_func_name}/top10/std"] = np.std(top10s)
-        run[f"{score_func_name}/top100/std"] = np.std(top100s)
+        return top1, top10, top100
+
+    top1s, top10s, top100s = [], [], []
+    fail_cnt = 0
+    for rep_id in range(NUM_REPS):
+        try:
+            top1, top10, top100 = run_single_bo(rep_id)
+            top1s.append(top1)
+            top10s.append(top10)
+            top100s.append(top100)
+            
+            run[f"{score_func_name}/top1/avg"] = np.mean(top1s)
+            run[f"{score_func_name}/top10/avg"] = np.mean(top10s)
+            run[f"{score_func_name}/top100/avg"] = np.mean(top100s)
+            run[f"{score_func_name}/top1/std"] = np.std(top1s)
+            run[f"{score_func_name}/top10/std"] = np.std(top10s)
+            run[f"{score_func_name}/top100/std"] = np.std(top100s)
+        except:
+            fail_cnt += 1
+            run[f"{score_func_name}/fail_cnt"] = fail_cnt
+
+        
