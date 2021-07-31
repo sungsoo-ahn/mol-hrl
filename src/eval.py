@@ -51,5 +51,5 @@ if __name__ == "__main__":
         #"scaffold_hop",
         ]:
         #run_gradopt(model, "linear", scoring_func_name, run)
-        #run_bo(model, scoring_func_name, run, args.bo_covar_module)
-        run_finetune(model, scoring_func_name, run)
+        run_bo(model, scoring_func_name, run, args.bo_covar_module)
+        #run_finetune(model, scoring_func_name, run)
