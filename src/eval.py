@@ -8,6 +8,7 @@ import neptune.new as neptune
 from module.pl_autoencoder import AutoEncoderModule
 from lso.gradopt import run_gradopt
 from lso.bo import run_bo
+from condgen.finetune import run_finetune
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -50,4 +51,5 @@ if __name__ == "__main__":
         #"scaffold_hop",
         ]:
         #run_gradopt(model, "linear", scoring_func_name, run)
-        run_bo(model, scoring_func_name, run, args.bo_covar_module)
+        #run_bo(model, scoring_func_name, run, args.bo_covar_module)
+        run_finetune(model, scoring_func_name, run)
