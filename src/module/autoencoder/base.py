@@ -2,7 +2,7 @@ from data.graph.util import smiles2graph
 import torch.nn as nn
 
 from data.graph.dataset import GraphDataset
-from data.graph.transform import mask, fragment_contract, subgraph, mutate
+from data.graph.transform import mask, fragment_contract, subgraph, fragment
 from data.sequence.dataset import SequenceDataset
 from module.encoder.graph import GraphEncoder
 from module.decoder.sequence import SequenceDecoder
@@ -21,8 +21,8 @@ class BaseAutoEncoder(nn.Module):
             self.transform = lambda smiles: mask(smiles2graph(smiles))
         elif hparams.input_graph_subgraph:
             self.transform = subgraph
-        #elif hparams.input_graph_mutate:
-        #    self.transform = lambda smiles: mutate(smiles2graph(smiles))
+        elif hparams.input_graph_fragment:
+            self.transform = fragment
         else:
             self.transform=smiles2graph
 

@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from data.graph.dataset import GraphDataset
 from data.graph.util import smiles2graph
 
-num_atom_type = 120
+num_atom_type = 1 + 119 + 1 # Frag node (0), atomic (1~119), mask (120)
 num_chirality_tag = 3
 
 num_bond_type = 6

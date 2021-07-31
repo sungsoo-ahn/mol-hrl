@@ -108,7 +108,7 @@ import numpy as np
 import torch
 from torch_geometric.data import Data
 from torch_sparse import coalesce
-from data.graph.util import smiles2graph
+from data.graph.util import smiles2graph, mol2graph
 from rdkit import Chem
 from rdkit.Chem import BRICS
 
@@ -175,6 +175,15 @@ def fragment_contract(smiles):
     data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
     
     return data
+
+def fragment(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    brics_bonds = list(BRICS.FindBRICSBonds(mol))
+    if len(brics_bonds) == 0 or random.choice(range(2)) == 0:
+        return mol2graph(mol)
+    else:
+        fragged_mol = BRICS.BreakBRICSBonds(mol, bonds=[random.choice(brics_bonds)])
+        return mol2graph(fragged_mol)
 
 import torch
 from torch_cluster import random_walk
