@@ -9,20 +9,24 @@ python run_autoencoder.py \
 
 python run_conddecoder.py \
 --score_func_name penalized_logp \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}_penalized_logp.pth" \
 --tag "${TAG}_penalized_logp"
 
 python run_conddecoder.py \
 --score_func_name logp \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}_logp.pth" \
 --tag "${TAG}_logp"
 
 python run_conddecoder.py \
 --score_func_name molwt \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}_molwt.pth" \
 --tag "${TAG}_molwt"
 
 python run_conddecoder.py \
 --score_func_name qed \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}_qed.pth" \
 --tag "${TAG}_qed"

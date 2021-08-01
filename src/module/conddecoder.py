@@ -27,8 +27,8 @@ class CondDecoderModule(pl.LightningModule):
 
         self.decoder = SequenceDecoder(hparams)
         self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
-        if hparams.checkpoint_path != "":
-            state_dict = torch.load(hparams.checkpoint_path)
+        if hparams.load_checkpoint_path != "":
+            state_dict = torch.load(hparams.load_checkpoint_path)
             if "decoder" in state_dict:
                 self.decoder.load_state_dict(state_dict["decoder"])
             elif "cond_embedding" in state_dict:
@@ -51,7 +51,7 @@ class CondDecoderModule(pl.LightningModule):
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
-        parser.add_argument("--checkpoint_path", type=str, default="")
+        parser.add_argument("--load_checkpoint_path", type=str, default="")
         parser.add_argument("--train_split", type=str, default="train_01")
         parser.add_argument("--batch_size", type=int, default=256)
         parser.add_argument("--query_batch_size", type=int, default=500)

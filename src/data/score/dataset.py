@@ -31,7 +31,7 @@ class ScoreDataset(torch.utils.data.Dataset):
         # Setup normalization statistics
         score_func_names = [score_func_name]
         train_score_lists = [
-            load_score_list(root_dir, score_func_name, "train_labeled") for score_func_name in score_func_names
+            load_score_list(root_dir, score_func_name, split) for score_func_name in score_func_names
         ]
         train_raw_tsrs = torch.FloatTensor(train_score_lists).T
         self.mean_scores = train_raw_tsrs.mean(dim=0)
