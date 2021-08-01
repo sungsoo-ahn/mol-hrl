@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from data.graph.dataset import GraphDataset
 from data.graph.util import smiles2graph
 
-num_atom_type = 1 + 119 + 1 # Frag node (0), atomic (1~119), mask (120)
+num_atom_type = 1 + 119 + 1  # Frag node (0), atomic (1~119), mask (120)
 num_chirality_tag = 3
 
 num_bond_type = 6
@@ -18,9 +18,7 @@ class GINConv(MessagePassing):
     def __init__(self, emb_dim):
         super(GINConv, self).__init__()
         self.mlp = torch.nn.Sequential(
-            torch.nn.Linear(emb_dim, 2 * emb_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(2 * emb_dim, emb_dim),
+            torch.nn.Linear(emb_dim, 2 * emb_dim), torch.nn.ReLU(), torch.nn.Linear(2 * emb_dim, emb_dim),
         )
         self.edge_embedding1 = torch.nn.Embedding(num_bond_type, emb_dim)
         self.edge_embedding2 = torch.nn.Embedding(num_bond_direction, emb_dim)
@@ -38,9 +36,7 @@ class GINConv(MessagePassing):
         self_loop_attr = self_loop_attr.to(edge_attr.device).to(edge_attr.dtype)
         edge_attr = torch.cat((edge_attr, self_loop_attr), dim=0)
 
-        edge_embeddings = self.edge_embedding1(edge_attr[:, 0]) + self.edge_embedding2(
-            edge_attr[:, 1]
-        )
+        edge_embeddings = self.edge_embedding1(edge_attr[:, 0]) + self.edge_embedding2(edge_attr[:, 1])
 
         return self.propagate(edge_index, x=x, edge_attr=edge_embeddings)
 
@@ -55,31 +51,31 @@ class GraphEncoder(torch.nn.Module):
     def __init__(self, hparams):
         super(GraphEncoder, self).__init__()
         self.hparams = hparams
-        self.num_layers = hparams.graph_encoder_num_layers
+        self.num_layers = hparams.encoder_num_layers
 
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.x_embedding1 = torch.nn.Embedding(num_atom_type, hparams.graph_encoder_hidden_dim)
-        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hparams.graph_encoder_hidden_dim)
+        self.x_embedding1 = torch.nn.Embedding(num_atom_type, hparams.encoder_hidden_dim)
+        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hparams.encoder_hidden_dim)
 
         torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
         torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
 
         ###List of MLPs
         self.gnns = torch.nn.ModuleList()
-        for layer in range(hparams.graph_encoder_num_layers):
-            self.gnns.append(GINConv(hparams.graph_encoder_hidden_dim))
+        for layer in range(hparams.encoder_num_layers):
+            self.gnns.append(GINConv(hparams.encoder_hidden_dim))
 
         ###List of batchnorms
         self.batch_norms = torch.nn.ModuleList()
-        for _ in range(hparams.graph_encoder_num_layers):
-            self.batch_norms.append(torch.nn.BatchNorm1d(hparams.graph_encoder_hidden_dim))
+        for _ in range(hparams.encoder_num_layers):
+            self.batch_norms.append(torch.nn.BatchNorm1d(hparams.encoder_hidden_dim))
 
         self.projector = torch.nn.Sequential(
-            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.graph_encoder_hidden_dim),
+            torch.nn.Linear(hparams.encoder_hidden_dim, hparams.encoder_hidden_dim),
             torch.nn.ReLU(),
-            torch.nn.Linear(hparams.graph_encoder_hidden_dim, hparams.code_dim),
+            torch.nn.Linear(hparams.encoder_hidden_dim, hparams.code_dim),
         )
 
     def forward(self, batched_data):

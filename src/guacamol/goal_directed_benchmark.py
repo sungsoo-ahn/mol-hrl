@@ -113,9 +113,7 @@ class GoalDirectedBenchmark:
         internal_similarities = calculate_internal_pairwise_similarities(unique_molecules)
 
         # accumulate internal_similarities in metadata
-        int_simi_histogram = np.histogram(
-            internal_similarities, bins=10, range=(0, 1), density=True
-        )
+        int_simi_histogram = np.histogram(internal_similarities, bins=10, range=(0, 1), density=True)
 
         metadata: Dict[str, Any] = {}
         metadata.update(top_x_dict)

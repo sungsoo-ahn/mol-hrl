@@ -27,10 +27,7 @@ def compute_sequence_cross_entropy(logits, batched_sequence_data):
     targets = sequences[:, 1:]
 
     loss = torch.nn.functional.cross_entropy(
-        logits.reshape(-1, logits.size(-1)),
-        targets.reshape(-1),
-        reduction="sum",
-        ignore_index=PAD_ID,
+        logits.reshape(-1, logits.size(-1)), targets.reshape(-1), reduction="sum", ignore_index=PAD_ID,
     )
     loss /= torch.sum(lengths - 1)
 
@@ -45,16 +42,16 @@ class SequenceDecoder(nn.Module):
         self.tokenizer = load_tokenizer(hparams.data_dir)
         num_vocabs = len(self.vocabulary)
 
-        self.encoder = nn.Embedding(num_vocabs, hparams.sequence_decoder_hidden_dim)
-        self.code_encoder = nn.Linear(hparams.code_dim, hparams.sequence_decoder_hidden_dim)
+        self.encoder = nn.Embedding(num_vocabs, hparams.decoder_hidden_dim)
+        self.code_encoder = nn.Linear(hparams.code_dim, hparams.decoder_hidden_dim)
         self.lstm = nn.LSTM(
-            hparams.sequence_decoder_hidden_dim,
-            hparams.sequence_decoder_hidden_dim,
+            hparams.decoder_hidden_dim,
+            hparams.decoder_hidden_dim,
             batch_first=True,
-            num_layers=hparams.sequence_decoder_num_layers,
+            num_layers=hparams.decoder_num_layers,
         )
-        self.decoder = nn.Linear(hparams.sequence_decoder_hidden_dim, num_vocabs)
-        self.max_length = hparams.sequence_decoder_max_length
+        self.decoder = nn.Linear(hparams.decoder_hidden_dim, num_vocabs)
+        self.max_length = hparams.decoder_max_length
 
     def forward(self, batched_sequence_data, codes):
         sequences, lengths = batched_sequence_data
@@ -66,9 +63,7 @@ class SequenceDecoder(nn.Module):
 
         out = sequences_embedding + codes_embedding
 
-        out = pack_padded_sequence(
-            out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False
-        )
+        out = pack_padded_sequence(out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False)
         out, _ = self.lstm(out, None)
         out, _ = pad_packed_sequence(out, batch_first=True)
 
@@ -120,7 +115,5 @@ class SequenceDecoder(nn.Module):
         sequences = sequences.cpu()
         lengths = lengths.cpu()
         sequences = [sequence[:length] for sequence, length in zip(sequences, lengths)]
-        smiles_list = [
-            sequence2smiles(sequence, self.tokenizer, self.vocabulary) for sequence in sequences
-        ]
+        smiles_list = [sequence2smiles(sequence, self.tokenizer, self.vocabulary) for sequence in sequences]
         return smiles_list

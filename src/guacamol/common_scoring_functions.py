@@ -31,9 +31,7 @@ class RdkitScoringFunction(ScoringFunctionBasedOnRdkitMol):
     Scoring function wrapping RDKit descriptors.
     """
 
-    def __init__(
-        self, descriptor: Callable[[Chem.Mol], float], score_modifier: ScoreModifier = None,
-    ) -> None:
+    def __init__(self, descriptor: Callable[[Chem.Mol], float], score_modifier: ScoreModifier = None,) -> None:
         """
         Args:
             descriptor: molecular descriptors, such as the ones in descriptors.py
@@ -143,8 +141,7 @@ class IsomerScoringFunction(MoleculewiseScoringFunction):
         # scoring functions for each element
         functions = [
             RdkitScoringFunction(
-                descriptor=AtomCounter(element),
-                score_modifier=GaussianModifier(mu=n_atoms, sigma=1.0),
+                descriptor=AtomCounter(element), score_modifier=GaussianModifier(mu=n_atoms, sigma=1.0),
             )
             for element, n_atoms in element_occurrences
         ]
@@ -152,8 +149,7 @@ class IsomerScoringFunction(MoleculewiseScoringFunction):
         # scoring functions for the total number of atoms
         functions.append(
             RdkitScoringFunction(
-                descriptor=num_atoms,
-                score_modifier=GaussianModifier(mu=total_number_atoms, sigma=2.0),
+                descriptor=num_atoms, score_modifier=GaussianModifier(mu=total_number_atoms, sigma=2.0),
             )
         )
 

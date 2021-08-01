@@ -49,8 +49,7 @@ def assess_goal_directed_generation(
 
 
 def _evaluate_goal_directed_benchmarks(
-    goal_directed_molecule_generator: GoalDirectedGenerator,
-    benchmarks: List[GoalDirectedBenchmark],
+    goal_directed_molecule_generator: GoalDirectedGenerator, benchmarks: List[GoalDirectedBenchmark],
 ) -> List[GoalDirectedBenchmarkResult]:
     """
     Evaluate a model with the given benchmarks.
@@ -70,9 +69,7 @@ def _evaluate_goal_directed_benchmarks(
         result = benchmark.assess_model(goal_directed_molecule_generator)
         logger.info(f'Results for the benchmark "{result.benchmark_name}":')
         logger.info(f"  Score: {result.score:.6f}")
-        logger.info(
-            f"  Execution time: {str(datetime.timedelta(seconds=int(result.execution_time)))}"
-        )
+        logger.info(f"  Execution time: {str(datetime.timedelta(seconds=int(result.execution_time)))}")
         logger.info(f"  Metadata: {result.metadata}")
         results.append(result)
 

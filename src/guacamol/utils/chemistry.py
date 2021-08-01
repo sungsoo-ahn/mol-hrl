@@ -154,12 +154,7 @@ def neutralise_charges(mol, reactions=None):
 
 
 def filter_and_canonicalize(
-    smiles: str,
-    holdout_set,
-    holdout_fps,
-    neutralization_rxns,
-    tanimoto_cutoff=0.5,
-    include_stereocenters=False,
+    smiles: str, holdout_set, holdout_fps, neutralization_rxns, tanimoto_cutoff=0.5, include_stereocenters=False,
 ):
     """
     Args:
@@ -224,10 +219,7 @@ def calculate_internal_pairwise_similarities(smiles_list: Collection[str]) -> np
         Symmetric matrix of pairwise similarities. Diagonal is set to zero.
     """
     if len(smiles_list) > 10000:
-        logger.warning(
-            f"Calculating internal similarity on large set of "
-            f"SMILES strings ({len(smiles_list)})"
-        )
+        logger.warning(f"Calculating internal similarity on large set of " f"SMILES strings ({len(smiles_list)})")
 
     mols = get_mols(smiles_list)
     fps = get_fingerprints(mols)
@@ -334,11 +326,7 @@ def highest_tanimoto_precalc_fps(mol, fps):
 def continuous_kldiv(X_baseline: np.array, X_sampled: np.array) -> float:
     kde_P = gaussian_kde(X_baseline)
     kde_Q = gaussian_kde(X_sampled)
-    x_eval = np.linspace(
-        np.hstack([X_baseline, X_sampled]).min(),
-        np.hstack([X_baseline, X_sampled]).max(),
-        num=1000,
-    )
+    x_eval = np.linspace(np.hstack([X_baseline, X_sampled]).min(), np.hstack([X_baseline, X_sampled]).max(), num=1000,)
     P = kde_P(x_eval) + 1e-10
     Q = kde_Q(x_eval) + 1e-10
 

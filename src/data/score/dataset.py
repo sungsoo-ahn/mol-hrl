@@ -26,22 +26,19 @@ def load_scores(root_dir, score_func_name, split):
 
 
 class ScoreDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, score_func_names, split):
+    def __init__(self, root_dir, score_func_name, split):
         super(ScoreDataset, self).__init__()
         # Setup normalization statistics
+        score_func_names = [score_func_name]
         train_score_lists = [
-            load_score_list(root_dir, score_func_name, "train_labeled")
-            for score_func_name in score_func_names
+            load_score_list(root_dir, score_func_name, "train_labeled") for score_func_name in score_func_names
         ]
         train_raw_tsrs = torch.FloatTensor(train_score_lists).T
         self.mean_scores = train_raw_tsrs.mean(dim=0)
         self.std_scores = train_raw_tsrs.std(dim=0)
 
         # Setup dataset
-        score_lists = [
-            load_score_list(root_dir, score_func_name, split)
-            for score_func_name in score_func_names
-        ]
+        score_lists = [load_score_list(root_dir, score_func_name, split) for score_func_name in score_func_names]
         self.raw_tsrs = torch.FloatTensor(score_lists).T
         self.tsrs = self.normalize(self.raw_tsrs)
 

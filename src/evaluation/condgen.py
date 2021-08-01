@@ -6,6 +6,7 @@ from data.score.dataset import ScoreDataset
 from data.util import ZipDataset
 from data.score.factory import get_scoring_func
 
+
 def run_finetune(checkpoint_path, score_func_name, run):
     # seed=1
     EVAL_BATCH_SIZE = 256
@@ -17,7 +18,7 @@ def run_finetune(checkpoint_path, score_func_name, run):
     device = model.device
     score_embedding = torch.nn.Linear(1, model.hparams.code_dim).cuda()
     optimizer = torch.optim.Adam(list(ae.parameters()) + list(score_embedding.parameters()), lr=LR)
-    
+
     if score_func_name == "penalized_logp":
         eval_scores = [0.0, 2.0, 4.0]
     elif score_func_name == "logp":
@@ -32,16 +33,12 @@ def run_finetune(checkpoint_path, score_func_name, run):
     score_dataset = ScoreDataset(model.hparams.data_dir, [score_func_name], "train_labeled")
     dataset = ZipDataset(input_dataset, score_dataset)
     loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=256,
-            shuffle=True,
-            collate_fn=dataset.collate,
-            num_workers=8,
-        )
+        dataset, batch_size=256, shuffle=True, collate_fn=dataset.collate, num_workers=8,
+    )
 
     _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
     invalid_scores = score_dataset.raw_tsrs.min()
-    
+
     def score_codes(codes):
         smiles_list = ae.decoder.sample_smiles(codes.to(device), argmax=True)
         scores = smiles_score_func(smiles_list)
@@ -56,7 +53,7 @@ def run_finetune(checkpoint_path, score_func_name, run):
             codes = score_embedding(batched_score_data)
             decoder_out = ae.decoder(batched_input_data, codes)
             recon_loss, recon_statistics = ae.decoder.compute_recon_loss(decoder_out, batched_input_data)
-            
+
             optimizer.zero_grad()
             recon_loss.backward()
             optimizer.step()

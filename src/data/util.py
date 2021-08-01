@@ -26,6 +26,4 @@ class ZipDataset(torch.utils.data.Dataset):
         return [dataset[idx] for dataset in self.datasets]
 
     def collate(self, data_list):
-        return [
-            dataset.collate(data_list) for dataset, data_list in zip(self.datasets, zip(*data_list))
-        ]
+        return [dataset.collate(data_list) for dataset, data_list in zip(self.datasets, zip(*data_list))]

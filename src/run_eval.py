@@ -17,21 +17,16 @@ if __name__ == "__main__":
     parser.add_argument("--tag", type=str, default="notag")
     args = parser.parse_args()
 
-    run = neptune.init(
-        project="sungsahn0215/molrep",
-        name="eval_ae",
-        source_files=["*.py", "**/*.py"],
-        tags=args.tag,
-    )
+    run = neptune.init(project="sungsahn0215/molrep", name="eval_ae", source_files=["*.py", "**/*.py"], tags=args.tag,)
     run["tag"] = args.tag
-    
+
     for scoring_func_name in [
-        "penalized_logp", 
-        "logp", 
-        "molwt", 
-        "qed", 
+        "penalized_logp",
+        "logp",
+        "molwt",
+        "qed",
         "tpsa",
-        ]:
-        #run_gradopt(model, "linear", scoring_func_name, run)
+    ]:
+        # run_gradopt(model, "linear", scoring_func_name, run)
         run_bo(scoring_func_name, run, args.bo_covar_module)
-        #run_finetune(model, scoring_func_name, run)
+        # run_finetune(model, scoring_func_name, run)

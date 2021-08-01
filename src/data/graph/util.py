@@ -58,14 +58,15 @@ def smiles2graph(smiles):
     mol = Chem.MolFromSmiles(smiles, sanitize=True)
     return mol2graph(mol)
 
+
 def mol2graph(mol):
     # atoms
     num_atom_features = 2  # atom type,  chirality tag
     atom_features_list = []
     for atom in mol.GetAtoms():
-        atom_feature = [
-            allowable_features["possible_atomic_num_list"].index(atom.GetAtomicNum())
-        ] + [allowable_features["possible_chirality_list"].index(atom.GetChiralTag())]
+        atom_feature = [allowable_features["possible_atomic_num_list"].index(atom.GetAtomicNum())] + [
+            allowable_features["possible_chirality_list"].index(atom.GetChiralTag())
+        ]
         atom_features_list.append(atom_feature)
     x = torch.tensor(np.array(atom_features_list), dtype=torch.long)
 

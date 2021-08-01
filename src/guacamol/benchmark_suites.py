@@ -65,9 +65,7 @@ def distribution_learning_benchmark_suite(
 
     # For distribution-learning, v1 and v2 are identical
     if version_name == "v1" or version_name == "v2":
-        return distribution_learning_suite_v1(
-            chembl_file_path=chembl_file_path, number_samples=number_samples
-        )
+        return distribution_learning_suite_v1(chembl_file_path=chembl_file_path, number_samples=number_samples)
 
     raise Exception(f'Distribution-learning benchmark suite "{version_name}" does not exist.')
 
@@ -115,12 +113,7 @@ def goal_directed_suite_v1() -> List[GoalDirectedBenchmark]:
             fp_type="FCFP4",
             threshold=0.75,
         ),
-        similarity(
-            smiles="CC(C)(C)NCC(O)c1ccc(O)c(CO)c1",
-            name="Albuterol",
-            fp_type="FCFP4",
-            threshold=0.75,
-        ),
+        similarity(smiles="CC(C)(C)NCC(O)c1ccc(O)c(CO)c1", name="Albuterol", fp_type="FCFP4", threshold=0.75,),
         similarity(
             smiles="COc1ccc2[C@H]3CC[C@@]4(C)[C@@H](CC[C@@]4(O)C#C)[C@@H]3CCc2c1",
             name="Mestranol",
@@ -167,12 +160,7 @@ def goal_directed_suite_v2() -> List[GoalDirectedBenchmark]:
             fp_type="ECFP4",
             threshold=0.75,
         ),
-        similarity(
-            smiles="CC(C)(C)NCC(O)c1ccc(O)c(CO)c1",
-            name="Albuterol",
-            fp_type="FCFP4",
-            threshold=0.75,
-        ),
+        similarity(smiles="CC(C)(C)NCC(O)c1ccc(O)c(CO)c1", name="Albuterol", fp_type="FCFP4", threshold=0.75,),
         similarity(
             smiles="COc1ccc2[C@H]3CC[C@@]4(C)[C@@H](CC[C@@]4(O)C#C)[C@@H]3CCc2c1",
             name="Mestranol",

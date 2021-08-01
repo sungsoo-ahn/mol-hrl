@@ -28,10 +28,7 @@ class FrechetBenchmark(DistributionLearningBenchmark):
     """
 
     def __init__(
-        self,
-        training_set: List[str],
-        chemnet_model_filename="ChemNet_v0.13_pretrained.h5",
-        sample_size=10000,
+        self, training_set: List[str], chemnet_model_filename="ChemNet_v0.13_pretrained.h5", sample_size=10000,
     ) -> None:
         """
         Args:
@@ -46,15 +43,11 @@ class FrechetBenchmark(DistributionLearningBenchmark):
 
         self.reference_molecules = get_random_subset(training_set, self.sample_size, seed=42)
 
-    def assess_model(
-        self, model: DistributionMatchingGenerator
-    ) -> DistributionLearningBenchmarkResult:
+    def assess_model(self, model: DistributionMatchingGenerator) -> DistributionLearningBenchmarkResult:
         chemnet = self._load_chemnet()
 
         start_time = time.time()
-        generated_molecules = sample_valid_molecules(
-            model=model, number_molecules=self.number_samples
-        )
+        generated_molecules = sample_valid_molecules(model=model, number_molecules=self.number_samples)
         end_time = time.time()
 
         if len(generated_molecules) != self.number_samples:
@@ -73,10 +66,7 @@ class FrechetBenchmark(DistributionLearningBenchmark):
         }
 
         return DistributionLearningBenchmarkResult(
-            benchmark_name=self.name,
-            score=score,
-            sampling_time=end_time - start_time,
-            metadata=metadata,
+            benchmark_name=self.name, score=score, sampling_time=end_time - start_time, metadata=metadata,
         )
 
     def _load_chemnet(self):

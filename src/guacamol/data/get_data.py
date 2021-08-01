@@ -36,8 +36,7 @@ TANIMOTO_CUTOFF = 0.323
 
 def get_argparser():
     parser = argparse.ArgumentParser(
-        description="Data Preparation for GuacaMol",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="Data Preparation for GuacaMol", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("-o", "--destination", default=".", help="Download and Output location")
     parser.add_argument("--n_jobs", default=8, type=int, help="Number of cores to use")
@@ -191,9 +190,7 @@ def compare_hash(output_file: str, correct_hash: str) -> bool:
     """
     output_hash = hashlib.md5(open(output_file, "rb").read()).hexdigest()
     if output_hash != correct_hash:
-        logger.error(
-            f"{output_file} file has different hash, {output_hash}, than expected, {correct_hash}!"
-        )
+        logger.error(f"{output_file} file has different hash, {output_hash}, than expected, {correct_hash}!")
         return False
 
     return True
@@ -222,9 +219,7 @@ def main():
 
     chembl_file = os.path.join(args.destination, CHEMBL_FILE_NAME)
 
-    data = (
-        pkgutil.get_data("guacamol.data", "holdout_set_gcm_v1.smiles").decode("utf-8").splitlines()
-    )
+    data = pkgutil.get_data("guacamol.data", "holdout_set_gcm_v1.smiles").decode("utf-8").splitlines()
 
     holdout_mols = [i.split(" ")[0] for i in data]
     holdout_set = set(canonicalize_list(holdout_mols, False))

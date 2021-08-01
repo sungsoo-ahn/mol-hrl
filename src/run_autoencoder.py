@@ -1,10 +1,11 @@
 import argparse
 
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
-from module.pl_autoencoder import AutoEncoderModule
+from module.autoencoder import AutoEncoderModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -21,10 +22,6 @@ if __name__ == "__main__":
     neptune_logger.append_tags([hparams.tag])
 
     model = AutoEncoderModule(hparams)
-    try:
-        model.load_from_checkpoint(hparams.checkpoint_path)
-    except:
-        pass
 
     checkpoint_callback = ModelCheckpoint(monitor="train/loss/total")
     trainer = pl.Trainer(
@@ -36,7 +33,7 @@ if __name__ == "__main__":
         gradient_clip_val=hparams.gradient_clip_val,
     )
     trainer.fit(model)
-
     model.load_from_checkpoint(checkpoint_callback.best_model_path)
 
-    trainer.save_checkpoint(hparams.checkpoint_path)
+    state_dict = {"encoder": model.encoder.state_dict(), "decoder": model.decoder.state_dict()}
+    torch.save(state_dict, hparams.checkpoint_path)

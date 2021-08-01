@@ -39,10 +39,16 @@ def load_smiles_list(root_dir, split):
         return smiles_list
     elif split == "train":
         return [smiles_list[idx] for idx in train_idxs]
+    elif split == "train_05":
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.05)]]
+    elif split == "train_10":
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.1)]]
+    elif split == "train_20":
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.2)]]
+    elif split == "train_50":
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.5)]]
     elif split == "val":
         return [smiles_list[idx] for idx in vali_idxs]
-    elif split == "train_labeled":
-        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.1)]]
 
 
 def is_valid_smiles(smiles):

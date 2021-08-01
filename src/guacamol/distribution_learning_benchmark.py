@@ -30,9 +30,7 @@ class DistributionLearningBenchmarkResult:
     NB: timing does not make sense since training happens outside of DistributionLearningBenchmark.
     """
 
-    def __init__(
-        self, benchmark_name: str, score: float, sampling_time: float, metadata: Dict[str, Any],
-    ) -> None:
+    def __init__(self, benchmark_name: str, score: float, sampling_time: float, metadata: Dict[str, Any],) -> None:
         """
         Args:
             benchmark_name: name of the distribution-learning benchmark
@@ -58,9 +56,7 @@ class DistributionLearningBenchmark:
         self.number_samples = number_samples
 
     @abstractmethod
-    def assess_model(
-        self, model: DistributionMatchingGenerator
-    ) -> DistributionLearningBenchmarkResult:
+    def assess_model(self, model: DistributionMatchingGenerator) -> DistributionLearningBenchmarkResult:
         """
         Assess a distribution-matching generator model.
 
@@ -77,9 +73,7 @@ class ValidityBenchmark(DistributionLearningBenchmark):
     def __init__(self, number_samples) -> None:
         super().__init__(name="Validity", number_samples=number_samples)
 
-    def assess_model(
-        self, model: DistributionMatchingGenerator
-    ) -> DistributionLearningBenchmarkResult:
+    def assess_model(self, model: DistributionMatchingGenerator) -> DistributionLearningBenchmarkResult:
         start_time = time.time()
         molecules = model.generate(number_samples=self.number_samples)
         end_time = time.time()
@@ -95,10 +89,7 @@ class ValidityBenchmark(DistributionLearningBenchmark):
         }
 
         return DistributionLearningBenchmarkResult(
-            benchmark_name=self.name,
-            score=validity_ratio,
-            sampling_time=end_time - start_time,
-            metadata=metadata,
+            benchmark_name=self.name, score=validity_ratio, sampling_time=end_time - start_time, metadata=metadata,
         )
 
 
@@ -110,17 +101,13 @@ class UniquenessBenchmark(DistributionLearningBenchmark):
     def __init__(self, number_samples) -> None:
         super().__init__(name="Uniqueness", number_samples=number_samples)
 
-    def assess_model(
-        self, model: DistributionMatchingGenerator
-    ) -> DistributionLearningBenchmarkResult:
+    def assess_model(self, model: DistributionMatchingGenerator) -> DistributionLearningBenchmarkResult:
         start_time = time.time()
         molecules = sample_valid_molecules(model=model, number_molecules=self.number_samples)
         end_time = time.time()
 
         if len(molecules) != self.number_samples:
-            logger.warning(
-                "The model could not generate enough valid molecules. The score will be penalized."
-            )
+            logger.warning("The model could not generate enough valid molecules. The score will be penalized.")
 
         # canonicalize_list removes duplicates (and invalid molecules, but there shouldn't be any)
         unique_molecules = canonicalize_list(molecules, include_stereocenters=False)
@@ -132,10 +119,7 @@ class UniquenessBenchmark(DistributionLearningBenchmark):
         }
 
         return DistributionLearningBenchmarkResult(
-            benchmark_name=self.name,
-            score=unique_ratio,
-            sampling_time=end_time - start_time,
-            metadata=metadata,
+            benchmark_name=self.name, score=unique_ratio, sampling_time=end_time - start_time, metadata=metadata,
         )
 
 
@@ -147,13 +131,9 @@ class NoveltyBenchmark(DistributionLearningBenchmark):
             training_set: molecules from the training set
         """
         super().__init__(name="Novelty", number_samples=number_samples)
-        self.training_set_molecules = set(
-            canonicalize_list(training_set, include_stereocenters=False)
-        )
+        self.training_set_molecules = set(canonicalize_list(training_set, include_stereocenters=False))
 
-    def assess_model(
-        self, model: DistributionMatchingGenerator
-    ) -> DistributionLearningBenchmarkResult:
+    def assess_model(self, model: DistributionMatchingGenerator) -> DistributionLearningBenchmarkResult:
         """
         Assess a distribution-matching generator model.
 
@@ -161,15 +141,11 @@ class NoveltyBenchmark(DistributionLearningBenchmark):
             model: model to assess
         """
         start_time = time.time()
-        molecules = sample_unique_molecules(
-            model=model, number_molecules=self.number_samples, max_tries=2
-        )
+        molecules = sample_unique_molecules(model=model, number_molecules=self.number_samples, max_tries=2)
         end_time = time.time()
 
         if len(molecules) != self.number_samples:
-            logger.warning(
-                "The model could not generate enough unique molecules. The score will be penalized."
-            )
+            logger.warning("The model could not generate enough unique molecules. The score will be penalized.")
 
         # canonicalize_list in order to remove stereo information (also removes duplicates and invalid molecules, but there shouldn't be any)
         unique_molecules = set(canonicalize_list(molecules, include_stereocenters=False))
@@ -184,10 +160,7 @@ class NoveltyBenchmark(DistributionLearningBenchmark):
         }
 
         return DistributionLearningBenchmarkResult(
-            benchmark_name=self.name,
-            score=novel_ratio,
-            sampling_time=end_time - start_time,
-            metadata=metadata,
+            benchmark_name=self.name, score=novel_ratio, sampling_time=end_time - start_time, metadata=metadata,
         )
 
 
@@ -204,8 +177,7 @@ class KLDivBenchmark(DistributionLearningBenchmark):
         """
         super().__init__(name="KL divergence", number_samples=number_samples)
         self.training_set_molecules = canonicalize_list(
-            get_random_subset(training_set, self.number_samples, seed=42),
-            include_stereocenters=False,
+            get_random_subset(training_set, self.number_samples, seed=42), include_stereocenters=False,
         )
         self.pc_descriptor_subset = [
             "BertzCT",
@@ -219,9 +191,7 @@ class KLDivBenchmark(DistributionLearningBenchmark):
             "NumAromaticRings",
         ]
 
-    def assess_model(
-        self, model: DistributionMatchingGenerator
-    ) -> DistributionLearningBenchmarkResult:
+    def assess_model(self, model: DistributionMatchingGenerator) -> DistributionLearningBenchmarkResult:
         """
         Assess a distribution-matching generator model.
 
@@ -229,15 +199,11 @@ class KLDivBenchmark(DistributionLearningBenchmark):
             model: model to assess
         """
         start_time = time.time()
-        molecules = sample_unique_molecules(
-            model=model, number_molecules=self.number_samples, max_tries=2
-        )
+        molecules = sample_unique_molecules(model=model, number_molecules=self.number_samples, max_tries=2)
         end_time = time.time()
 
         if len(molecules) != self.number_samples:
-            logger.warning(
-                "The model could not generate enough unique molecules. The score will be penalized."
-            )
+            logger.warning("The model could not generate enough unique molecules. The score will be penalized.")
 
         # canonicalize_list in order to remove stereo information (also removes duplicates and invalid molecules, but there shouldn't be any)
         unique_molecules = set(canonicalize_list(molecules, include_stereocenters=False))
@@ -285,8 +251,5 @@ class KLDivBenchmark(DistributionLearningBenchmark):
         score = sum(partial_scores) / len(partial_scores)
 
         return DistributionLearningBenchmarkResult(
-            benchmark_name=self.name,
-            score=score,
-            sampling_time=end_time - start_time,
-            metadata=metadata,
+            benchmark_name=self.name, score=score, sampling_time=end_time - start_time, metadata=metadata,
         )

@@ -90,10 +90,7 @@ def get_scoring_func(name, num_workers=32):
 
     elif name == "albuterol":
         benchmark = similarity(
-            smiles="CC(C)(C)NCC(O)c1ccc(O)c(CO)c1",
-            name="Albuterol",
-            fp_type="FCFP4",
-            threshold=0.75,
+            smiles="CC(C)(C)NCC(O)c1ccc(O)c(CO)c1", name="Albuterol", fp_type="FCFP4", threshold=0.75,
         )
         objective = benchmark.objective
 
@@ -173,17 +170,17 @@ def get_scoring_func(name, num_workers=32):
     elif name == "logp":
         objective = RdkitScoringFunction(descriptor=logP)
         objective.corrupt_score = -1e6
-    
+
     elif name == "qed":
         objective = RdkitScoringFunction(descriptor=qed)
         objective.corrupt_score = -1e6
-    
+
     elif name == "tpsa":
         objective = RdkitScoringFunction(descriptor=tpsa)
         objective.corrupt_score = -1e6
-    
+
     # print(objective.corrupt_score)
-        
+
     float_score = lambda smiles: float(objective.score(smiles))
 
     def parallel_scoring_func(smiles_list):

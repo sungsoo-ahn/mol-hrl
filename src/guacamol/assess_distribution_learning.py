@@ -54,9 +54,7 @@ def _assess_distribution_learning(
     """
     logger.info(f"Benchmarking distribution learning, version {benchmark_version}")
     benchmarks = distribution_learning_benchmark_suite(
-        chembl_file_path=chembl_training_file,
-        version_name=benchmark_version,
-        number_samples=number_samples,
+        chembl_file_path=chembl_training_file, version_name=benchmark_version, number_samples=number_samples,
     )
 
     results = _evaluate_distribution_learning_benchmarks(model=model, benchmarks=benchmarks)
@@ -94,9 +92,7 @@ def _evaluate_distribution_learning_benchmarks(
         result = benchmark.assess_model(model)
         logger.info(f'Results for the benchmark "{result.benchmark_name}":')
         logger.info(f"  Score: {result.score:.6f}")
-        logger.info(
-            f"  Sampling time: {str(datetime.timedelta(seconds=int(result.sampling_time)))}"
-        )
+        logger.info(f"  Sampling time: {str(datetime.timedelta(seconds=int(result.sampling_time)))}")
         logger.info(f"  Metadata: {result.metadata}")
         results.append(result)
 

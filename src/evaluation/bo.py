@@ -21,6 +21,7 @@ from data.sequence.dataset import SequenceDataset
 
 from data.smiles.util import is_valid_smiles
 
+
 def extract_codes(model, split):
     hparams = model.hparams
     if hparams.encoder_type == "graph":
@@ -70,13 +71,13 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
     #
     dataset_codes = extract_codes(model, "train")
     dataset_scores = ScoreDataset(model.hparams.data_dir, [score_func_name], "train").raw_tsrs
-    
+
     # setup scoring function
     _, smiles_score_func, corrupt_score = get_scoring_func(score_func_name)
     invalid_scores = dataset_scores.min()
 
     code_dim = dataset_codes.size(1)
-        
+
     def score(codes):
         smiles_list = ae.decoder.sample_smiles(codes.to(device), argmax=True)
         scores = smiles_score_func(smiles_list)
@@ -87,16 +88,11 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
     def get_fitted_model(train_codes, train_scores, bounds, state_dict=None):
         # initialize and fit model
         if covar_module == "rbf":
-            model = SingleTaskGP(
-                train_X=normalize(train_codes, bounds=bounds), 
-                train_Y=train_scores,
-            )
-            
+            model = SingleTaskGP(train_X=normalize(train_codes, bounds=bounds), train_Y=train_scores,)
+
         elif covar_module == "linear":
             model = SingleTaskGP(
-                train_X=normalize(train_codes, bounds=bounds), 
-                train_Y=train_scores,
-                covar_module=LinearKernel()
+                train_X=normalize(train_codes, bounds=bounds), train_Y=train_scores, covar_module=LinearKernel()
             )
 
         if state_dict is not None:
@@ -116,9 +112,7 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
         # optimize
         new_codes, _ = optimize_acqf(
             acq_function=acq_func,
-            bounds=torch.stack(
-                [torch.zeros(code_dim, device=device), torch.ones(code_dim, device=device),]
-            ),
+            bounds=torch.stack([torch.zeros(code_dim, device=device), torch.ones(code_dim, device=device),]),
             q=BATCH_SIZE,
             num_restarts=NUM_RESTARTS,
             raw_samples=RAW_SAMPLES,
@@ -136,7 +130,7 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
         train_codes = dataset_codes[train_idxs].to(device)
 
         best_score = train_scores.max().item()
-        
+
         # call helper function to initialize model
         best_observed = [best_score]
         state_dict = None
@@ -145,15 +139,11 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
         for _ in tqdm(range(N_BATCH)):
             # fit the model
             bounds = [torch.min(train_codes, dim=0)[0], torch.max(train_codes, dim=0)[0]]
-            model = get_fitted_model(
-                train_codes, standardize(train_scores), bounds, state_dict=state_dict
-                )
+            model = get_fitted_model(train_codes, standardize(train_scores), bounds, state_dict=state_dict)
 
             # define the qNEI acquisition module using a QMC sampler
             qmc_sampler = SobolQMCNormalSampler(num_samples=MC_SAMPLES)
-            qEI = qExpectedImprovement(
-                model=model, sampler=qmc_sampler, best_f=standardize(train_scores).max()
-            )
+            qEI = qExpectedImprovement(model=model, sampler=qmc_sampler, best_f=standardize(train_scores).max())
 
             # optimize and get new observation
             new_codes, new_scores = optimize_acqf_and_get_observation(qEI, bounds)
@@ -175,7 +165,7 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
         top1 = torch.topk(train_scores, k=1)[0].mean().item()
         top10 = torch.topk(train_scores, k=10)[0].mean().item()
         top100 = torch.topk(train_scores, k=100)[0].mean().item()
-        
+
         return top1, top10, top100
 
     top1s, top10s, top100s = [], [], []
@@ -186,7 +176,7 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
             top1s.append(top1)
             top10s.append(top10)
             top100s.append(top100)
-            
+
             run[f"{score_func_name}/top1/avg"] = np.mean(top1s)
             run[f"{score_func_name}/top10/avg"] = np.mean(top10s)
             run[f"{score_func_name}/top100/avg"] = np.mean(top100s)
@@ -196,5 +186,3 @@ def run_bo(checkpoint_path, score_func_name, run, covar_module):
         except:
             fail_cnt += 1
             run[f"{score_func_name}/fail_cnt"] = fail_cnt
-
-        
