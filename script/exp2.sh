@@ -1,13 +1,13 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="denoising"
+TAG="fragment"
 
-#python train.py \
-#--autoencoder_type base \
-#--input_graph_mutate \
-#--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag $TAG
+python run_autoencoder.py \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--input_fragment \
+--tag $TAG
 
-python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag "${TAG}_linear"
-python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
+python run_conddecoder.py \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tag $TAG

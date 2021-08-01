@@ -178,7 +178,9 @@ def fragment(smiles):
         return mol2graph(mol)
     else:
         fragged_mol = BRICS.BreakBRICSBonds(mol, bonds=[random.choice(brics_bonds)])
-        return mol2graph(fragged_mol)
+        frag = Chem.GetMolFrags(fragged_mol, asMols=True)
+        frag = random.choice(frag)
+        return mol2graph(frag)
 
 
 import torch

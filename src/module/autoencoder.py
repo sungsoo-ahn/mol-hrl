@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from module.encoder.graph import GraphEncoder
 from module.decoder.sequence import SequenceDecoder
 from data.graph.dataset import GraphDataset
-from data.graph.transform import mutate
+from data.graph.transform import fragment, mutate
 from data.graph.util import smiles2graph
 from data.sequence.dataset import SequenceDataset
 from data.util import ZipDataset
@@ -32,6 +32,8 @@ class AutoEncoderModule(pl.LightningModule):
 
         if hparams.input_mutate:
             self.input_transform = mutate
+        elif hparams.input_fragment:
+            self.input_transform = fragment
         else:
             self.input_transform = smiles2graph
 
@@ -53,18 +55,19 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--num_workers", type=int, default=8)
 
         parser.add_argument("--input_mutate", action="store_true")
+        parser.add_argument("--input_fragment", action="store_true")
 
         #
         parser.add_argument("--code_dim", type=int, default=256)
 
         # GraphEncoder specific
-        parser.add_argument("--graph_encoder_hidden_dim", type=int, default=256)
-        parser.add_argument("--graph_encoder_num_layers", type=int, default=5)
+        parser.add_argument("--encoder_hidden_dim", type=int, default=256)
+        parser.add_argument("--encoder_num_layers", type=int, default=5)
 
         # SequentialDecoder specific
-        parser.add_argument("--sequence_decoder_hidden_dim", type=int, default=1024)
-        parser.add_argument("--sequence_decoder_num_layers", type=int, default=3)
-        parser.add_argument("--sequence_decoder_max_length", type=int, default=120)
+        parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
+        parser.add_argument("--decoder_num_layers", type=int, default=3)
+        parser.add_argument("--decoder_max_length", type=int, default=120)
 
         return parser
 

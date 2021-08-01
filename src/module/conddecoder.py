@@ -28,7 +28,7 @@ class CondDecoderModule(pl.LightningModule):
         self.decoder = SequenceDecoder(hparams)
         self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
         if hparams.checkpoint_path != "":
-            state_dict = torch.load(hparams.decoder_checkpoint_path)
+            state_dict = torch.load(hparams.checkpoint_path)
             if "decoder" in state_dict:
                 self.decoder.load_state_dict(state_dict["decoder"])
             elif "cond_embedding" in state_dict:
@@ -46,13 +46,15 @@ class CondDecoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--lr", type=float, default=1e-4)
+        parser.add_argument("--cond_embedding_lr", type=float, default=1e-2)
+        parser.add_argument("--decoder_lr", type=float, default=1e-4)
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
+        parser.add_argument("--checkpoint_path", type=str, default="")
         parser.add_argument("--train_split", type=str, default="train")
         parser.add_argument("--batch_size", type=int, default=256)
-        parser.add_argument("--query_batch_size", type=int, default=256)
+        parser.add_argument("--query_batch_size", type=int, default=500)
         parser.add_argument("--num_workers", type=int, default=8)
         parser.add_argument("--score_func_name", type=str, default="penalized_logp")
 
@@ -63,7 +65,6 @@ class CondDecoderModule(pl.LightningModule):
         parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--decoder_num_layers", type=int, default=3)
         parser.add_argument("--decoder_max_length", type=int, default=120)
-        parser.add_argument("--decoder_checkpoint_path", type=str, default="")
 
         return parser
 
@@ -111,9 +112,15 @@ class CondDecoderModule(pl.LightningModule):
 
         return loss
 
-    def on_validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self):
         if self.hparams.score_func_name == "penalized_logp":
             score_queries = [0.0, 2.0, 4.0, 6.0]
+        elif self.hparams.score_func_name == "logp":
+            score_queries = [3.0, 6.0, 9.0, 12.0]
+        elif self.hparams.score_func_name == "molwt":
+            score_queries = [200.0, 400.0, 600.0, 800.0]
+        elif self.hparams.score_func_name == "qed":
+            score_queries = [0.5, 0.7, 0.9, 1.0]
 
         for query in score_queries:
             normalized_query = self.train_cond_dataset.normalize(query).item()
@@ -134,5 +141,9 @@ class CondDecoderModule(pl.LightningModule):
                 self.log(f"query{query:.2f}/max_score", max_score, on_step=False, logger=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        grouped_parameters = [
+            {"params": self.decoder.parameters(), "lr": self.hparams.decoder_lr},
+            {"params": self.cond_embedding.parameters(), "lr": self.hparams.cond_embedding_lr},
+            ]
+        optimizer = torch.optim.Adam(grouped_parameters)
         return [optimizer]

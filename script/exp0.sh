@@ -3,10 +3,10 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="base"
 
-#python train.py \
-#--autoencoder_type base \
-#--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag $TAG
+python run_autoencoder.py \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tag $TAG
 
-python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag "${TAG}_linear"
-python eval.py --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" --tag $TAG
+python run_conddecoder.py \
+--checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tag $TAG
