@@ -10,7 +10,7 @@ from module.conddecoder import CondDecoderModule
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     CondDecoderModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=200)
+    parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()

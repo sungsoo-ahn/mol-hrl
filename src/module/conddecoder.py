@@ -46,13 +46,13 @@ class CondDecoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--cond_embedding_lr", type=float, default=1e-2)
-        parser.add_argument("--decoder_lr", type=float, default=1e-4)
+        parser.add_argument("--cond_embedding_lr", type=float, default=1e-3)
+        parser.add_argument("--decoder_lr", type=float, default=1e-5)
 
         # Common - data
-        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc_small/")
+        parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
         parser.add_argument("--checkpoint_path", type=str, default="")
-        parser.add_argument("--train_split", type=str, default="train")
+        parser.add_argument("--train_split", type=str, default="train_01")
         parser.add_argument("--batch_size", type=int, default=256)
         parser.add_argument("--query_batch_size", type=int, default=500)
         parser.add_argument("--num_workers", type=int, default=8)
