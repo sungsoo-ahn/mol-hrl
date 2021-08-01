@@ -17,10 +17,6 @@ if __name__ == "__main__":
     parser.add_argument("--tag", type=str, default="notag")
     args = parser.parse_args()
 
-    model = AutoEncoderModule.load_from_checkpoint(args.checkpoint_path)
-
-    model = model.cuda()
-
     run = neptune.init(
         project="sungsahn0215/molrep",
         name="eval_ae",
@@ -28,28 +24,14 @@ if __name__ == "__main__":
         tags=args.tag,
     )
     run["tag"] = args.tag
-    run["log_dir"] = log_dir = f"../resource/log/{args.tag}"
-    os.makedirs(log_dir, exist_ok=True)
-
+    
     for scoring_func_name in [
         "penalized_logp", 
         "logp", 
         "molwt", 
         "qed", 
         "tpsa",
-        #"camphor_menthol",
-        #"tadalafil_sildenafil",
-        #"osimertinib",
-        #"fexofenadine",
-        #"ranolazine",
-        #"perindopril",
-        #"amlodipine",
-        #"sitagliptin",
-        #"zaleplon",
-        #"valsartan_smarts",
-        #"decoration_hop",
-        #"scaffold_hop",
         ]:
         #run_gradopt(model, "linear", scoring_func_name, run)
-        run_bo(model, scoring_func_name, run, args.bo_covar_module)
+        run_bo(scoring_func_name, run, args.bo_covar_module)
         #run_finetune(model, scoring_func_name, run)

@@ -13,6 +13,7 @@ from botorch.utils.transforms import standardize, normalize, unnormalize
 from botorch.acquisition.monte_carlo import qExpectedImprovement
 from botorch.sampling.samplers import SobolQMCNormalSampler
 
+from module.pl_autoencoder import AutoEncoderModule
 from data.score.factory import get_scoring_func
 from data.score.dataset import ScoreDataset
 from data.graph.dataset import GraphDataset
@@ -51,8 +52,7 @@ def extract_codes(model, split):
     return codes
 
 
-def run_bo(model, score_func_name, run, covar_module):
-    #
+def run_bo(checkpoint_path, score_func_name, run, covar_module):
     BATCH_SIZE = 10
     NUM_RESTARTS = 10
     RAW_SAMPLES = 256
@@ -60,7 +60,8 @@ def run_bo(model, score_func_name, run, covar_module):
     MC_SAMPLES = 2048
     NUM_REPS = 5
 
-    # seed=1
+    #
+    model = AutoEncoderModule.load_from_checkpoint(checkpoint_path)
     model = model.cuda()
     model.eval()
     ae = model.autoencoder
