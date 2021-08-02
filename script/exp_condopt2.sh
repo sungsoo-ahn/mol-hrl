@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run_condopt.py --load_checkpoint_path ../resource/checkpoint/nopretrain_full.pth --reweight_k 1e-2
+python run_condopt.py --load_checkpoint_path ../resource/checkpoint/nopretrain_full.pth --reweight_k 1e-2 --tag condopt2
