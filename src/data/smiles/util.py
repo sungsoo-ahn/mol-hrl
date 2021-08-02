@@ -35,8 +35,6 @@ def load_smiles_list(root_dir, split):
     with open(vali_idxs_path, "r") as f:
         vali_idxs = torch.load(vali_idxs_path)
 
-    print(split)
-
     if split == "full":
         return smiles_list
     elif split == "train":

@@ -22,6 +22,9 @@ class SequenceDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.smiles_list)
 
+    def update(self, smiles_list):
+        self.smiles_list.extend(smiles_list)
+
     @staticmethod
     def collate(data_list):
         lengths = torch.LongTensor([sequence.size(0) for sequence in data_list])

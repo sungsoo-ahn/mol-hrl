@@ -40,18 +40,22 @@ class ScoreDataset(torch.utils.data.Dataset):
         # Setup dataset
         score_lists = [load_score_list(root_dir, score_func_name, split) for score_func_name in score_func_names]
         self.raw_tsrs = torch.FloatTensor(score_lists).T
-        self.tsrs = self.normalize(self.raw_tsrs)
+        #self.tsrs = self.normalize(self.raw_tsrs)
 
     def __len__(self):
-        return self.tsrs.size(0)
+        return self.raw_tsrs.size(0)
 
     def __getitem__(self, idx):
-        return self.tsrs[idx]
+        return self.normalize(self.raw_tsrs[idx])
+    
+    def update(self, score_list):
+        new_raw_tsrs = torch.FloatTensor(score_list).view(-1, 1)
+        self.raw_tsrs = torch.cat([self.raw_tsrs, new_raw_tsrs], dim=0)
 
     @staticmethod
     def collate(data_list):
-        return torch.stack(data_list, dim=0)
+        return torch.cat(data_list, dim=0)
 
     def normalize(self, tsrs):
-        out = (tsrs - self.mean_scores.unsqueeze(0)) / self.std_scores
+        out = (tsrs - self.mean_scores.to(tsrs.device).unsqueeze(0)) / self.std_scores.to(tsrs.device)
         return out
