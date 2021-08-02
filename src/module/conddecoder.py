@@ -47,7 +47,7 @@ class CondDecoderModule(pl.LightningModule):
     def add_args(parser):
         # Common - model
         parser.add_argument("--cond_embedding_lr", type=float, default=1e-3)
-        parser.add_argument("--decoder_lr", type=float, default=1e-5)
+        parser.add_argument("--decoder_lr", type=float, default=1e-3)
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
@@ -127,10 +127,13 @@ class CondDecoderModule(pl.LightningModule):
             batched_cond_data = torch.full((self.hparams.query_batch_size, 1), normalized_query, device=self.device)
             codes = self.cond_embedding(batched_cond_data)
             smiles_list = self.decoder.sample_smiles(codes, argmax=False)
-            scores_list = self.score_func(smiles_list)
-            valid_scores = torch.FloatTensor([score for score in scores_list if score > self.corrupt_score])
+            score_list = self.score_func(smiles_list)
 
-            valid_ratio = valid_scores.size(0) / len(scores_list)
+            valid_idxs = [idx for idx, score in enumerate(score_list) if score > self.corrupt_score]
+            valid_smiles_list = [smiles_list[idx] for idx in valid_idxs]
+            valid_scores = torch.FloatTensor([score_list[idx] for idx in valid_idxs])
+
+            valid_ratio = valid_scores.size(0) / len(score_list)
             self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
 
             if valid_ratio > 0.0:
@@ -139,6 +142,9 @@ class CondDecoderModule(pl.LightningModule):
 
                 max_score = valid_scores.max()
                 self.log(f"query{query:.2f}/max_score", max_score, on_step=False, logger=True)
+            
+                uniqueness = float(len(set(valid_smiles_list))) / len(valid_smiles_list)
+                self.log(f"query{query:.2f}/uniqueness", uniqueness, on_step=False, logger=True)
 
     def configure_optimizers(self):
         grouped_parameters = [

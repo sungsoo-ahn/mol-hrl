@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--decoder_max_length", type=int, default=512)
     parser.add_argument("--train_split", type=str, default="train")
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
-    parser.add_argument("--num_stages", type=int, default=500)
+    parser.add_argument("--num_stages", type=int, default=100)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
     parser.add_argument("--reweight_k", type=float, default=1e-3)
     parser.add_argument("--train_batch_size", type=float, default=256)
@@ -134,6 +134,5 @@ if __name__ == "__main__":
         top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
         run["top1"].log(top123[0])
         run["top2"].log(top123[1])
-        run["top3"].log(top123[2])
+        run["top3"].log(top123[2]) 
         
-        #print(smiles_list, score_list)
