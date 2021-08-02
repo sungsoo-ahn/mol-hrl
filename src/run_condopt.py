@@ -24,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("--code_dim", type=int, default=256)
     parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
     parser.add_argument("--decoder_num_layers", type=int, default=3)
-    parser.add_argument("--decoder_max_length", type=int, default=5000)
+    parser.add_argument("--decoder_max_length", type=int, default=512)
     parser.add_argument("--train_split", type=str, default="train")
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
     parser.add_argument("--num_stages", type=int, default=500)
@@ -54,7 +54,9 @@ if __name__ == "__main__":
 
     def sample(queries):
         codes = cond_embedding(queries)
-        smiles_list = decoder.sample_smiles(codes, argmax=False)
+        with torch.no_grad():
+            smiles_list = decoder.sample_smiles(codes, argmax=False)
+
         score_list = scoring_func(smiles_list)
         valid_idxs = [idx for idx, score in enumerate(score_list) if score > corrupt_score]
         valid_score_list = [score_list[idx] for idx in valid_idxs]
@@ -113,7 +115,7 @@ if __name__ == "__main__":
         #
         decoder.eval()
         cond_embedding.eval()
-        queries = get_queries(max(hparams.num_queries_per_stage, 512))
+        queries = get_queries(max(hparams.num_queries_per_stage, 128))
         queries = queries.to(device)
         
         smiles_list, score_list = [], []
