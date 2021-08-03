@@ -25,12 +25,13 @@ if __name__ == "__main__":
     parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
     parser.add_argument("--decoder_num_layers", type=int, default=3)
     parser.add_argument("--decoder_max_length", type=int, default=512)
-    parser.add_argument("--train_split", type=str, default="train")
+    parser.add_argument("--train_split", type=str, default="train_01")
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
     parser.add_argument("--num_stages", type=int, default=100)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
     parser.add_argument("--reweight_k", type=float, default=1e-3)
     parser.add_argument("--train_batch_size", type=float, default=256)
+    parser.add_argument("--num_warmup_steps", type=int, default=500)
     parser.add_argument("--num_steps_per_stage", type=int, default=50)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
@@ -102,6 +103,8 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
+            run["train/loss"].log(loss)
+
     run = neptune.init(
         project="sungsahn0215/molrep", name="run_condopt", source_files=["*.py", "**/*.py"], tags=[hparams.tag]
         )
@@ -110,8 +113,7 @@ if __name__ == "__main__":
         #
         decoder.train()
         cond_embedding.train()
-        run_steps(hparams.num_steps_per_stage)
-        
+        run_steps(hparams.num_steps_per_stage if stage > 0 else hparams.num_warmup_steps)
         #
         decoder.eval()
         cond_embedding.eval()

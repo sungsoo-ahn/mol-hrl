@@ -123,13 +123,13 @@ class CondDecoderModule(pl.LightningModule):
 
     def on_validation_epoch_end(self):
         if self.hparams.score_func_name == "penalized_logp":
-            score_queries = [0.0, 2.0, 4.0, 6.0]
+            score_queries = [4.0, 5.0, 6.0, 7.0]
         elif self.hparams.score_func_name == "logp":
-            score_queries = [4.0, 5.0, 6.0]
+            score_queries = [4.0, 5.0, 6.0, 7.0]
         elif self.hparams.score_func_name == "molwt":
-            score_queries = [200.0, 400.0, 600.0, 800.0]
+            score_queries = [500.0, 600.0, 700.0, 800.0]
         elif self.hparams.score_func_name == "qed":
-            score_queries = [0.5, 0.7, 0.9, 1.0]
+            score_queries = [0.7, 0.8, 0.9, 1.0]
 
         for query in score_queries:
             query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
@@ -149,9 +149,6 @@ class CondDecoderModule(pl.LightningModule):
                 mae = (query - valid_scores).abs().mean()
                 self.log(f"query{query:.2f}/mae", mae, on_step=False, logger=True)
 
-                max_score = valid_scores.max()
-                self.log(f"query{query:.2f}/max_score", max_score, on_step=False, logger=True)
-            
                 unique_ratio = float(len(set(valid_smiles_list))) / len(smiles_list)
                 self.log(f"query{query:.2f}/unique_ratio", unique_ratio, on_step=False, logger=True)
 
