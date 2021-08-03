@@ -26,7 +26,15 @@ class CondDecoderModule(pl.LightningModule):
         self.save_hyperparameters(hparams)
 
         self.decoder = SequenceDecoder(hparams)
-        self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
+        if hparams.cond_embedding_mlp:
+            self.cond_embedding = torch.nn.Sequential(
+                torch.nn.Linear(1, hparams.code_dim),
+                torch.nn.ReLU(), 
+                torch.nn.Linear(hparams.code_dim, hparams.code_dim),
+            )
+        else:
+            self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
+
         if hparams.load_checkpoint_path != "":
             state_dict = torch.load(hparams.load_checkpoint_path)
             if "decoder" in state_dict:
@@ -46,8 +54,9 @@ class CondDecoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--cond_embedding_lr", type=float, default=1e-3)
-        parser.add_argument("--decoder_lr", type=float, default=1e-3)
+        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--freeze_decoder", action="store_true")
+        parser.add_argument("--cond_embedding_mlp", action="store_true")
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
@@ -147,9 +156,9 @@ class CondDecoderModule(pl.LightningModule):
                 self.log(f"query{query:.2f}/uniqueness", uniqueness, on_step=False, logger=True)
 
     def configure_optimizers(self):
-        grouped_parameters = [
-            {"params": self.decoder.parameters(), "lr": self.hparams.decoder_lr},
-            {"params": self.cond_embedding.parameters(), "lr": self.hparams.cond_embedding_lr},
-            ]
-        optimizer = torch.optim.Adam(grouped_parameters)
+        params = list(self.cond_embedding.parameters())
+        if not self.hparams.freeze_decoder:
+            params += list(self.decoder.parameters())
+        
+        optimizer = torch.optim.Adam(params, lr=self.hparams.lr)
         return [optimizer]
