@@ -7,5 +7,4 @@ python run_condopt.py \
 --train_split train_01 \
 --num_warmup_steps 200 \
 --load_checkpoint_path "${CHECKPOINT_DIR}/base.pth" \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag "${TAG}"
