@@ -37,6 +37,9 @@ if __name__ == "__main__":
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
+    if hparams.load_checkpoint_path != "":
+        hparams.num_warmup_steps = 200
+
     device = torch.device(0)
     decoder = SequenceDecoder(hparams)
     cond_embedding = torch.nn.Linear(1, hparams.code_dim)

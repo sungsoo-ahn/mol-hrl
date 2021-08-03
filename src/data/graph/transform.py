@@ -182,6 +182,20 @@ def fragment(smiles):
         frag = random.choice(frag)
         return mol2graph(frag)
 
+def fragment2(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    brics_bonds = list(BRICS.FindBRICSBonds(mol))
+    k = random.randint(0, len(brics_bonds))
+    if k == 0:
+        return mol2graph(mol)
+    else:
+        brics_bonds = random.sample(brics_bonds, k=k)
+        fragged_mol = BRICS.BreakBRICSBonds(mol, bonds=brics_bonds)
+        frag = Chem.GetMolFrags(fragged_mol, asMols=True)
+        frag = random.choice(frag)
+        return mol2graph(frag)
+
+
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from rdkit.Chem import rdRGroupDecomposition
 

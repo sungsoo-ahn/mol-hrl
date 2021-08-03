@@ -1,11 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="rgroup"
+TAG="fragment2"
 
 python run_autoencoder.py \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---input_rgroup \
+--input_fragment2 \
 --tag $TAG
 
 python run_condopt.py \

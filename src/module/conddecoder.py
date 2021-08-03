@@ -63,6 +63,7 @@ class CondDecoderModule(pl.LightningModule):
         parser.add_argument("--load_checkpoint_path", type=str, default="")
         parser.add_argument("--train_split", type=str, default="train_01")
         parser.add_argument("--batch_size", type=int, default=256)
+        parser.add_argument("--num_queries", type=int, default=10000)
         parser.add_argument("--query_batch_size", type=int, default=500)
         parser.add_argument("--num_workers", type=int, default=8)
         parser.add_argument("--score_func_name", type=str, default="penalized_logp")
@@ -86,14 +87,14 @@ class CondDecoderModule(pl.LightningModule):
             num_workers=self.hparams.num_workers,
         )
 
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_dataset,
-            batch_size=self.hparams.batch_size,
-            shuffle=False,
-            collate_fn=collate,
-            num_workers=self.hparams.num_workers,
-        )
+    #def val_dataloader(self):
+    #    return DataLoader(
+    #        self.val_dataset,
+    #        batch_size=self.hparams.batch_size,
+    #        shuffle=False,
+    #        collate_fn=collate,
+    #        num_workers=self.hparams.num_workers,
+    #    )
 
     def shared_step(self, batched_data):
         loss, statistics = 0.0, dict()
@@ -113,13 +114,12 @@ class CondDecoderModule(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batched_data, batch_idx):
-        loss, statistics = self.shared_step(batched_data)
-        self.log("validation/loss/total", loss, on_step=False, logger=True)
-        for key, val in statistics.items():
-            self.log(f"validation/{key}", val, on_step=False, logger=True)
-
-        return loss
+    #def validation_step(self, batched_data, batch_idx):
+    #    loss, statistics = self.shared_step(batched_data)
+    #    self.log("validation/loss/total", loss, on_step=False, logger=True)
+    #    for key, val in statistics.items():
+    #        self.log(f"validation/{key}", val, on_step=False, logger=True)
+    #    return loss
 
     def on_validation_epoch_end(self):
         if self.hparams.score_func_name == "penalized_logp":
@@ -132,10 +132,14 @@ class CondDecoderModule(pl.LightningModule):
             score_queries = [0.7, 0.8, 0.9, 1.0]
 
         for query in score_queries:
-            query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
-            batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
-            codes = self.cond_embedding(batched_cond_data)
-            smiles_list = self.decoder.sample_smiles(codes, argmax=False)
+            smiles_list = []
+            for _ in range(self.hparams.num_queries // self.hparams.query_batch_size):
+                query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
+                batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
+                codes = self.cond_embedding(batched_cond_data)
+                smiles_list_ = self.decoder.sample_smiles(codes, argmax=False)
+                smiles_list.extend(smiles_list_)
+            
             score_list = self.score_func(smiles_list)
 
             valid_idxs = [idx for idx, score in enumerate(score_list) if score > self.corrupt_score]
