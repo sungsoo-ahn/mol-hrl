@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
     parser.add_argument("--reweight_k", type=float, default=1e-3)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=5000)
+    parser.add_argument("--num_warmup_steps", type=int, default=2000)
     parser.add_argument("--num_steps_per_stage", type=int, default=50)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
@@ -108,6 +108,7 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(list(decoder.parameters()) + list(cond_embedding.parameters()), 0.5)
             optimizer.step()
 
             run["train/loss"].log(loss)
