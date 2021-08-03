@@ -87,14 +87,14 @@ class CondDecoderModule(pl.LightningModule):
             num_workers=self.hparams.num_workers,
         )
 
-    #def val_dataloader(self):
-    #    return DataLoader(
-    #        self.val_dataset,
-    #        batch_size=self.hparams.batch_size,
-    #        shuffle=False,
-    #        collate_fn=collate,
-    #        num_workers=self.hparams.num_workers,
-    #    )
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.hparams.batch_size,
+            shuffle=False,
+            collate_fn=collate,
+            num_workers=self.hparams.num_workers,
+        )
 
     def shared_step(self, batched_data):
         loss, statistics = 0.0, dict()
@@ -114,12 +114,13 @@ class CondDecoderModule(pl.LightningModule):
 
         return loss
 
-    #def validation_step(self, batched_data, batch_idx):
-    #    loss, statistics = self.shared_step(batched_data)
-    #    self.log("validation/loss/total", loss, on_step=False, logger=True)
-    #    for key, val in statistics.items():
-    #        self.log(f"validation/{key}", val, on_step=False, logger=True)
-    #    return loss
+    def validation_step(self, batched_data, batch_idx):
+        return 0.0
+        #loss, statistics = self.shared_step(batched_data)
+        #self.log("validation/loss/total", loss, on_step=False, logger=True)
+        #for key, val in statistics.items():
+        #    self.log(f"validation/{key}", val, on_step=False, logger=True)
+        #return loss
 
     def on_validation_epoch_end(self):
         if self.hparams.score_func_name == "penalized_logp":
