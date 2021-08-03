@@ -30,9 +30,9 @@ if __name__ == "__main__":
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
     parser.add_argument("--num_stages", type=int, default=100)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
-    parser.add_argument("--reweight_k", type=float, default=1e-3)
+    parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=2000)
+    parser.add_argument("--num_warmup_steps", type=int, default=1000)
     parser.add_argument("--num_steps_per_stage", type=int, default=50)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         ranks = np.argsort(np.argsort(-1 * scores_np))
         weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
         #print(weights)
-        sampler = torch.utils.data.WeightedRandomSampler(weights=weights, num_samples=len(weights))
+        sampler = torch.utils.data.WeightedRandomSampler(weights=weights, num_samples=len(scores_np), replacement=False)
         loader = torch.utils.data.DataLoader(
             dataset, sampler=sampler, 
             batch_size=hparams.train_batch_size, 
@@ -131,18 +131,24 @@ if __name__ == "__main__":
         queries = queries.to(device)
         
         smiles_list, score_list = [], []
+        num_valids = 0
         for query_step in range(10):
-            new_smiles_list, new_score_list = sample(queries)
-            
-            new_idxs = [idx for idx, smiles in enumerate(new_smiles_list) if smiles not in seen_smiles_list]
-            new_smiles_list = [new_smiles_list[idx] for idx in new_idxs]
-            new_score_list = [new_score_list[idx] for idx in new_idxs]
+            valid_smiles_list, valid_score_list = sample(queries)
+            num_valids += len(valid_smiles_list)
+
+            new_idxs = [idx for idx, smiles in enumerate(valid_smiles_list) if smiles not in seen_smiles_list]
+            new_smiles_list = [valid_smiles_list[idx] for idx in new_idxs]
+            new_score_list = [valid_score_list[idx] for idx in new_idxs]
             
             smiles_list.extend(new_smiles_list)
             score_list.extend(new_score_list)
             
-            if len(smiles_list) > hparams.num_queries_per_stage:
-                run["valid_ratio"].log(len(smiles_list) / (query_step + 1) / max(hparams.num_queries_per_stage, 128))
+            if len(smiles_list) + 1 > hparams.num_queries_per_stage:
+                valid_ratio = float(num_valids) / (query_step + 1) / max(hparams.num_queries_per_stage, 128)
+                run["valid_ratio"].log(valid_ratio)
+
+                new_ratio = float(len(smiles_list)) / (query_step + 1) / max(hparams.num_queries_per_stage, 128)
+                run["new_ratio"].log(new_ratio)
 
                 smiles_list = smiles_list[:hparams.num_queries_per_stage]
                 score_list = score_list[:hparams.num_queries_per_stage]

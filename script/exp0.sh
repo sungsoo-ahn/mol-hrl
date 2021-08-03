@@ -3,15 +3,15 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="base"
 
-python run_condopt.py \
---train_split train_01 \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condopt_01"
+#python run_condopt.py \
+#--train_split train_01 \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condopt_01"
 
-python run_condopt.py \
---train_split train_05 \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condopt_05"
+#python run_condopt.py \
+#--train_split train_05 \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condopt_05"
 
 python run_conddecoder.py \
 --train_split train_01 \
