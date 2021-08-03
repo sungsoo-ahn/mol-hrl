@@ -5,7 +5,7 @@ TAG="nopretrain"
 
 python run_conddecoder.py \
 --train_split train_01 \
---score_func_name logp \
+--score_func_name penalized_logp \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}_01_logp.pth" \
 --tag "${TAG}_01_plogp"
 
@@ -16,7 +16,7 @@ python run_condopt.py \
 
 python run_conddecoder.py \
 --train_split train_10 \
---score_func_name logp \
+--score_func_name penalized_logp \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}_10_logp.pth" \
 --tag "${TAG}_10_plogp"
 
@@ -27,7 +27,7 @@ python run_condopt.py \
 
 python run_conddecoder.py \
 --train_split train \
---score_func_name logp \
+--score_func_name penalized_logp \
 --checkpoint_path "${CHECKPOINT_DIR}/${TAG}_00_logp.pth" \
 --tag "${TAG}_00_plogp"
 
