@@ -60,6 +60,7 @@ class AutoEncoderModule(pl.LightningModule):
 
         parser.add_argument("--input_mutate", action="store_true")
         parser.add_argument("--input_fragment", action="store_true")
+        parser.add_argument("--input_fragment2", action="store_true")
         parser.add_argument("--input_rgroup", action="store_true")
 
         #
