@@ -5,13 +5,11 @@ TAG="mutate"
 
 python run_condopt.py \
 --train_split train_01 \
---num_warmup_steps 200 \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag "${TAG}_condopt_01"
 
 python run_condopt.py \
 --train_split train_05 \
---num_warmup_steps 200 \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag "${TAG}_condopt_05"
 
