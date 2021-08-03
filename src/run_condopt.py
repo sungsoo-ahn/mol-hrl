@@ -32,13 +32,13 @@ if __name__ == "__main__":
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
     parser.add_argument("--reweight_k", type=float, default=1e-3)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=500)
+    parser.add_argument("--num_warmup_steps", type=int, default=5000)
     parser.add_argument("--num_steps_per_stage", type=int, default=50)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
-    if hparams.load_checkpoint_path != "":
-        hparams.num_warmup_steps = 200
+    #if hparams.load_checkpoint_path != "":
+    #    hparams.num_warmup_steps = 2000
 
     device = torch.device(0)
     decoder = SequenceDecoder(hparams)
