@@ -125,7 +125,7 @@ class CondDecoderModule(pl.LightningModule):
         if self.hparams.score_func_name == "penalized_logp":
             score_queries = [0.0, 2.0, 4.0, 6.0]
         elif self.hparams.score_func_name == "logp":
-            score_queries = [3.0, 6.0, 9.0, 12.0]
+            score_queries = [4.0, 5.0, 6.0]
         elif self.hparams.score_func_name == "molwt":
             score_queries = [200.0, 400.0, 600.0, 800.0]
         elif self.hparams.score_func_name == "qed":
@@ -152,8 +152,8 @@ class CondDecoderModule(pl.LightningModule):
                 max_score = valid_scores.max()
                 self.log(f"query{query:.2f}/max_score", max_score, on_step=False, logger=True)
             
-                uniqueness = float(len(set(valid_smiles_list))) / len(valid_smiles_list)
-                self.log(f"query{query:.2f}/uniqueness", uniqueness, on_step=False, logger=True)
+                unique_ratio = float(len(set(valid_smiles_list))) / len(smiles_list)
+                self.log(f"query{query:.2f}/unique_ratio", unique_ratio, on_step=False, logger=True)
 
     def configure_optimizers(self):
         params = list(self.cond_embedding.parameters())
