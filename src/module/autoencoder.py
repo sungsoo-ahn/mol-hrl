@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from module.encoder.graph import GraphEncoder
 from module.decoder.sequence import SequenceDecoder
 from data.graph.dataset import GraphDataset
-from data.graph.transform import fragment, mutate
+from data.graph.transform import fragment, mutate, rgroup
 from data.graph.util import smiles2graph
 from data.sequence.dataset import SequenceDataset
 from data.util import ZipDataset
@@ -34,6 +34,8 @@ class AutoEncoderModule(pl.LightningModule):
             self.input_transform = mutate
         elif hparams.input_fragment:
             self.input_transform = fragment
+        elif hparams.input_rgroup:
+            self.input_transform = rgroup
         else:
             self.input_transform = smiles2graph
 
@@ -56,6 +58,7 @@ class AutoEncoderModule(pl.LightningModule):
 
         parser.add_argument("--input_mutate", action="store_true")
         parser.add_argument("--input_fragment", action="store_true")
+        parser.add_argument("--input_rgroup", action="store_true")
 
         #
         parser.add_argument("--code_dim", type=int, default=256)

@@ -1,3 +1,4 @@
+from data.smiles.util import load_smiles_list
 from tqdm import tqdm
 import argparse
 from data.util import ZipDataset
@@ -112,6 +113,8 @@ if __name__ == "__main__":
         project="sungsahn0215/molrep", name="run_condopt", source_files=["*.py", "**/*.py"], tags=[hparams.tag]
         )
     
+    
+    seen_smiles_list = load_smiles_list(hparams.data_dir, hparams.train_split)
     for stage in tqdm(range(hparams.num_stages)):
         #
         decoder.train()
@@ -124,17 +127,27 @@ if __name__ == "__main__":
         queries = queries.to(device)
         
         smiles_list, score_list = [], []
-        for _ in range(10):
+        for query_step in range(10):
             new_smiles_list, new_score_list = sample(queries)
+            
+            new_idxs = [idx for idx, smiles in enumerate(new_smiles_list) if smiles not in seen_smiles_list]
+            new_smiles_list = [new_smiles_list[idx] for idx in new_idxs]
+            new_score_list = [new_score_list[idx] for idx in new_idxs]
+            
             smiles_list.extend(new_smiles_list)
             score_list.extend(new_score_list)
+            
             if len(smiles_list) > hparams.num_queries_per_stage:
+                run["valid_ratio"].log(len(smiles_list) / query_step / max(hparams.num_queries_per_stage, 128))
+
                 smiles_list = smiles_list[:hparams.num_queries_per_stage]
                 score_list = score_list[:hparams.num_queries_per_stage]
                 break
+        
         #
         sequence_dataset.update(smiles_list)
         score_dataset.update(score_list)
+        seen_smiles_list = list(set(seen_smiles_list + new_smiles_list))            
 
         top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
         run["top1"].log(top123[0])

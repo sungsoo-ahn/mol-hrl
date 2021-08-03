@@ -182,11 +182,25 @@ def fragment(smiles):
         frag = random.choice(frag)
         return mol2graph(frag)
 
+from rdkit.Chem.Scaffolds import MurckoScaffold
+from rdkit.Chem import rdRGroupDecomposition
+
+def rgroup(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if random.choice(range(2)) == 0:
+        return mol2graph(mol)
+    else:
+        try:
+            scaffold = MurckoScaffold.GetScaffoldForMol(mol)
+            groups, _ = rdRGroupDecomposition.RGroupDecompose([scaffold], [mol], asSmiles=False, asRows=False) 
+            frag = random.choice(list(groups.values()))[0]
+            return mol2graph(frag)
+        except:
+            return mol2graph(mol)
 
 import torch
 from torch_cluster import random_walk
 from torch_geometric.utils import subgraph as subgraph_
-
 
 def subgraph(smiles):
     data = smiles2graph(smiles)
