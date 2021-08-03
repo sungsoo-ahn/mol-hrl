@@ -123,8 +123,8 @@ class CondDecoderModule(pl.LightningModule):
             score_queries = [0.5, 0.7, 0.9, 1.0]
 
         for query in score_queries:
-            normalized_query = self.train_cond_dataset.normalize(query).item()
-            batched_cond_data = torch.full((self.hparams.query_batch_size, 1), normalized_query, device=self.device)
+            query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
+            batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
             codes = self.cond_embedding(batched_cond_data)
             smiles_list = self.decoder.sample_smiles(codes, argmax=False)
             score_list = self.score_func(smiles_list)
