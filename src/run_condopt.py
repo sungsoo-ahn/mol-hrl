@@ -42,7 +42,10 @@ if __name__ == "__main__":
     if hparams.load_checkpoint_path != "":
         state_dict = torch.load(hparams.load_checkpoint_path)
         decoder.load_state_dict(state_dict["decoder"])
-        cond_embedding.load_state_dict(state_dict["cond_embedding"])
+        try:
+            cond_embedding.load_state_dict(state_dict["cond_embedding"])
+        except:
+            pass
 
     decoder.to(device)
     cond_embedding.to(device)
