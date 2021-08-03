@@ -141,7 +141,7 @@ if __name__ == "__main__":
             score_list.extend(new_score_list)
             
             if len(smiles_list) > hparams.num_queries_per_stage:
-                run["valid_ratio"].log(len(smiles_list) / query_step / max(hparams.num_queries_per_stage, 128))
+                run["valid_ratio"].log(len(smiles_list) / (query_step + 1) / max(hparams.num_queries_per_stage, 128))
 
                 smiles_list = smiles_list[:hparams.num_queries_per_stage]
                 score_list = score_list[:hparams.num_queries_per_stage]
