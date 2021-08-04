@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--cond_embedding_mlp", action="store_true")
     parser.add_argument("--train_split", type=str, default="train_256")
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
-    parser.add_argument("--num_stages", type=int, default=100)
+    parser.add_argument("--num_stages", type=int, default=1000)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
     parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--reweight_k", type=float, default=1e-2)
