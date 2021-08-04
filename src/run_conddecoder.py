@@ -18,10 +18,6 @@ if __name__ == "__main__":
     parser.add_argument("--tags", type=str, nargs="+")
     hparams = parser.parse_args()
 
-    if hparams.load_checkpoint_path != "":
-        hparams.max_epochs = 10
-        hparams.check_val_every_n_epoch = 1
-
     neptune_logger = NeptuneLogger(
         project_name="sungsahn0215/molrep", experiment_name="run_conddecoder", params=vars(hparams),
     )
