@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=5000)
+    parser.add_argument("--num_warmup_steps", type=int, default=1000)
     parser.add_argument("--num_steps_per_stage", type=int, default=500)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
@@ -99,14 +99,14 @@ if __name__ == "__main__":
                 sampler=sampler, 
                 batch_size=hparams.train_batch_size, 
                 collate_fn=dataset.collate,
-                drop_last=False
+                drop_last=True
                 )
         else:
             loader = torch.utils.data.DataLoader(
                 dataset, 
                 batch_size=hparams.train_batch_size, 
                 collate_fn=dataset.collate,
-                drop_last=False
+                drop_last=True
                 )
         
         step = 0
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             torch.nn.utils.clip_grad_norm_(params, 0.5)
             optimizer.step()
 
-            run["train/loss"].log(loss)
+            run["logs/train/loss/total"].log(loss)
 
     run = neptune.init(
         project="sungsahn0215/molrep", name="run_condopt", source_files=["*.py", "**/*.py"], tags=[hparams.tag]
