@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
     parser.add_argument("--num_warmup_steps", type=int, default=10)
-    parser.add_argument("--num_steps_per_stage", type=int, default=1)
+    parser.add_argument("--num_steps_per_stage", type=int, default=0)
     parser.add_argument("--tags", type=str, nargs="+")
     hparams = parser.parse_args()
 
