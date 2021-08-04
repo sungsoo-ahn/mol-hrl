@@ -25,4 +25,4 @@ python run_conddecoder.py \
 --cond_embedding_mlp \
 --max_epochs 100 \
 --check_val_every_n_epoch 10 \
---tags $TAG full molwt
+--tags $TAG full qed
