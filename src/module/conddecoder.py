@@ -108,9 +108,9 @@ class CondDecoderModule(pl.LightningModule):
 
     def training_step(self, batched_data, batch_idx):
         loss, statistics = self.shared_step(batched_data)
-        self.log("train/loss/total", loss, on_step=True, logger=True)
+        self.log("train/loss/total", loss, on_step=False, on_epoch=True, logger=True)
         for key, val in statistics.items():
-            self.log(f"train/{key}", val, on_step=True, logger=True)
+            self.log(f"train/{key}", val, on_step=False, on_epoch=True, logger=True)
 
         return loss
 
