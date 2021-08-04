@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
     parser.add_argument("--num_warmup_steps", type=int, default=100)
-    parser.add_argument("--num_steps_per_stage", type=int, default=10)
+    parser.add_argument("--num_steps_per_stage", type=int, default=100)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
@@ -84,7 +84,8 @@ if __name__ == "__main__":
         return valid_smiles_list, valid_score_list
 
     def get_queries(num_queries):
-        query = score_dataset.raw_tsrs.max() + 2.0
+        query = score_dataset.raw_tsrs.max() + 1.0
+        run["query"].log(query)
         queries = query.view(1, 1).expand(num_queries, 1)
         queries = score_dataset.normalize(queries)
         return queries
@@ -130,7 +131,7 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(list(decoder.parameters()) + list(cond_embedding.parameters()), 0.5)
+            torch.nn.utils.clip_grad_norm_(params, 0.5)
             optimizer.step()
 
             run["train/loss"].log(loss)
