@@ -78,7 +78,7 @@ if __name__ == "__main__":
         return valid_smiles_list, valid_score_list
 
     def get_queries(num_queries):
-        query = score_dataset.raw_tsrs.max() + 1.0
+        query = score_dataset.raw_tsrs.max() + 2.0
         run["query"].log(query)
         queries = query.view(1, 1).expand(num_queries, 1)
         queries = score_dataset.normalize(queries)
