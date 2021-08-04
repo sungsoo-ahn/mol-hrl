@@ -3,25 +3,20 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="base"
 
-python run_condopt.py \
---train_split train_001 \
---freeze_decoder \
---cond_embedding_mlp \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condopt_001"
-
 #python run_condopt.py \
-#--train_split train_05 \
-#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag "${TAG}_condopt_05"
-
-#python run_conddecoder.py \
-#--train_split train_001 \
-#--score_func_name logp \
+#--train_split train_256 \
 #--freeze_decoder \
 #--cond_embedding_mlp \
 #--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag "${TAG}_condgen_001_logp"
+#--tag "${TAG}_condopt_001"
+
+python run_conddecoder.py \
+--train_split train_256 \
+--score_func_name logp \
+--freeze_decoder \
+--cond_embedding_mlp \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tags $TAG 256 logp
 
 #python run_conddecoder.py \
 #--train_split train_01 \
