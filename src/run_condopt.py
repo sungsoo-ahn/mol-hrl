@@ -164,8 +164,7 @@ if __name__ == "__main__":
             smiles_list.extend(new_smiles_list)
             score_list.extend(new_score_list)
             
-            #if len(smiles_list) + 1 > hparams.num_queries_per_stage:
-            if query_step == 9:
+            if len(smiles_list) + 1 > hparams.num_queries_per_stage:
                 valid_ratio = float(num_valids) / (query_step + 1) / max(hparams.num_queries_per_stage, 128)
                 run["valid_ratio"].log(valid_ratio)
 
@@ -176,12 +175,12 @@ if __name__ == "__main__":
                 score_list = score_list[:hparams.num_queries_per_stage]
                 break
         
-        #sequence_dataset.update(smiles_list)
-        #score_dataset.update(score_list)
-        #seen_smiles_list = list(set(seen_smiles_list + new_smiles_list))            
+        sequence_dataset.update(smiles_list)
+        score_dataset.update(score_list)
+        seen_smiles_list = list(set(seen_smiles_list + new_smiles_list))            
 
-        #top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
-        #run["top1"].log(top123[0])
-        #run["top2"].log(top123[1])
-        #run["top3"].log(top123[2]) 
+        top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
+        run["top1"].log(top123[0])
+        run["top2"].log(top123[1])
+        run["top3"].log(top123[2]) 
         
