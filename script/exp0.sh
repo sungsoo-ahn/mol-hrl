@@ -17,6 +17,7 @@ python run_conddecoder.py \
 --train_split train_01 \
 --score_func_name logp \
 --freeze_decoder \
+--cond_embedding_mlp \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag "${TAG}_condgen_01_logp"
 

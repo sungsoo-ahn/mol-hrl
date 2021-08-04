@@ -28,9 +28,9 @@ class CondDecoderModule(pl.LightningModule):
         self.decoder = SequenceDecoder(hparams)
         if hparams.cond_embedding_mlp:
             self.cond_embedding = torch.nn.Sequential(
-                torch.nn.Linear(1, hparams.code_dim),
-                torch.nn.ReLU(), 
-                torch.nn.Linear(hparams.code_dim, hparams.code_dim),
+                torch.nn.Linear(1, 4 * hparams.code_dim),
+                torch.nn.LeakyReLU(), 
+                torch.nn.Linear(4 * hparams.code_dim, hparams.code_dim),
             )
         else:
             self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
