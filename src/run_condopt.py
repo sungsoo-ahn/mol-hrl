@@ -106,6 +106,7 @@ if __name__ == "__main__":
                 dataset, 
                 batch_size=hparams.train_batch_size, 
                 collate_fn=dataset.collate,
+                shuffle=True,
                 drop_last=True
                 )
         
