@@ -16,35 +16,36 @@ TAG="fragment"
 python run_conddecoder.py \
 --train_split train_01 \
 --score_func_name logp \
+--freeze_decoder \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag "${TAG}_condgen_01_logp"
 
-python run_conddecoder.py \
---train_split train_01 \
---score_func_name molwt \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_01_molwt"
-
-python run_conddecoder.py \
---train_split train_01 \
---score_func_name qed \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_01_qed"
-
-python run_conddecoder.py \
---train_split train_05 \
---score_func_name logp \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_05_logp"
-
-python run_conddecoder.py \
---train_split train_05 \
---score_func_name molwt \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_05_molwt"
-
-python run_conddecoder.py \
---train_split train_05 \
---score_func_name qed \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_05_qed"
+#python run_conddecoder.py \
+#--train_split train_01 \
+#--score_func_name molwt \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condgen_01_molwt"
+#
+#python run_conddecoder.py \
+#--train_split train_01 \
+#--score_func_name qed \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condgen_01_qed"
+#
+#python run_conddecoder.py \
+#--train_split train_05 \
+#--score_func_name logp \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condgen_05_logp"
+#
+#python run_conddecoder.py \
+#--train_split train_05 \
+#--score_func_name molwt \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condgen_05_molwt"
+#
+#python run_conddecoder.py \
+#--train_split train_05 \
+#--score_func_name qed \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condgen_05_qed"
