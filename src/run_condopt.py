@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_batch_size", type=float, default=256)
     parser.add_argument("--num_warmup_steps", type=int, default=10)
     parser.add_argument("--num_steps_per_stage", type=int, default=5)
-    parser.add_argument("--tag", type=str, default="notag")
+    parser.add_argument("--tags", type=str, nargs="+")
     hparams = parser.parse_args()
 
     device = torch.device(0)
@@ -133,7 +133,10 @@ if __name__ == "__main__":
             run["logs/train/loss/total"].log(loss)
 
     run = neptune.init(
-        project="sungsahn0215/molrep", name="run_condopt", source_files=["*.py", "**/*.py"], tags=[hparams.tag]
+        project="sungsahn0215/molrep", 
+        name="run_condopt", 
+        source_files=["*.py", "**/*.py"], 
+        tags=["condopt"]+hparams.tags,
         )
     
     
