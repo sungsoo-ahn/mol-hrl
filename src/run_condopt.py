@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--freeze_decoder", action="store_true")
     parser.add_argument("--cond_embedding_mlp", action="store_true")
     parser.add_argument("--train_split", type=str, default="train_001")
-    parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
+    parser.add_argument("--scoring_func_name", type=str, default="logp")
     parser.add_argument("--num_stages", type=int, default=100)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
     parser.add_argument("--weighted", action="store_true")
@@ -81,6 +81,7 @@ if __name__ == "__main__":
         valid_idxs = [idx for idx, score in enumerate(score_list) if score > corrupt_score]
         valid_score_list = [score_list[idx] for idx in valid_idxs]
         valid_smiles_list = [smiles_list[idx] for idx in valid_idxs]
+        
         return valid_smiles_list, valid_score_list
 
     def get_queries(num_queries):
@@ -97,7 +98,9 @@ if __name__ == "__main__":
             ranks = np.argsort(np.argsort(-1 * scores_np))
             weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
             print(weights)
-            sampler = torch.utils.data.WeightedRandomSampler(weights=weights, num_samples=len(scores_np), replacement=False)
+            sampler = torch.utils.data.WeightedRandomSampler(
+                weights=weights, num_samples=len(scores_np), replacement=False
+                )
             loader = torch.utils.data.DataLoader(
                 dataset, 
                 sampler=sampler, 
