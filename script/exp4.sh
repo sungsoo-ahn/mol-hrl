@@ -15,6 +15,7 @@ TAG="nopretrain"
 
 python run_conddecoder.py \
 --train_split train_001 \
+--cond_embedding_mlp \
 --score_func_name logp \
 --tag "${TAG}_condgen_001_logp"
 
