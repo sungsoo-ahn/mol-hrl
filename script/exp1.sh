@@ -14,12 +14,12 @@ TAG="mutate"
 #--tag "${TAG}_condopt_05"
 
 python run_conddecoder.py \
---train_split train_01 \
+--train_split train_001 \
 --score_func_name logp \
 --freeze_decoder \
 --cond_embedding_mlp \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_01_logp"
+--tag "${TAG}_condgen_001_logp"
 
 #python run_conddecoder.py \
 #--train_split train_01 \

@@ -14,31 +14,31 @@ TAG="nopretrain"
 #--tag "${TAG}_condopt_05"
 
 python run_conddecoder.py \
---train_split train_01 \
+--train_split train_001 \
 --score_func_name logp \
---tag "${TAG}_condgen_01_logp"
+--tag "${TAG}_condgen_001_logp"
 
-python run_conddecoder.py \
---train_split train_01 \
---score_func_name molwt \
---tag "${TAG}_condgen_01_molwt"
-
-python run_conddecoder.py \
---train_split train_01 \
---score_func_name qed \
---tag "${TAG}_condgen_01_qed"
-
-python run_conddecoder.py \
---train_split train_05 \
---score_func_name logp \
---tag "${TAG}_condgen_05_logp"
-
-python run_conddecoder.py \
---train_split train_05 \
---score_func_name molwt \
---tag "${TAG}_condgen_05_molwt"
-
-python run_conddecoder.py \
---train_split train_05 \
---score_func_name qed \
---tag "${TAG}_condgen_05_qed"
+#python run_conddecoder.py \
+#--train_split train_01 \
+#--score_func_name molwt \
+#--tag "${TAG}_condgen_01_molwt"
+#
+#python run_conddecoder.py \
+#--train_split train_01 \
+#--score_func_name qed \
+#--tag "${TAG}_condgen_01_qed"
+#
+#python run_conddecoder.py \
+#--train_split train_05 \
+#--score_func_name logp \
+#--tag "${TAG}_condgen_05_logp"
+#
+#python run_conddecoder.py \
+#--train_split train_05 \
+#--score_func_name molwt \
+#--tag "${TAG}_condgen_05_molwt"
+#
+#python run_conddecoder.py \
+#--train_split train_05 \
+#--score_func_name qed \
+#--tag "${TAG}_condgen_05_qed"

@@ -39,6 +39,10 @@ def load_smiles_list(root_dir, split):
         return smiles_list
     elif split == "train":
         return [smiles_list[idx] for idx in train_idxs]
+    elif split == "train_001":
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.001)]]
+    elif split == "train_002":
+        return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.002)]]
     elif split == "train_01":
         return [smiles_list[idx] for idx in train_idxs[: int(len(smiles_list) * 0.01)]]
     elif split == "train_05":
