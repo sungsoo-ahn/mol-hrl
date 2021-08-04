@@ -28,8 +28,8 @@ if __name__ == "__main__":
     parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=1000)
-    parser.add_argument("--num_steps_per_stage", type=int, default=100)
+    parser.add_argument("--num_warmup_steps", type=int, default=2000)
+    parser.add_argument("--num_steps_per_stage", type=int, default=1000)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
@@ -164,7 +164,8 @@ if __name__ == "__main__":
             smiles_list.extend(new_smiles_list)
             score_list.extend(new_score_list)
             
-            if len(smiles_list) + 1 > hparams.num_queries_per_stage:
+            #if len(smiles_list) + 1 > hparams.num_queries_per_stage:
+            if query_step == 9:
                 valid_ratio = float(num_valids) / (query_step + 1) / max(hparams.num_queries_per_stage, 128)
                 run["valid_ratio"].log(valid_ratio)
 
