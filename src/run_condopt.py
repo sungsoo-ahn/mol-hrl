@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("--decoder_max_length", type=int, default=512)
     parser.add_argument("--freeze_decoder", action="store_true")
     parser.add_argument("--cond_embedding_mlp", action="store_true")
-    parser.add_argument("--train_split", type=str, default="train_001")
+    parser.add_argument("--train_split", type=str, default="train_256")
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
     parser.add_argument("--num_stages", type=int, default=100)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
