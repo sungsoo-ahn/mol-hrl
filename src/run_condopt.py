@@ -11,13 +11,6 @@ import neptune.new as neptune
 from module.decoder.sequence import SequenceDecoder
 from data.score.factory import get_scoring_func
 
-class QueueDataset(torch.utils.data.Dataset):
-    def __init__(self, smiles_list, score_list, k):
-        self.smiles_list = smiles_list
-        self.score_list = score_list
-        self.k = k
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
@@ -35,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=100)
+    parser.add_argument("--num_warmup_steps", type=int, default=1000)
     parser.add_argument("--num_steps_per_stage", type=int, default=100)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
@@ -150,6 +143,8 @@ if __name__ == "__main__":
         decoder.train()
         cond_embedding.train()
         run_steps(hparams.num_steps_per_stage if stage > 0 else hparams.num_warmup_steps)
+        
+        
         #
         decoder.eval()
         cond_embedding.eval()
@@ -180,13 +175,12 @@ if __name__ == "__main__":
                 score_list = score_list[:hparams.num_queries_per_stage]
                 break
         
-        #
-        sequence_dataset.update(smiles_list)
-        score_dataset.update(score_list)
-        seen_smiles_list = list(set(seen_smiles_list + new_smiles_list))            
+        #sequence_dataset.update(smiles_list)
+        #score_dataset.update(score_list)
+        #seen_smiles_list = list(set(seen_smiles_list + new_smiles_list))            
 
-        top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
-        run["top1"].log(top123[0])
-        run["top2"].log(top123[1])
-        run["top3"].log(top123[2]) 
+        #top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
+        #run["top1"].log(top123[0])
+        #run["top2"].log(top123[1])
+        #run["top3"].log(top123[2]) 
         
