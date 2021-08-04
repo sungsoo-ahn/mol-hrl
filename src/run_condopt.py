@@ -59,7 +59,7 @@ if __name__ == "__main__":
     if not hparams.freeze_decoder:
         params += list(decoder.parameters())
     
-    optimizer = torch.optim.Adam(params, lr=1e-3)
+    optimizer = torch.optim.Adam(params, lr=1e-4)
     
     _, scoring_func, corrupt_score = get_scoring_func(hparams.scoring_func_name)
     sequence_dataset = SequenceDataset(hparams.data_dir, hparams.train_split)
