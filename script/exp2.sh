@@ -6,7 +6,7 @@ TAG="fragment"
 python run_condopt.py \
 --train_split train_001 \
 --freeze_decoder \
---cond_embedding_mlp \
+#--cond_embedding_mlp \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 --tag "${TAG}_condopt_001"
 
