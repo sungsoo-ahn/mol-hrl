@@ -85,6 +85,7 @@ class CondDecoderModule(pl.LightningModule):
             shuffle=True,
             collate_fn=collate,
             num_workers=self.hparams.num_workers,
+            drop_last=True
         )
 
     def val_dataloader(self):

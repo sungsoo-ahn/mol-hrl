@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="fragment"
+TAG="base"
 
 python run_conddecoder.py \
 --train_split train_256 \
