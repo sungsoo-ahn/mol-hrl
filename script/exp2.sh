@@ -3,23 +3,25 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="fragment"
 
-#python run_condopt.py \
-#--train_split train_01 \
-#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag "${TAG}_condopt_01"
+python run_condopt.py \
+--train_split train_001 \
+--freeze_decoder \
+--cond_embedding_mlp \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tag "${TAG}_condopt_001"
 
 #python run_condopt.py \
 #--train_split train_05 \
 #--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
 #--tag "${TAG}_condopt_05"
 
-python run_conddecoder.py \
---train_split train_001 \
---score_func_name logp \
---freeze_decoder \
---cond_embedding_mlp \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tag "${TAG}_condgen_001_logp"
+#python run_conddecoder.py \
+#--train_split train_001 \
+#--score_func_name logp \
+#--freeze_decoder \
+#--cond_embedding_mlp \
+#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+#--tag "${TAG}_condgen_001_logp"
 
 #python run_conddecoder.py \
 #--train_split train_01 \

@@ -3,10 +3,10 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="nopretrain"
 
-#python run_condopt.py \
-#--train_split train_01 \
-#--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
-#--tag "${TAG}_condopt_01"
+python run_condopt.py \
+--train_split train_001 \
+--cond_embedding_mlp \
+--tag "${TAG}_condopt_001"
 
 #python run_condopt.py \
 #--train_split train_05 \

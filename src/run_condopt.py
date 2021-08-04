@@ -26,23 +26,31 @@ if __name__ == "__main__":
     parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
     parser.add_argument("--decoder_num_layers", type=int, default=3)
     parser.add_argument("--decoder_max_length", type=int, default=512)
-    parser.add_argument("--train_split", type=str, default="train_01")
+    parser.add_argument("--freeze_decoder", action="store_true")
+    parser.add_argument("--cond_embedding_mlp", action="store_true")
+    parser.add_argument("--train_split", type=str, default="train_001")
     parser.add_argument("--scoring_func_name", type=str, default="penalized_logp")
     parser.add_argument("--num_stages", type=int, default=100)
     parser.add_argument("--num_queries_per_stage", type=int, default=1)
+    parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--reweight_k", type=float, default=1e-2)
     parser.add_argument("--train_batch_size", type=float, default=256)
-    parser.add_argument("--num_warmup_steps", type=int, default=1000)
-    parser.add_argument("--num_steps_per_stage", type=int, default=50)
+    parser.add_argument("--num_warmup_steps", type=int, default=100)
+    parser.add_argument("--num_steps_per_stage", type=int, default=10)
     parser.add_argument("--tag", type=str, default="notag")
     hparams = parser.parse_args()
 
-    #if hparams.load_checkpoint_path != "":
-    #    hparams.num_warmup_steps = 2000
-
     device = torch.device(0)
     decoder = SequenceDecoder(hparams)
-    cond_embedding = torch.nn.Linear(1, hparams.code_dim)
+    if hparams.cond_embedding_mlp:
+        cond_embedding = torch.nn.Sequential(
+            torch.nn.Linear(1, 4 * hparams.code_dim),
+            torch.nn.LeakyReLU(), 
+            torch.nn.Linear(4 * hparams.code_dim, hparams.code_dim),
+        )
+    else:
+        cond_embedding = torch.nn.Linear(1, hparams.code_dim)
+    
     if hparams.load_checkpoint_path != "":
         state_dict = torch.load(hparams.load_checkpoint_path)
         decoder.load_state_dict(state_dict["decoder"])
@@ -54,7 +62,11 @@ if __name__ == "__main__":
     decoder.to(device)
     cond_embedding.to(device)
 
-    optimizer = torch.optim.Adam(list(decoder.parameters()) + list(cond_embedding.parameters()), lr=1e-3)
+    params = list(cond_embedding.parameters())
+    if not hparams.freeze_decoder:
+        params += list(decoder.parameters())
+    
+    optimizer = torch.optim.Adam(params, lr=1e-3)
     
     _, scoring_func, corrupt_score = get_scoring_func(hparams.scoring_func_name)
     sequence_dataset = SequenceDataset(hparams.data_dir, hparams.train_split)
@@ -79,16 +91,26 @@ if __name__ == "__main__":
         
     def run_steps(num_steps):
         dataset = ZipDataset(score_dataset, sequence_dataset)
-        scores_np = score_dataset.raw_tsrs.view(-1).numpy()
-        ranks = np.argsort(np.argsort(-1 * scores_np))
-        weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
-        #print(weights)
-        sampler = torch.utils.data.WeightedRandomSampler(weights=weights, num_samples=len(scores_np), replacement=False)
-        loader = torch.utils.data.DataLoader(
-            dataset, sampler=sampler, 
-            batch_size=hparams.train_batch_size, 
-            collate_fn=dataset.collate
-            )
+        if hparams.weighted:
+            scores_np = score_dataset.raw_tsrs.view(-1).numpy()
+            ranks = np.argsort(np.argsort(-1 * scores_np))
+            weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
+            print(weights)
+            sampler = torch.utils.data.WeightedRandomSampler(weights=weights, num_samples=len(scores_np), replacement=False)
+            loader = torch.utils.data.DataLoader(
+                dataset, 
+                sampler=sampler, 
+                batch_size=hparams.train_batch_size, 
+                collate_fn=dataset.collate,
+                drop_last=False
+                )
+        else:
+            loader = torch.utils.data.DataLoader(
+                dataset, 
+                batch_size=hparams.train_batch_size, 
+                collate_fn=dataset.collate,
+                drop_last=False
+                )
         
         step = 0
         while step < num_steps:
