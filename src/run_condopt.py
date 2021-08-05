@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_batch_size", type=float, default=256)
     parser.add_argument("--num_warmup_steps", type=int, default=10)
     parser.add_argument("--num_steps_per_stage", type=int, default=1)
-    parser.add_argument("--tags", type=str, nargs="+")
+    parser.add_argument("--tags", type=str, nargs="+", default=[])
     hparams = parser.parse_args()
 
     device = torch.device(0)
@@ -90,9 +90,8 @@ if __name__ == "__main__":
             scores_np = score_dataset.raw_tsrs.view(-1).numpy()
             ranks = np.argsort(np.argsort(-1 * scores_np))
             weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
-            print(weights)
             sampler = torch.utils.data.WeightedRandomSampler(
-                weights=weights, num_samples=len(scores_np), replacement=False
+                weights=weights, num_samples=len(scores_np), replacement=True
                 )
             loader = torch.utils.data.DataLoader(
                 dataset, 
