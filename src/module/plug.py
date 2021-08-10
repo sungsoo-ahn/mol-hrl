@@ -33,7 +33,7 @@ class ConditionalGaussianMixture(torch.nn.Module):
 
     def forward(self, x):
         dist = self.get_distribution(x)
-        return dist.mean()
+        return dist.mean
 
     def log_prob(self, x, code):
         dist = self.get_distribution(x)
