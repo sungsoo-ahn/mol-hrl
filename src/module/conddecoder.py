@@ -26,14 +26,14 @@ class CondDecoderModule(pl.LightningModule):
         self.save_hyperparameters(hparams)
 
         self.decoder = SequenceDecoder(hparams)
-        if hparams.cond_embedding_mlp:
-            self.cond_embedding = torch.nn.Sequential(
-                torch.nn.Linear(1, hparams.code_dim),
-                torch.nn.LeakyReLU(), 
-                torch.nn.Linear(hparams.code_dim, hparams.code_dim),
-            )
-        else:
-            self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
+        #if hparams.cond_embedding_mlp:
+        self.cond_embedding = torch.nn.Sequential(
+            torch.nn.Linear(1, hparams.code_dim),
+            torch.nn.LeakyReLU(), 
+            torch.nn.Linear(hparams.code_dim, hparams.code_dim),
+        )
+        #else:
+        #    self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
 
         if hparams.load_checkpoint_path != "":
             state_dict = torch.load(hparams.load_checkpoint_path)
