@@ -3,7 +3,7 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="base"
 
-python run_conddecoder.py \
+python run_plug.py \
 --train_split train_256 \
 --score_func_name logp \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
