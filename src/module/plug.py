@@ -33,7 +33,7 @@ class ConditionalGaussianMixture(torch.nn.Module):
 
     def forward(self, x):
         dist = self.get_distribution(x)
-        return dist.sample()
+        return dist.mean()
 
     def log_prob(self, x, code):
         dist = self.get_distribution(x)
@@ -128,7 +128,7 @@ class CondDecoderModule(pl.LightningModule):
 
     def shared_step(self, batched_data):
         self.encoder.eval()
-        
+
         loss, statistics = 0.0, dict()
         batched_cond_data, batched_input_data = batched_data
 
