@@ -127,6 +127,8 @@ class CondDecoderModule(pl.LightningModule):
         )
 
     def shared_step(self, batched_data):
+        self.encoder.eval()
+        
         loss, statistics = 0.0, dict()
         batched_cond_data, batched_input_data = batched_data
 
@@ -147,6 +149,9 @@ class CondDecoderModule(pl.LightningModule):
 
     def training_epoch_end(self, processed_epoch_output):
         if (self.current_epoch + 1) % 100 == 0:
+            self.cond_embedding.eval()
+            self.decoder.eval()
+        
             if self.hparams.score_func_name == "penalized_logp":
                 score_queries = [4.0, 5.0, 6.0, 7.0]
             elif self.hparams.score_func_name == "logp":
