@@ -53,7 +53,7 @@ class CondDecoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--sample_eval_freq", type=int, default=10)
+        parser.add_argument("--sample_eval_freq", type=int, default=100)
         parser.add_argument("--lr", type=float, default=1e-3)
         parser.add_argument("--cond_embedding_mlp", action="store_true")
 
