@@ -28,9 +28,9 @@ class CondDecoderModule(pl.LightningModule):
         self.decoder = SequenceDecoder(hparams)
         if hparams.cond_embedding_mlp:
             self.cond_embedding = torch.nn.Sequential(
-                torch.nn.Linear(1, 4 * hparams.code_dim),
+                torch.nn.Linear(1, hparams.code_dim),
                 torch.nn.LeakyReLU(), 
-                torch.nn.Linear(4 * hparams.code_dim, hparams.code_dim),
+                torch.nn.Linear(hparams.code_dim, hparams.code_dim),
             )
         else:
             self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
@@ -44,24 +44,23 @@ class CondDecoderModule(pl.LightningModule):
 
         self.train_cond_dataset = ScoreDataset(hparams.data_dir, hparams.score_func_name, hparams.train_split)
         self.train_target_dataset = SequenceDataset(hparams.data_dir, hparams.train_split)
-        self.val_cond_dataset = ScoreDataset(hparams.data_dir, hparams.score_func_name, "val")
-        self.val_target_dataset = SequenceDataset(hparams.data_dir, "val")
         self.train_dataset = ZipDataset(self.train_cond_dataset, self.train_target_dataset)
-        self.val_dataset = ZipDataset(self.val_cond_dataset, self.val_target_dataset)
-
+        
         _, self.score_func, self.corrupt_score = get_scoring_func(hparams.score_func_name)
+        
+        self.freeze_decoder = True
 
     @staticmethod
     def add_args(parser):
         # Common - model
+        parser.add_argument("--sample_eval_freq", type=int, default=10)
         parser.add_argument("--lr", type=float, default=1e-3)
-        parser.add_argument("--freeze_decoder", action="store_true")
         parser.add_argument("--cond_embedding_mlp", action="store_true")
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
         parser.add_argument("--load_checkpoint_path", type=str, default="")
-        parser.add_argument("--train_split", type=str, default="train_01")
+        parser.add_argument("--train_split", type=str, default="train_256")
         parser.add_argument("--batch_size", type=int, default=256)
         parser.add_argument("--num_queries", type=int, default=10000)
         parser.add_argument("--query_batch_size", type=int, default=500)
@@ -88,15 +87,6 @@ class CondDecoderModule(pl.LightningModule):
             drop_last=True
         )
 
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_dataset,
-            batch_size=self.hparams.batch_size,
-            shuffle=False,
-            collate_fn=collate,
-            num_workers=self.hparams.num_workers,
-        )
-
     def shared_step(self, batched_data):
         loss, statistics = 0.0, dict()
         batched_cond_data, batched_target_data = batched_data
@@ -115,47 +105,45 @@ class CondDecoderModule(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batched_data, batch_idx):
-        return 0.0
+    def training_epoch_end(self, processed_epoch_output):
+        if (self.current_epoch + 1) % self.hparams.sample_eval_freq == 0:
+            if self.hparams.score_func_name == "penalized_logp":
+                score_queries = [4.0, 5.0, 6.0, 7.0]
+            elif self.hparams.score_func_name == "logp":
+                score_queries = [4.0, 5.0, 6.0, 7.0]
+            elif self.hparams.score_func_name == "molwt":
+                score_queries = [500.0, 600.0, 700.0, 800.0]
+            elif self.hparams.score_func_name == "qed":
+                score_queries = [0.7, 0.8, 0.9, 1.0]
 
-    def on_validation_epoch_end(self):
-        if self.hparams.score_func_name == "penalized_logp":
-            score_queries = [4.0, 5.0, 6.0, 7.0]
-        elif self.hparams.score_func_name == "logp":
-            score_queries = [4.0, 5.0, 6.0, 7.0]
-        elif self.hparams.score_func_name == "molwt":
-            score_queries = [500.0, 600.0, 700.0, 800.0]
-        elif self.hparams.score_func_name == "qed":
-            score_queries = [0.7, 0.8, 0.9, 1.0]
+            for query in score_queries:
+                smiles_list = []
+                for _ in range(self.hparams.num_queries // self.hparams.query_batch_size):
+                    query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
+                    batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
+                    codes = self.cond_embedding(batched_cond_data)
+                    smiles_list_ = self.decoder.sample_smiles(codes, argmax=False)
+                    smiles_list.extend(smiles_list_)
+                
+                score_list = self.score_func(smiles_list)
 
-        for query in score_queries:
-            smiles_list = []
-            for _ in range(self.hparams.num_queries // self.hparams.query_batch_size):
-                query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
-                batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
-                codes = self.cond_embedding(batched_cond_data)
-                smiles_list_ = self.decoder.sample_smiles(codes, argmax=False)
-                smiles_list.extend(smiles_list_)
-            
-            score_list = self.score_func(smiles_list)
+                valid_idxs = [idx for idx, score in enumerate(score_list) if score > self.corrupt_score]
+                valid_smiles_list = [smiles_list[idx] for idx in valid_idxs]
+                valid_scores = torch.FloatTensor([score_list[idx] for idx in valid_idxs])
 
-            valid_idxs = [idx for idx, score in enumerate(score_list) if score > self.corrupt_score]
-            valid_smiles_list = [smiles_list[idx] for idx in valid_idxs]
-            valid_scores = torch.FloatTensor([score_list[idx] for idx in valid_idxs])
+                valid_ratio = valid_scores.size(0) / len(score_list)
+                self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
 
-            valid_ratio = valid_scores.size(0) / len(score_list)
-            self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
+                if valid_ratio > 0.0:
+                    mae = (query - valid_scores).abs().mean()
+                    self.log(f"query{query:.2f}/mae", mae, on_step=False, logger=True)
 
-            if valid_ratio > 0.0:
-                mae = (query - valid_scores).abs().mean()
-                self.log(f"query{query:.2f}/mae", mae, on_step=False, logger=True)
-
-                unique_ratio = float(len(set(valid_smiles_list))) / len(smiles_list)
-                self.log(f"query{query:.2f}/unique_ratio", unique_ratio, on_step=False, logger=True)
+                    unique_ratio = float(len(set(valid_smiles_list))) / len(smiles_list)
+                    self.log(f"query{query:.2f}/unique_ratio", unique_ratio, on_step=False, logger=True)
 
     def configure_optimizers(self):
         params = list(self.cond_embedding.parameters())
-        if not self.hparams.freeze_decoder:
+        if not self.freeze_decoder:
             params += list(self.decoder.parameters())
         
         optimizer = torch.optim.Adam(params, lr=self.hparams.lr)
