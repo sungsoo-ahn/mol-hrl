@@ -37,9 +37,9 @@ if __name__ == "__main__":
     decoder = SequenceDecoder(hparams)
     if hparams.cond_embedding_mlp:
         cond_embedding = torch.nn.Sequential(
-            torch.nn.Linear(1, 4 * hparams.code_dim),
+            torch.nn.Linear(1, hparams.code_dim),
             torch.nn.LeakyReLU(), 
-            torch.nn.Linear(4 * hparams.code_dim, hparams.code_dim),
+            torch.nn.Linear(hparams.code_dim, hparams.code_dim),
         )
     else:
         cond_embedding = torch.nn.Linear(1, hparams.code_dim)
@@ -185,5 +185,5 @@ if __name__ == "__main__":
         top123 = torch.topk(score_dataset.raw_tsrs.view(-1), k=3)[0]
         run["top1"].log(top123[0])
         run["top2"].log(top123[1])
-        run["top3"].log(top123[2]) 
+        run["top3"].log(top123[2])
         

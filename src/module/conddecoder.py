@@ -117,11 +117,6 @@ class CondDecoderModule(pl.LightningModule):
 
     def validation_step(self, batched_data, batch_idx):
         return 0.0
-        #loss, statistics = self.shared_step(batched_data)
-        #self.log("validation/loss/total", loss, on_step=False, logger=True)
-        #for key, val in statistics.items():
-        #    self.log(f"validation/{key}", val, on_step=False, logger=True)
-        #return loss
 
     def on_validation_epoch_end(self):
         if self.hparams.score_func_name == "penalized_logp":
