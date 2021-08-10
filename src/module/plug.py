@@ -86,7 +86,6 @@ class CondDecoderModule(pl.LightningModule):
     def add_args(parser):
         # Common - model
         parser.add_argument("--lr", type=float, default=1e-3)
-        parser.add_argument("--freeze_decoder", action="store_true")
         parser.add_argument("--cond_embedding_mlp", action="store_true")
 
         # Common - data
@@ -186,8 +185,5 @@ class CondDecoderModule(pl.LightningModule):
         
     def configure_optimizers(self):
         params = list(self.cond_embedding.parameters())
-        if not self.hparams.freeze_decoder:
-            params += list(self.decoder.parameters())
-        
         optimizer = torch.optim.Adam(params, lr=self.hparams.lr)
         return [optimizer]
