@@ -133,7 +133,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         parser.add_argument("--decoder_max_length", type=int, default=120)
 
         #
-        parser.add_argument("--plug_code_dim", type=int, default=64)
+        parser.add_argument("--plug_code_dim", type=int, default=16)
         parser.add_argument("--plug_beta", type=float, default=0.01)
         
         return parser
@@ -155,10 +155,10 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         with torch.no_grad():
             codes = self.encoder(batched_input_data)
 
-        codes, loss, statistics = self.plug_vae.step(codes, batched_cond_data)
+        codes_hat, loss, statistics = self.plug_vae.step(codes, batched_cond_data)
 
         #
-        decoder_out = self.decoder(batched_target_data, codes)
+        decoder_out = self.decoder(batched_target_data, codes_hat)
         recon_loss, recon_statistics = self.decoder.compute_recon_loss(decoder_out, batched_target_data)
         loss += recon_loss
         statistics.update(recon_statistics)
