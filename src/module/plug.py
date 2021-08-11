@@ -92,7 +92,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
 
         if hparams.load_checkpoint_path != "":
             state_dict = torch.load(hparams.load_checkpoint_path)
-            self.encoder.load_state_dict(state_dict["decoder"])
+            self.encoder.load_state_dict(state_dict["encoder"])
             self.decoder.load_state_dict(state_dict["decoder"])
             if "plug_vae" in state_dict:
                 self.cond_embedding.load_state_dict(state_dict["plug_vae"])
