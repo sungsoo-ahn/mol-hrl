@@ -158,10 +158,12 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         codes_hat, loss, statistics = self.plug_vae.step(codes, batched_cond_data)
 
         #
-        #decoder_out = self.decoder(batched_target_data, codes_hat)
-        #recon_loss, recon_statistics = self.decoder.compute_recon_loss(decoder_out, batched_target_data)
+        with torch.no_grad():
+            decoder_out = self.decoder(batched_target_data, codes_hat)
+        
+        recon_loss, recon_statistics = self.decoder.compute_recon_loss(decoder_out, batched_target_data)
         #loss += recon_loss
-        #statistics.update(recon_statistics)
+        statistics.update(recon_statistics)
 
         return loss, statistics
 
