@@ -9,4 +9,4 @@ python run_plug.py \
 --plug_depth 2 \
 --plug_width_factor 1.0 \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tags $TAG 256 logp
+--tags $TAG 2 1.0
