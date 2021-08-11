@@ -3,7 +3,10 @@
 CHECKPOINT_DIR="../resource/checkpoint"
 TAG="base"
 
-python run_autoencoder.py \
---code_dim 1024 \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}_large.pth" \
---tags $TAG "large"
+python run_plug.py \
+--train_split train \
+--score_func_name logp \
+--plug_depth 4 \
+--plug_width_factor 1.0 \
+--load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
+--tags $TAG 4 4.0
