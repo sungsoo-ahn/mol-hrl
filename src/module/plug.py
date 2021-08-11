@@ -196,7 +196,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
 
     def evaluate_sampling(self):
         if self.hparams.score_func_name == "penalized_logp":
-            score_queries = [4.0, 5.0, 6.0, 7.0]
+            score_queries = [3.0, 4.0, 5.0, 6.0]
             success_margin = 0.2
         elif self.hparams.score_func_name == "logp":
             score_queries = [4.0, 5.0, 6.0, 7.0]
