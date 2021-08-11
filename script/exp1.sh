@@ -1,12 +1,10 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="base"
+TAG="fragment"
 
 python run_plug.py \
 --train_split train \
 --score_func_name logp \
---plug_depth 3 \
---plug_width_factor 1.0 \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tags $TAG 3 1.0
+--tags $TAG

@@ -27,53 +27,24 @@ class PlugVariationalAutoEncoder(torch.nn.Module):
         super(PlugVariationalAutoEncoder, self).__init__()
 
         hidden_dim = int(hparams.plug_width_factor * hparams.code_dim)
-        if hparams.plug_depth == 2:
-            self.encoder = torch.nn.Sequential(
-                torch.nn.Linear(hparams.code_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
-            )   
-            self.decoder = torch.nn.Sequential(
-                torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hparams.code_dim),
-            )
-
-        elif hparams.plug_depth == 3:
-            self.encoder = torch.nn.Sequential(
-                torch.nn.Linear(hparams.code_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
-            )   
-            self.decoder = torch.nn.Sequential(
-                torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hparams.code_dim),
-            )
-
-        elif hparams.plug_depth == 4:
-            self.encoder = torch.nn.Sequential(
-                torch.nn.Linear(hparams.code_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
-            )   
-            self.decoder = torch.nn.Sequential(
-                torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hidden_dim),
-                torch.nn.LeakyReLU(),
-                torch.nn.Linear(hidden_dim, hparams.code_dim),
-            )
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Linear(hparams.code_dim, hidden_dim),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
+        )   
+        self.decoder = torch.nn.Sequential(
+            torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(hidden_dim, hparams.code_dim),
+        )
 
         self.linear_mu = torch.nn.Linear(hparams.plug_code_dim, hparams.plug_code_dim)
         self.linear_logstd = torch.nn.Linear(hparams.plug_code_dim, hparams.plug_code_dim)
