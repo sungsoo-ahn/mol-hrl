@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_epochs", type=int, default=200)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default.pth")
-    parser.add_argument("--tags", type=str, nargs="+")
+    parser.add_argument("--tags", type=str, nargs="+", default=[])
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(

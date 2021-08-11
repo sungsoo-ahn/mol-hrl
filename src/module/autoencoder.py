@@ -51,7 +51,7 @@ class AutoEncoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--lr", type=float, default=1e-4)
+        parser.add_argument("--lr", type=float, default=1e-3)
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
@@ -74,6 +74,8 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--decoder_num_layers", type=int, default=3)
         parser.add_argument("--decoder_max_length", type=int, default=120)
+
+        parser.add_argument("--l2_coef", type=float, default=0.001)
 
         return parser
 
@@ -99,10 +101,17 @@ class AutoEncoderModule(pl.LightningModule):
         loss, statistics = 0.0, dict()
         batched_input_data, batched_target_data = batched_data
         codes = self.encoder(batched_input_data)
+
+
         decoder_out = self.decoder(batched_target_data, codes)
         recon_loss, recon_statistics = self.decoder.compute_recon_loss(decoder_out, batched_target_data)
         loss += recon_loss
         statistics.update(recon_statistics)
+
+        l2_loss = torch.norm(codes, p=2, dim=1).mean()
+        loss += l2_loss * self.hparams.l2_coef
+        statistics["loss/l2"] = l2_loss
+
         return loss, statistics
 
     def training_step(self, batched_data, batch_idx):
