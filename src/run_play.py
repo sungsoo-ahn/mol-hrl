@@ -18,7 +18,7 @@ from data.score.factory import get_scoring_func
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
-    parser.add_argument("--load_checkpoint_path", type=str, default="")
+    parser.add_argument("--load_checkpoint_path", type=str, default="../resource/checkpoint/default_codedecoder.pth")
     parser.add_argument("--code_dim", type=int, default=256)
     
     # GraphEncoder specific
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         state_dict = torch.load(hparams.load_checkpoint_path)
         encoder.load_state_dict(state_dict["encoder"])
         decoder.load_state_dict(state_dict["decoder"])
-        plug_vae.load_state_dict(state_dict["cond_embedding"])
+        plug_vae.load_state_dict(state_dict["plug_vae"])
         
     encoder.to(device)
     decoder.to(device)
