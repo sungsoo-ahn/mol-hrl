@@ -47,7 +47,7 @@ class CondDecoderModule(pl.LightningModule):
     def add_args(parser):
         # Common - model
         parser.add_argument("--sample_eval_freq", type=int, default=100)
-        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--lr", type=float, default=1e-4)
         parser.add_argument("--cond_embedding_mlp", action="store_true")
 
         # Common - data
@@ -98,46 +98,70 @@ class CondDecoderModule(pl.LightningModule):
 
         return loss
 
-    def training_epoch_end(self, processed_epoch_output):
-        if (self.current_epoch + 1) % self.hparams.sample_eval_freq == 0:
-            if self.hparams.score_func_name == "penalized_logp":
-                score_queries = [4.0, 5.0, 6.0, 7.0]
-            elif self.hparams.score_func_name == "logp":
-                score_queries = [4.0, 5.0, 6.0, 7.0]
-            elif self.hparams.score_func_name == "molwt":
-                score_queries = [500.0, 600.0, 700.0, 800.0]
-            elif self.hparams.score_func_name == "qed":
-                score_queries = [0.7, 0.8, 0.9, 1.0]
-
-            for query in score_queries:
-                smiles_list = []
-                for _ in range(self.hparams.num_queries // self.hparams.query_batch_size):
-                    query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
-                    batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
-                    codes = self.cond_embedding(batched_cond_data)
-                    smiles_list_ = self.decoder.sample_smiles(codes, argmax=False)
-                    smiles_list.extend(smiles_list_)
+    def training_epoch_end(self, outputs):
+        if (self.current_epoch + 1) % self.hparams.evaluate_per_n_epoch == 0:
+            self.eval()
+            with torch.no_grad():
+                self.evaluate_sampling()
                 
-                score_list = self.score_func(smiles_list)
+            self.train()
 
-                valid_idxs = [idx for idx, score in enumerate(score_list) if score > self.corrupt_score]
-                valid_smiles_list = [smiles_list[idx] for idx in valid_idxs]
-                valid_scores = torch.FloatTensor([score_list[idx] for idx in valid_idxs])
+    def evaluate_sampling(self):
+        if self.hparams.score_func_name == "penalized_logp":
+            score_queries = [4.0, 5.0, 6.0, 7.0]
+            success_margin = 0.2
+        elif self.hparams.score_func_name == "logp":
+            score_queries = [4.0, 5.0, 6.0, 7.0]
+            success_margin = 0.2
+        elif self.hparams.score_func_name == "molwt":
+            score_queries = [500.0, 600.0, 700.0, 800.0]
+            success_margin = 20.0
+        elif self.hparams.score_func_name == "qed":
+            score_queries = [0.75, 0.8, 0.85, 0.9]
+            success_margin = 0.01
 
-                valid_ratio = valid_scores.size(0) / len(score_list)
-                self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
+        for query in score_queries:
+            smiles_list = []
+            for _ in range(self.hparams.num_queries // self.hparams.query_batch_size):
+                query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
+                batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
+                codes = self.cond_embedding(batched_cond_data)
+                smiles_list_ = self.decoder.sample_smiles(codes, argmax=True)
+                smiles_list.extend(smiles_list_)
+            
+            smiles_list = smiles_list[:self.hparams.num_queries]
+            unique_smiles_list = list(set(smiles_list))
 
-                if valid_ratio > 0.0:
-                    mae = (query - valid_scores).abs().mean()
-                    self.log(f"query{query:.2f}/mae", mae, on_step=False, logger=True)
+            unique_ratio = float(len(unique_smiles_list)) / len(smiles_list)
+            self.log(f"query{query:.2f}/unique_ratio", unique_ratio, on_step=False, logger=True)
 
-                    unique_ratio = float(len(set(valid_smiles_list))) / len(smiles_list)
-                    self.log(f"query{query:.2f}/unique_ratio", unique_ratio, on_step=False, logger=True)
+            score_list = self.score_func(smiles_list)
+            valid_idxs = [idx for idx, score in enumerate(score_list) if score > self.corrupt_score]
+            valid_scores = [score_list[idx] for idx in valid_idxs]
+
+            valid_ratio = len(valid_scores) / len(score_list)
+            self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
+
+            is_success = lambda score: (score > query - success_margin) and (score < query + success_margin)
+            success_ratio = float(len([score for score in valid_scores if is_success(score)])) / len(smiles_list)
+            self.log(f"query{query:.2f}/success_ratio", success_ratio, on_step=False, logger=True)
+            
+            if valid_ratio > 0.0:
+                valid_scores_tsr = torch.FloatTensor(valid_scores)
+                mae = (query - valid_scores_tsr).abs().mean()
+                self.log(f"query{query:.2f}/mae_score", mae, on_step=False, logger=True)
+
+                mean = valid_scores_tsr.mean()
+                self.log(f"query{query:.2f}/mean_score", mean, on_step=False, logger=True)
+
+                std = valid_scores_tsr.std() if len(valid_scores) > 1 else 0.0
+                self.log(f"query{query:.2f}/std_score", std, on_step=False, logger=True)
 
     def configure_optimizers(self):
-        params = list(self.cond_embedding.parameters())
-        if not self.freeze_decoder:
-            params += list(self.decoder.parameters())
-        
-        optimizer = torch.optim.Adam(params, lr=self.hparams.lr)
-        return [optimizer]
+        optimizer = torch.optim.Adam(
+            [{"params": self.cond_embedding.parameters()}, {"params": self.decoder.parameters()}], lr=self.hparams.lr
+            )
+        lambda0 = lambda epoch: 0.0 if epoch < self.hparams.max_decoder_freeze_epochs else 1.0
+        lambda1 = lambda epoch: 10.0 if epoch < self.hparams.max_decoder_freeze_epochs else 1.0
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=[lambda0, lambda1])
+        return [optimizer], [scheduler]
