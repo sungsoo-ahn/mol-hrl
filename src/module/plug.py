@@ -26,7 +26,7 @@ class PlugVariationalAutoEncoder(torch.nn.Module):
     def __init__(self, hparams):
         super(PlugVariationalAutoEncoder, self).__init__()
 
-        hidden_dim = self.hparams.plug_width_factor * hparams.code_dim
+        hidden_dim = int(hparams.plug_width_factor * hparams.code_dim)
         if hparams.plug_depth == 2:
             self.encoder = torch.nn.Sequential(
                 torch.nn.Linear(hparams.code_dim, hidden_dim),
