@@ -108,7 +108,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
                 self.cond_embedding.load_state_dict(state_dict["plug_vae"])
 
         self.train_cond_dataset = ScoreDataset(hparams.data_dir, hparams.score_func_name, hparams.train_split)
-        self.train_input_dataset = GraphDataset(self.hparams.data_dir, "train")
+        self.train_input_dataset = GraphDataset(self.hparams.data_dir, hparams.train_split)
         self.train_target_dataset = SequenceDataset(hparams.data_dir, hparams.train_split)
         self.train_dataset = ZipDataset(self.train_input_dataset, self.train_target_dataset, self.train_cond_dataset)
         
