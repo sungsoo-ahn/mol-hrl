@@ -6,6 +6,8 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
 from module.decoder.sequence import SequenceDecoder
+from module.encoder.graph import GraphEncoder
+from data.graph.dataset import GraphDataset
 from data.sequence.dataset import SequenceDataset
 from data.score.dataset import ScoreDataset
 from data.score.factory import get_scoring_func
@@ -13,42 +15,119 @@ from data.util import ZipDataset
 
 
 def collate(data_list):
-    cond_data_list, target_data_list = zip(*data_list)
-    batched_cond_data = ScoreDataset.collate(cond_data_list)
+    input_data_list, target_data_list, cond_data_list = zip(*data_list)
+    batched_input_data = GraphDataset.collate(input_data_list)
     batched_target_data = SequenceDataset.collate(target_data_list)
-    return batched_cond_data, batched_target_data
+    batched_cond_data = ScoreDataset.collate(cond_data_list)
+    
+    return batched_input_data, batched_target_data, batched_cond_data
 
-
-class CondDecoderModule(pl.LightningModule):
+class PlugVariationalAutoEncoder(torch.nn.Module):
     def __init__(self, hparams):
-        super(CondDecoderModule, self).__init__()
+        super(PlugVariationalAutoEncoder, self).__init__()
+
+        hidden_dim = self.hparams.plug_width_factor * hparams.code_dim
+        if hparams.plug_depth == 2:
+            self.encoder = torch.nn.Sequential(
+                torch.nn.Linear(hparams.code_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
+            )   
+            self.decoder = torch.nn.Sequential(
+                torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hparams.code_dim),
+            )
+
+        elif hparams.plug_depth == 3:
+            self.encoder = torch.nn.Sequential(
+                torch.nn.Linear(hparams.code_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
+            )   
+            self.decoder = torch.nn.Sequential(
+                torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hparams.code_dim),
+            )
+
+        self.linear_mu = torch.nn.Linear(hparams.plug_code_dim, hparams.plug_code_dim)
+        self.linear_logstd = torch.nn.Linear(hparams.plug_code_dim, hparams.plug_code_dim)
+
+        self.plug_beta = hparams.plug_beta
+        self.plug_code_dim = hparams.plug_code_dim
+
+    def step(self, x, y):
+        out = self.encoder(x)
+        mu = self.linear_mu(out)
+        std = (self.linear_logstd(out).exp() + 1e-6)
+        
+        p = torch.distributions.Normal(torch.zeros_like(mu), torch.ones_like(std))
+        q = torch.distributions.Normal(mu, std)
+        
+        z = q.rsample()
+        x_hat = self.decoder(torch.cat([z, y], dim=1))
+        
+        recon_loss = torch.nn.functional.mse_loss(x_hat, x, reduction="mean")
+
+        log_qz = q.log_prob(z)
+        log_pz = p.log_prob(z)
+
+        kl_loss = log_qz - log_pz
+        kl_loss = kl_loss.mean()
+        loss = self.plug_beta * kl_loss + recon_loss
+
+        statistics = {
+            "loss/plug/total": loss,
+            "loss/plug/recon": recon_loss,
+            "loss/plug/kl": kl_loss,
+        }
+
+        return x_hat, loss, statistics
+
+    def sample(self, y):
+        mu = torch.zeros(y.size(0), self.plug_code_dim, device=y.device)
+        std = torch.ones(y.size(0), self.plug_code_dim, device=y.device)
+        p = torch.distributions.Normal(mu, std)
+        z = p.sample()
+        x_hat = self.decoder(torch.cat([z, y], dim=1))
+
+        return x_hat
+
+
+class PlugVariationalAutoEncoderModule(pl.LightningModule):
+    def __init__(self, hparams):
+        super(PlugVariationalAutoEncoderModule, self).__init__()
         hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
 
+        self.encoder = GraphEncoder(hparams)
         self.decoder = SequenceDecoder(hparams)
-        self.cond_embedding = torch.nn.Linear(1, hparams.code_dim)
+        self.plug_vae = PlugVariationalAutoEncoder(hparams)
 
         if hparams.load_checkpoint_path != "":
             state_dict = torch.load(hparams.load_checkpoint_path)
-            if "decoder" in state_dict:
-                self.decoder.load_state_dict(state_dict["decoder"])
-            elif "cond_embedding" in state_dict:
-                self.cond_embedding.load_state_dict(state_dict["cond_embedding"])
+            self.encoder.load_state_dict(state_dict["encoder"])
+            self.decoder.load_state_dict(state_dict["decoder"])
+            if "plug_vae" in state_dict:
+                self.cond_embedding.load_state_dict(state_dict["plug_vae"])
 
         self.train_cond_dataset = ScoreDataset(hparams.data_dir, hparams.score_func_name, hparams.train_split)
+        self.train_input_dataset = GraphDataset(self.hparams.data_dir, "train")
         self.train_target_dataset = SequenceDataset(hparams.data_dir, hparams.train_split)
-        self.train_dataset = ZipDataset(self.train_cond_dataset, self.train_target_dataset)
+        self.train_dataset = ZipDataset(self.train_input_dataset, self.train_target_dataset, self.train_cond_dataset)
         
         _, self.score_func, self.corrupt_score = get_scoring_func(hparams.score_func_name)
         
-        self.freeze_decoder = True
-
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--sample_eval_freq", type=int, default=100)
-        parser.add_argument("--lr", type=float, default=1e-4)
-        parser.add_argument("--cond_embedding_mlp", action="store_true")
+        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--freeze_decoder", action="store_true")
 
         # Common - data
         parser.add_argument("--data_dir", type=str, default="../resource/data/zinc/")
@@ -63,11 +142,20 @@ class CondDecoderModule(pl.LightningModule):
         #
         parser.add_argument("--code_dim", type=int, default=256)
 
+        # GraphEncoder specific
+        parser.add_argument("--encoder_hidden_dim", type=int, default=256)
+        parser.add_argument("--encoder_num_layers", type=int, default=5)
+
         # SequentialDecoder specific
         parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
         parser.add_argument("--decoder_num_layers", type=int, default=3)
         parser.add_argument("--decoder_max_length", type=int, default=120)
 
+        #
+        parser.add_argument("--plug_code_dim", type=int, default=16)
+        parser.add_argument("--plug_beta", type=float, default=0.01)
+        parser.add_argument("--plug_depth", type=int, default=2)
+        parser.add_argument("--plug_width_factor", type=float, default=1.0)
         return parser
 
     def train_dataloader(self):
@@ -82,12 +170,23 @@ class CondDecoderModule(pl.LightningModule):
 
     def shared_step(self, batched_data):
         loss, statistics = 0.0, dict()
-        batched_cond_data, batched_target_data = batched_data
-        codes = self.cond_embedding(batched_cond_data)
-        decoder_out = self.decoder(batched_target_data, codes)
+        batched_input_data, batched_target_data, batched_cond_data = batched_data
+        self.encoder.eval()
+        with torch.no_grad():
+            codes = self.encoder(batched_input_data)
+
+        codes_hat, loss, statistics = self.plug_vae.step(codes, batched_cond_data)
+
+        """
+        #
+        with torch.no_grad():
+            decoder_out = self.decoder(batched_target_data, codes_hat)
+        
         recon_loss, recon_statistics = self.decoder.compute_recon_loss(decoder_out, batched_target_data)
-        loss += recon_loss
+        #loss += recon_loss
         statistics.update(recon_statistics)
+        """
+        
         return loss, statistics
 
     def training_step(self, batched_data, batch_idx):
@@ -101,9 +200,7 @@ class CondDecoderModule(pl.LightningModule):
     def training_epoch_end(self, outputs):
         if (self.current_epoch + 1) % self.hparams.evaluate_per_n_epoch == 0:
             self.eval()
-            with torch.no_grad():
-                self.evaluate_sampling()
-                
+            self.evaluate_sampling()
             self.train()
 
     def evaluate_sampling(self):
@@ -125,8 +222,8 @@ class CondDecoderModule(pl.LightningModule):
             for _ in range(self.hparams.num_queries // self.hparams.query_batch_size):
                 query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
                 batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
-                codes = self.cond_embedding(batched_cond_data)
-                smiles_list_ = self.decoder.sample_smiles(codes, argmax=True)
+                codes = self.plug_vae.sample(batched_cond_data)
+                smiles_list_ = self.decoder.sample_smiles(codes, argmax=False)
                 smiles_list.extend(smiles_list_)
             
             smiles_list = smiles_list[:self.hparams.num_queries]
@@ -142,7 +239,7 @@ class CondDecoderModule(pl.LightningModule):
             valid_ratio = len(valid_scores) / len(score_list)
             self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
 
-            is_success = lambda score: (score > query - success_margin) and (score < query + success_margin)
+            is_success = lambda score: (score > query - success_margin) and (score < query - success_margin)
             success_ratio = float(len([score for score in valid_scores if is_success(score)])) / len(smiles_list)
             self.log(f"query{query:.2f}/success_ratio", success_ratio, on_step=False, logger=True)
             
@@ -155,13 +252,10 @@ class CondDecoderModule(pl.LightningModule):
                 self.log(f"query{query:.2f}/mean_score", mean, on_step=False, logger=True)
 
                 std = valid_scores_tsr.std() if len(valid_scores) > 1 else 0.0
-                self.log(f"query{query:.2f}/std_score", std, on_step=False, logger=True)
+                self.log(f"query{query:.2f}/mean_score", std, on_step=False, logger=True)
+
+
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            [{"params": self.cond_embedding.parameters()}, {"params": self.decoder.parameters()}], lr=self.hparams.lr
-            )
-        lambda0 = lambda epoch: 0.0 if epoch < self.hparams.max_decoder_freeze_epochs else 1.0
-        lambda1 = lambda epoch: 10.0 if epoch < self.hparams.max_decoder_freeze_epochs else 1.0
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=[lambda0, lambda1])
-        return [optimizer], [scheduler]
+        optimizer = torch.optim.Adam(self.plug_vae.parameters(), lr=self.hparams.lr)
+        return [optimizer]
