@@ -151,7 +151,7 @@ class CondDecoderModule(pl.LightningModule):
                 mean = valid_scores_tsr.mean()
                 self.log(f"query{query:.2f}/mean_score", mean, on_step=False, logger=True)
 
-                std = valid_scores_tsr.std()
+                std = valid_scores_tsr.std() if len(valid_scores) > 1 else 0.0
                 self.log(f"query{query:.2f}/mean_score", std, on_step=False, logger=True)
 
 
