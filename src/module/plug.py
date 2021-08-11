@@ -68,7 +68,7 @@ class PlugVariationalAutoEncoder(torch.nn.Module):
             "loss/plug/kl": kl_loss,
         }
 
-        return loss, statistics
+        return x_hat, loss, statistics
 
     def sample(self, y):
         mu = torch.zeros(y.size(0), self.plug_code_dim, device=y.device)
@@ -155,7 +155,13 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         with torch.no_grad():
             codes = self.encoder(batched_input_data)
 
-        loss, statistics = self.plug_vae.step(codes, batched_cond_data)
+        codes, loss, statistics = self.plug_vae.step(codes, batched_cond_data)
+
+        #
+        decoder_out = self.decoder(batched_target_data, codes)
+        recon_loss, recon_statistics = self.decoder.compute_recon_loss(decoder_out, batched_target_data)
+        loss += recon_loss
+        statistics.update(recon_statistics)
 
         return loss, statistics
 
