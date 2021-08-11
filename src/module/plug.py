@@ -259,7 +259,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
             valid_ratio = len(valid_scores) / len(score_list)
             self.log(f"query{query:.2f}/valid_ratio", valid_ratio, on_step=False, logger=True)
 
-            is_success = lambda score: (score > query - success_margin) and (score < query - success_margin)
+            is_success = lambda score: (score > query - success_margin) and (score < query + success_margin)
             success_ratio = float(len([score for score in valid_scores if is_success(score)])) / len(smiles_list)
             self.log(f"query{query:.2f}/success_ratio", success_ratio, on_step=False, logger=True)
             
@@ -272,7 +272,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
                 self.log(f"query{query:.2f}/mean_score", mean, on_step=False, logger=True)
 
                 std = valid_scores_tsr.std() if len(valid_scores) > 1 else 0.0
-                self.log(f"query{query:.2f}/mean_score", std, on_step=False, logger=True)
+                self.log(f"query{query:.2f}/std_score", std, on_step=False, logger=True)
 
 
 
