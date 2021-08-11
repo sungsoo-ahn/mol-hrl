@@ -102,28 +102,30 @@ if __name__ == "__main__":
         
     def run_steps(num_steps):
         dataset = ZipDataset(score_dataset, graph_dataset)
-        if hparams.weighted:
-            scores_np = score_dataset.raw_tsrs.view(-1).numpy()
-            ranks = np.argsort(np.argsort(-1 * scores_np))
-            weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
-            sampler = torch.utils.data.WeightedRandomSampler(
-                weights=weights, num_samples=len(scores_np), replacement=True
-                )
-            loader = torch.utils.data.DataLoader(
-                dataset, 
-                sampler=sampler, 
-                batch_size=hparams.train_batch_size, 
-                collate_fn=dataset.collate,
-                drop_last=True
-                )
-        else:
-            loader = torch.utils.data.DataLoader(
-                dataset, 
-                batch_size=hparams.train_batch_size, 
-                collate_fn=dataset.collate,
-                shuffle=True,
-                drop_last=True
-                )
+        #if hparams.weighted:
+        
+        scores_np = score_dataset.raw_tsrs.view(-1).numpy()
+        ranks = np.argsort(np.argsort(-1 * scores_np))
+        weights = 1.0 / (hparams.reweight_k * len(scores_np) + ranks)
+        sampler = torch.utils.data.WeightedRandomSampler(
+            weights=weights, num_samples=len(scores_np), replacement=True
+            )
+        loader = torch.utils.data.DataLoader(
+            dataset, 
+            sampler=sampler, 
+            batch_size=hparams.train_batch_size, 
+            collate_fn=dataset.collate,
+            drop_last=True
+            )
+        
+        #else:
+        #    loader = torch.utils.data.DataLoader(
+        #        dataset, 
+        #        batch_size=hparams.train_batch_size, 
+        #        collate_fn=dataset.collate,
+        #        shuffle=True,
+        #        drop_last=True
+        #        )
         
         step = 0
         while step < num_steps:
