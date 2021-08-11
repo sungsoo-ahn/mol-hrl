@@ -1,11 +1,11 @@
 #!/bin/bash
 
 CHECKPOINT_DIR="../resource/checkpoint"
-TAG="fragment"
+TAG="base"
 
-python run_condopt.py \
---train_split train_256 \
---decoder_max_length 81 \
---cond_embedding_mlp \
+python run_plug.py \
+--train_split train \
+--score_func_name logp \
+--plug_beta 0.1 \
 --load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---tags $TAG 256 penalized_logp
+--tags $TAG 256 logp largebeta
