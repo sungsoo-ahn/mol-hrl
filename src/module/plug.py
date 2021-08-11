@@ -55,6 +55,26 @@ class PlugVariationalAutoEncoder(torch.nn.Module):
                 torch.nn.Linear(hidden_dim, hparams.code_dim),
             )
 
+        elif hparams.plug_depth == 4:
+            self.encoder = torch.nn.Sequential(
+                torch.nn.Linear(hparams.code_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hparams.plug_code_dim),
+            )   
+            self.decoder = torch.nn.Sequential(
+                torch.nn.Linear(hparams.plug_code_dim+1, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hidden_dim),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(hidden_dim, hparams.code_dim),
+            )
+
         self.linear_mu = torch.nn.Linear(hparams.plug_code_dim, hparams.plug_code_dim)
         self.linear_logstd = torch.nn.Linear(hparams.plug_code_dim, hparams.plug_code_dim)
 
