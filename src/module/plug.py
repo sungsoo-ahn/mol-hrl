@@ -78,7 +78,7 @@ class PlugVariationalAutoEncoder(torch.nn.Module):
             "loss/plug/kl": kl_loss,
         }
 
-        return x_hat, loss, statistics
+        return loss, statistics
 
     def sample(self, y):
         mu = torch.zeros(y.size(0), self.plug_code_dim, device=y.device)
@@ -166,7 +166,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         with torch.no_grad():
             codes = self.encoder(batched_input_data)
 
-        codes_hat, loss, statistics = self.plug_vae.step(codes, batched_cond_data)
+        loss, statistics = self.plug_vae.step(codes, batched_cond_data)
 
         """
         #
@@ -214,7 +214,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
                 query_tsr = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
                 batched_cond_data = self.train_cond_dataset.normalize(query_tsr)
                 codes = self.plug_vae.sample(batched_cond_data)
-                smiles_list_ = self.decoder.sample_smiles(codes, argmax=False)
+                smiles_list_ = self.decoder.sample_smiles(codes, argmax=True)
                 smiles_list.extend(smiles_list_)
             
             smiles_list = smiles_list[:self.hparams.num_queries]

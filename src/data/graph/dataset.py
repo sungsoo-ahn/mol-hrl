@@ -52,3 +52,6 @@ class GraphDataset(torch.utils.data.Dataset):
         batch = batch.contiguous()
 
         return batch
+
+    def update(self, smiles_list):
+        self.smiles_list.extend(smiles_list)

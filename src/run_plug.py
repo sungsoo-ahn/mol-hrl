@@ -33,5 +33,9 @@ if __name__ == "__main__":
     )
     trainer.fit(model)
     
-    state_dict = {"decoder": model.decoder.state_dict(), "cond_embedding": model.cond_embedding.state_dict()}
+    state_dict = {
+        "encoder": model.encoder.state_dict(),
+        "decoder": model.decoder.state_dict(), 
+        "plug_vae": model.plug_vae.state_dict(),
+        }
     torch.save(state_dict, hparams.checkpoint_path)
