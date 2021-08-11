@@ -152,7 +152,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         parser.add_argument("--decoder_max_length", type=int, default=120)
 
         #
-        parser.add_argument("--plug_code_dim", type=int, default=16)
+        parser.add_argument("--plug_code_dim", type=int, default=64)
         parser.add_argument("--plug_beta", type=float, default=0.01)
         parser.add_argument("--plug_depth", type=int, default=2)
         parser.add_argument("--plug_width_factor", type=float, default=1.0)
@@ -186,14 +186,14 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         #loss += recon_loss
         statistics.update(recon_statistics)
         """
-        
+
         return loss, statistics
 
     def training_step(self, batched_data, batch_idx):
         loss, statistics = self.shared_step(batched_data)
-        self.log("train/loss/total", loss, on_step=False, on_epoch=True, logger=True)
+        self.log("train/loss/total", loss, on_step=True, on_epoch=False, logger=True)
         for key, val in statistics.items():
-            self.log(f"train/{key}", val, on_step=False, on_epoch=True, logger=True)
+            self.log(f"train/{key}", val, on_step=True, on_epoch=False, logger=True)
 
         return loss
 
