@@ -157,8 +157,7 @@ class CondDecoderModule(pl.LightningModule):
 
     def configure_optimizers(self):
         params = list(self.cond_embedding.parameters())
-        if not self.freeze_decoder:
-            params += list(self.decoder.parameters())
+        params += list(self.decoder.parameters())
         
         optimizer = torch.optim.Adam(params, lr=self.hparams.lr)
         return [optimizer]
