@@ -84,7 +84,7 @@ if __name__ == "__main__":
     def sample(queries):
         codes = plug_vae.sample(queries)
         with torch.no_grad():
-            smiles_list = decoder.sample_smiles(codes, argmax=True)
+            smiles_list = decoder.sample_smiles(codes, argmax=False)
 
         score_list = scoring_func(smiles_list)
         valid_idxs = [idx for idx, score in enumerate(score_list) if score > corrupt_score]
