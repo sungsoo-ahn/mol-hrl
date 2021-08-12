@@ -65,15 +65,12 @@ if __name__ == "__main__":
     decoder.to(device)
     plug_vae.to(device)
 
-    encoder.eval()
-    decoder.eval()
-    plug_vae.train()
-
     params = list(plug_vae.parameters())
-    #if not hparams.tune_all:
-    #    params += list(encoder.parameters())
-    #    params += list(decoder.parameters())
+    params += list(encoder.parameters())
+    params += list(decoder.parameters())
     
+    #if not hparams.tune_all:
+        
     optimizer = torch.optim.Adam(params, lr=1e-5)
     
     _, scoring_func, corrupt_score = get_scoring_func(hparams.scoring_func_name)
@@ -101,8 +98,7 @@ if __name__ == "__main__":
         return queries
         
     def run_steps(num_steps):
-        dataset = ZipDataset(score_dataset, graph_dataset)
-        #if hparams.weighted:
+        dataset = ZipDataset(score_dataset, graph_dataset, sequence_dataset)
         
         scores_np = score_dataset.raw_tsrs.view(-1).numpy()
         ranks = np.argsort(np.argsort(-1 * scores_np))
@@ -136,14 +132,19 @@ if __name__ == "__main__":
                 data_iter = iter(loader)
                 batched_data = next(data_iter)
             
-            batched_cond_data, batched_input_data = batched_data
+            batched_cond_data, batched_input_data, batched_target_data = batched_data
             batched_cond_data = batched_cond_data.to(device)
             batched_input_data = batched_input_data.to(device)
-            with torch.no_grad():
-                codes = encoder(batched_input_data)
+            batched_target_data = [tsr.to(device) for tsr in batched_target_data]
+
+            codes = encoder(batched_input_data)
+            decoder_out = decoder(batched_target_data, codes)
+            loss0, _ = decoder.compute_recon_loss(decoder_out, batched_target_data)
             
-            loss, _ = plug_vae.step(codes, batched_cond_data)
+
+            loss1, _ = plug_vae.step(codes.detach(), batched_cond_data)
             
+
             optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(params, 0.5)
@@ -162,10 +163,14 @@ if __name__ == "__main__":
     seen_smiles_list = load_smiles_list(hparams.data_dir, hparams.train_split)
     for stage in tqdm(range(hparams.num_stages)):
         #
+        decoder.train()
+        encoder.train()
         plug_vae.train()
         run_steps(hparams.num_steps_per_stage if stage > 0 else hparams.num_warmup_steps)
         
         #
+        decoder.eval()
+        encoder.eval()
         plug_vae.eval()
         queries = get_queries(max(hparams.num_queries_per_stage, 128))
         queries = queries.to(device)
@@ -194,6 +199,7 @@ if __name__ == "__main__":
                 score_list = score_list[:hparams.num_queries_per_stage]
                 break
         
+        sequence_dataset.update(smiles_list)
         graph_dataset.update(smiles_list)
         score_dataset.update(score_list)
         seen_smiles_list = list(set(seen_smiles_list + new_smiles_list))
