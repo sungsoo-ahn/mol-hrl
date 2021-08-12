@@ -140,10 +140,9 @@ if __name__ == "__main__":
             codes = encoder(batched_input_data)
             decoder_out = decoder(batched_target_data, codes)
             loss0, _ = decoder.compute_recon_loss(decoder_out, batched_target_data)
-            
-
             loss1, _ = plug_vae.step(codes.detach(), batched_cond_data)
             
+            loss = loss0 + loss1
 
             optimizer.zero_grad()
             loss.backward()
