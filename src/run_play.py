@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # SequentialDecoder specific
     parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
     parser.add_argument("--decoder_num_layers", type=int, default=3)
-    parser.add_argument("--decoder_max_length", type=int, default=120)
+    parser.add_argument("--decoder_max_length", type=int, default=512)
 
     #
     parser.add_argument("--plug_code_dim", type=int, default=64)
