@@ -17,7 +17,8 @@ RUN pip install torch-geometric
 
 RUN conda install botorch -c pytorch -c gpytorch
 
-RUN pip install selfies
+RUN pip install transformers
+RUN pip install tokenizers
 
 ENV NEPTUNE_API_TOKEN "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIyNjdkMDIxZi1lZDkwLTQ0ZDAtODg5Yi03ZTdjNThhYTdjMmQifQ=="
 
