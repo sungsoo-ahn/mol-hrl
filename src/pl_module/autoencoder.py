@@ -74,7 +74,7 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--encoder_name", type=str, default="gnn_base")
         parser.add_argument("--decoder_name", type=str, default="lstm_base")
         parser.add_argument("--vq", action="store_true")
-        parser.add_argument("--vq_dim", type=int, default=64)
+        parser.add_argument("--vq_dim", type=int, default=256)
         parser.add_argument("--code_dim", type=int, default=512)
         
         #
