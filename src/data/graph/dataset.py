@@ -1,13 +1,13 @@
 import torch
 import torch_geometric
 from data.graph.util import smiles2graph
-from data.smiles.util import load_smiles_list
+from data.util import load_smiles_list
 
 
 class GraphDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, split, transform=smiles2graph):
+    def __init__(self, task, split, transform=smiles2graph):
         super(GraphDataset, self).__init__()
-        self.smiles_list = load_smiles_list(data_dir, split)
+        self.smiles_list = load_smiles_list(task, split)
         self.transform = transform
 
     def __getitem__(self, idx):

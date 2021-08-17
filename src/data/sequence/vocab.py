@@ -1,12 +1,10 @@
 """
 Vocabulary helper class
 """
-
-from data.smiles.util import load_smiles_list
+import torch
 import re
 import numpy as np
-import torch
-import selfies as sf
+import json
 
 START_TOKEN = "<SOS>"
 END_TOKEN = "<EOS>"
@@ -23,18 +21,22 @@ class Vocabulary:
         self._tokens = dict()
         self._current_id = 0
         self.update([PAD_TOKEN, END_TOKEN, START_TOKEN, MASK_TOKEN])
-        self.update(["p"])
-
+        
     def __getitem__(self, token_or_id):
         return self._tokens[token_or_id]
+
+    def load(self, path):
+        self._tokens = torch.load(path)
 
     def add(self, token):
         if not isinstance(token, str):
             raise TypeError("Token is not a string")
         if token in self:
             return self[token]
+        
         self._add(token, self._current_id)
         self._current_id += 1
+        
         return self._current_id - 1
 
     def update(self, tokens):
@@ -83,7 +85,7 @@ class Vocabulary:
 
 class SmilesTokenizer:
     REGEXP = re.compile(
-        "(\[|\]|Br?|Cl?|Si?|Se?|se?|@@?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
+        "(\[|\]|Br?|Cl?|Si?|Se?|se?|@@?|H|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
     )
 
     def tokenize(self, data):

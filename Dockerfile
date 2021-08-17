@@ -17,8 +17,10 @@ RUN pip install torch-geometric
 
 RUN conda install botorch -c pytorch -c gpytorch
 
-RUN pip install transformers
-RUN pip install tokenizers
+RUN pip conda install scikit-learn nltk=3.4.4 pandas h5py
+RUN pip conda install -c conda-forge openbabel
+RUN pip conda install -c bioconda "smina=2017.11.9"
 
 ENV NEPTUNE_API_TOKEN "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIyNjdkMDIxZi1lZDkwLTQ0ZDAtODg5Yi03ZTdjNThhYTdjMmQifQ=="
+
 

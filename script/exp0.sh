@@ -1,10 +1,5 @@
 #!/bin/bash
 
-CHECKPOINT_DIR="../resource/checkpoint"
-TAG="base"
-
-python run_plug.py \
---train_split train \
---load_checkpoint_path "${CHECKPOINT_DIR}/${TAG}.pth" \
---checkpoint_path "${CHECKPOINT_DIR}/${TAG}_plug_full.pth" \
---tags $TAG full
+python run_autoencoder.py \
+--tags base \
+--checkpoint_path ../resource/checkpoint/base
