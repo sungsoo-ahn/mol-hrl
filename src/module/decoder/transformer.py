@@ -55,6 +55,7 @@ class TransformerDecoder(nn.Module):
         nhead,
         dim_feedforward,
         dropout,
+        code_dim,
     ):
         super(TransformerDecoder, self).__init__()
         encoder_layer = TransformerEncoderLayer(emb_size, nhead, dim_feedforward, dropout, "gelu")
@@ -65,12 +66,13 @@ class TransformerDecoder(nn.Module):
         self.generator = nn.Linear(emb_size, vocab_size)
         self.tok_emb = TokenEmbedding(vocab_size, emb_size)
         self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
+        self.code_encoder = nn.Linear(code_dim, emb_size)
         
     def forward(self, batched_sequence_data, codes):
         batched_sequence_data = batched_sequence_data.transpose(0, 1)
 
         mask, key_padding_mask = self.create_mask(batched_sequence_data)
-        outs = self.positional_encoding(self.tok_emb(batched_sequence_data)) + codes.unsqueeze(0)
+        outs = self.positional_encoding(self.tok_emb(batched_sequence_data)) + self.code_encoder(codes).unsqueeze(0)
         outs = self.transformer(outs, mask, key_padding_mask)
         logits = self.generator(outs)
 

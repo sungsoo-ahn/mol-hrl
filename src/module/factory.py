@@ -9,10 +9,11 @@ def load_decoder(decoder_name, code_dim):
     elif decoder_name == "transformer_base":
         return TransformerDecoder(
             num_encoder_layers=6,
-            emb_size=code_dim,
+            emb_size=512,
             nhead=8,
             dim_feedforward=2048,
             dropout=0.0,
+            code_dim=code_dim,
             )
     
 def load_encoder(encoder_name, code_dim):
