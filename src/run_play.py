@@ -114,15 +114,6 @@ if __name__ == "__main__":
             drop_last=True
             )
         
-        #else:
-        #    loader = torch.utils.data.DataLoader(
-        #        dataset, 
-        #        batch_size=hparams.train_batch_size, 
-        #        collate_fn=dataset.collate,
-        #        shuffle=True,
-        #        drop_last=True
-        #        )
-        
         step = 0
         while step < num_steps:
             step += 1
