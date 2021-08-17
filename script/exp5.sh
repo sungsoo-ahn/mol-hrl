@@ -2,6 +2,6 @@
 
 python run_autoencoder.py \
 --vq \
---decoder_name transformer \
+--decoder_name transformer_base \
 --tags vq transformer \
 --checkpoint_path ../resource/checkpoint/vq_transformer
