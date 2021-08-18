@@ -1,6 +1,8 @@
 #!/bin/bash
 
 python run_autoencoder.py \
---dataset_name graph2enumseq \
---tags graph2enumseq lstm \
---checkpoint_path ../resource/checkpoint/graph2enumseq_lstm
+--vq \
+--code_dim 128 \
+--dataset_name fraggraph2seq \
+--tags vq lstm fraggraph2seq \
+--checkpoint_path ../resource/checkpoint/vq_lstm_fraggraph2seq 

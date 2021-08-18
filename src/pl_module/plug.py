@@ -117,7 +117,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--lr", type=float, default=1e-4)
         parser.add_argument("--freeze_decoder", action="store_true")
 
         # Common - data

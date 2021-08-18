@@ -1,9 +1,8 @@
-from data.util import load_vocabulary
+from data.util import load_tokenizer
 import torch
 import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, LayerNorm
 import math
-from data.sequence.vocab import START_ID, END_ID, PAD_ID
 
 
 # helper Module that adds positional encoding to the token embedding to introduce a notion of word order.
@@ -62,7 +61,8 @@ class TransformerDecoder(nn.Module):
         encoder_norm = LayerNorm(emb_size)
         self.transformer = TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
 
-        vocab_size = len(load_vocabulary())
+        self.tokenizer = load_tokenizer()
+        vocab_size = self.tokenizer.get_vocab_size()
         self.generator = nn.Linear(emb_size, vocab_size)
         self.tok_emb = TokenEmbedding(vocab_size, emb_size)
         self.positional_encoding = PositionalEncoding(emb_size, dropout=dropout)
@@ -81,7 +81,7 @@ class TransformerDecoder(nn.Module):
     
     def sample(self, codes, argmax, max_len):
         batch_size = codes.size(0)
-        ys = torch.ones(batch_size, 1).fill_(START_ID).type(torch.long).to(codes.device)
+        ys = torch.ones(batch_size, 1).fill_(self.tokenizer.token_to_id("[BOS]")).type(torch.long).to(codes.device)
         
         ended = torch.zeros(batch_size, 1, dtype=torch.bool, device=codes.device)
         for _ in range(max_len-1):
@@ -91,9 +91,9 @@ class TransformerDecoder(nn.Module):
             else:
                 assert False
 
-            next_word[ended] = PAD_ID
+            next_word[ended] = self.tokenizer.token_to_id("[PAD]")
             ys = torch.cat([ys, next_word], dim=1)
-            ended = ended | (next_word == END_ID)
+            ended = ended | (next_word == self.tokenizer.token_to_id("[EOS]"))
             
         return ys
 
@@ -106,6 +106,6 @@ class TransformerDecoder(nn.Module):
     def create_mask(self, seq):
         seq_len = seq.shape[0]
         mask = self.generate_square_subsequent_mask(seq_len, device=seq.device)
-        key_padding_mask = (seq == PAD_ID).transpose(0, 1)
+        key_padding_mask = (seq == self.tokenizer.token_to_id("[PAD]")).transpose(0, 1)
         return mask, key_padding_mask    
 

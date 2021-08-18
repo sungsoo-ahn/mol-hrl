@@ -1,32 +1,15 @@
 import os
 from pathlib import Path
-from tqdm import tqdm
 
-from data.sequence.vocab import Vocabulary, SmilesTokenizer
+from tokenizers import Tokenizer
+
 from docking_benchmark.data.proteins import get_proteins
 
 TASK_DIR = "../resource/data/"
 
-def create_vocabulary(smiles_list, tokenizer):
-    tokens = set()
-    for smi in tqdm(smiles_list):
-        cur_tokens = tokenizer.tokenize(smi)
-        tokens.update(cur_tokens)
-
-    vocabulary = Vocabulary()
-    vocabulary.update(sorted(tokens))
-    return vocabulary
-
-
 def load_tokenizer():
-    return SmilesTokenizer()
-
-
-def load_vocabulary():
-    vocabulary = Vocabulary()
-    vocabulary.load(f"{TASK_DIR}/vocab.pth")
-    return vocabulary
-
+    tokenizer = Tokenizer.from_file(f"{TASK_DIR}/tokenizer.json")
+    return tokenizer
 
 def load_smiles_list(task, split):
     if task == "zinc":

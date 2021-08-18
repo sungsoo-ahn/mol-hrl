@@ -17,7 +17,10 @@ if __name__ == "__main__":
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(
-        project_name="sungsahn0215/molrep", experiment_name="run_autoencoder", params=vars(hparams),
+        project_name="sungsahn0215/molrep", 
+        experiment_name="run_autoencoder", 
+        params=vars(hparams),
+        upload_source_files=["**/*.py", "*.py"],
     )
     neptune_logger.append_tags(["autoencoder"] + hparams.tags)
 

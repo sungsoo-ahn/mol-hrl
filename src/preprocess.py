@@ -1,9 +1,15 @@
-import torch
-import json
 import random
-
-from data.util import load_smiles_list, load_tokenizer, create_vocabulary, load_vocabulary
+import tokenizers
+from tqdm import tqdm
+    
+from data.util import load_smiles_list, load_tokenizer
 from data.score import BindingScorer, PLogPScorer
+
+from tokenizers import Tokenizer
+from tokenizers import pre_tokenizers
+from tokenizers.models import BPE
+from tokenizers.trainers import BpeTrainer
+from tokenizers.processors import TemplateProcessing
 
 if __name__ == "__main__":
     # create vocabulary
@@ -16,15 +22,36 @@ if __name__ == "__main__":
         
     for score_name in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
         smiles_list += load_smiles_list(score_name, "default")
-        
-    tokenizer = load_tokenizer()
-    vocabulary = create_vocabulary(smiles_list, tokenizer)
-    print(vocabulary._tokens)
-    torch.save(vocabulary._tokens, '../resource/data/vocab.pth')
-    
-    vocabulary = load_vocabulary()
-    print(vocabulary._tokens)
 
+    """        
+    tokenizer = Tokenizer(BPE())
+    tokenizer.pad_token = "[PAD]"
+    tokenizer.bos_token = "[BOS]"
+    tokenizer.eos_token = "[EOS]"
+    tokenizer.pre_tokenizer = pre_tokenizers.Split(
+        "(\[|\]|Br?|Cl?|Si?|Se?|se?|@@?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])",
+        "isolated",
+    )
+    trainer = BpeTrainer(vocab_size=400, special_tokens=["[PAD]", "[MASK]", "[BOS]", "[EOS]"])
+    tokenizer.train_from_iterator(iter(smiles_list), trainer)
+    tokenizer.post_processor = TemplateProcessing(
+        single="[BOS] $A [EOS]",
+        special_tokens=[("[BOS]", tokenizer.token_to_id("[BOS]")), ("[EOS]", tokenizer.token_to_id("[EOS]")),],
+    )
+    tokenizer.save(f"../resource/data/tokenizer.json")
+    """
+    
+    tokenizer = load_tokenizer()
+    print(tokenizer.token_to_id("[PAD]"))
+    for smiles in tqdm(smiles_list[:10000]):
+        try:
+            assert smiles == tokenizer.decode(tokenizer.encode(smiles).ids).replace(" ", "")
+        except:
+            print(smiles)
+            print(tokenizer.decode(tokenizer.encode(smiles).ids).replace(" ", ""))
+            assert False
+
+    """
     # create dataset for plogp
     smiles_list = load_smiles_list("zinc", "train")
     random.shuffle(smiles_list)
@@ -39,4 +66,4 @@ if __name__ == "__main__":
     with open("../resource/data/plogp/raw/zinc/plogp_score.txt", "w") as f:
         for score in score_list:
             f.write(str(score) + "\n")
-
+    """

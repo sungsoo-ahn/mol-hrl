@@ -6,14 +6,14 @@ import re
 import numpy as np
 import json
 
-START_TOKEN = "<SOS>"
-END_TOKEN = "<EOS>"
-PAD_TOKEN = "<PAD>"
-MASK_TOKEN = "<MASK>"
+START_TOKEN = "[SOS]"
+END_TOKEN = "[EOS]"
+PAD_TOKEN = "[PAD]"
+MASK_TOKEN = "[MASK]"
 START_ID = 2
-END_ID = 1
+END_ID = 3
 PAD_ID = 0
-MASK_ID = 3
+MASK_ID = 1
 
 
 class Vocabulary:
@@ -87,6 +87,8 @@ class SmilesTokenizer:
     REGEXP = re.compile(
         "(\[|\]|Br?|Cl?|Si?|Se?|se?|@@?|H|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
     )
+    #def __init__(self):
+    #    print(self.tokenize("CHCCHC"))
 
     def tokenize(self, data):
         tokens = self.REGEXP.split(data)

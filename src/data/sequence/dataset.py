@@ -4,21 +4,18 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 
 from data.sequence.vocab import PAD_ID
-from data.sequence.util import sequence2smiles, smiles2sequence
-from data.util import load_smiles_list, load_vocabulary, load_tokenizer
+from data.util import load_smiles_list, load_tokenizer
 
 
 class SequenceDataset(torch.utils.data.Dataset):
-    def __init__(self, task, split, transform=smiles2sequence):
+    def __init__(self, task, split):
         super(SequenceDataset, self).__init__()
         self.smiles_list = load_smiles_list(task, split)
         self.tokenizer = load_tokenizer()
-        self.vocabulary = load_vocabulary()
-        self.transform = transform
 
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
-        sequence = torch.LongTensor(smiles2sequence(smiles, self.tokenizer, self.vocabulary))
+        sequence = torch.LongTensor(self.tokenizer.encode(smiles).ids)
         return sequence
 
     def __len__(self):
@@ -42,5 +39,5 @@ class EnumSequenceDataset(SequenceDataset):
     def __getitem__(self, idx):
         smiles = self.smiles_list[idx]
         smiles = randomize_smiles(smiles)
-        sequence = torch.LongTensor(self.transform(smiles, self.tokenizer, self.vocabulary))
+        sequence = torch.LongTensor(self.tokenizer.encode(smiles).ids)
         return sequence

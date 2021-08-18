@@ -17,5 +17,5 @@ def load_decoder(decoder_name, code_dim):
             )
     
 def load_encoder(encoder_name, code_dim):
-    return GNNEncoder(encoder_num_layers=5, encoder_hidden_dim=1024, code_dim=code_dim)
+    return GNNEncoder(encoder_num_layers=5, encoder_hidden_dim=256, code_dim=code_dim)
     

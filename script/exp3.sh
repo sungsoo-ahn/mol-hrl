@@ -1,8 +1,8 @@
 #!/bin/bash
 
 python run_autoencoder.py \
---dataset_name graph2enumseq \
---decoder_name transformer_base \
---lr 1e-4 \
---tags graph2enumseq transformer \
---checkpoint_path ../resource/checkpoint/graph2enumseq_transformer
+--vq \
+--code_dim 128 \
+--dataset_name maskgraph2seq \
+--tags vq lstm maskgraph2seq \
+--checkpoint_path ../resource/checkpoint/vq_lstm_maskgraph2seq
