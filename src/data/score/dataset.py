@@ -1,61 +1,26 @@
-from data.smiles.util import load_smiles_list
-from data.score.factory import get_scoring_func
+from data.util import load_smiles_list, load_score_list
 import torch
 import os
 
+PLOGP_MEAN = -0.028084750892405044
+PLOGP_STD = 2.0570724640259397
 
-def load_score_list(root_dir, score_func_name, split):
-    score_list_path = os.path.join(root_dir, f"{split}_{score_func_name}.pth")
-
-    if not os.path.exists(score_list_path):
-        smiles_list = load_smiles_list(root_dir, split)
-        _, parallel_score_func, _ = get_scoring_func(score_func_name)
-        score_list = parallel_score_func(smiles_list)
-
-        torch.save(score_list, score_list_path)
-
-    with open(score_list_path, "r") as f:
-        score_list = torch.load(score_list_path)
-
-    return score_list
-
-
-def load_scores(root_dir, score_func_name, split):
-    score_list = load_score_list(root_dir, score_func_name, split)
-    return torch.FloatTensor(score_list).unsqueeze(1)
-
-
-class ScoreDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, score_func_name, split):
-        super(ScoreDataset, self).__init__()
+class PLogPDataset(torch.utils.data.Dataset):
+    def __init__(self, task, split):
+        super(PLogPDataset, self).__init__()
         # Setup normalization statistics
-        score_func_names = [score_func_name]
-        train_score_lists = [
-            load_score_list(root_dir, score_func_name, split) for score_func_name in score_func_names
-        ]
-        train_raw_tsrs = torch.FloatTensor(train_score_lists).T
-        self.mean_scores = train_raw_tsrs.mean(dim=0)
-        self.std_scores = train_raw_tsrs.std(dim=0)
-
-        # Setup dataset
-        score_lists = [load_score_list(root_dir, score_func_name, split) for score_func_name in score_func_names]
-        self.raw_tsrs = torch.FloatTensor(score_lists).T
-        #self.tsrs = self.normalize(self.raw_tsrs)
-
+        self.scores = torch.FloatTensor(load_score_list("plogp", None)).T
+        
     def __len__(self):
-        return self.raw_tsrs.size(0)
+        return self.scores.size(0)
 
     def __getitem__(self, idx):
-        return self.normalize(self.raw_tsrs[idx])
+        return (self.scores[idx] - PLOGP_MEAN) / PLOGP_STD
     
     def update(self, score_list):
-        new_raw_tsrs = torch.FloatTensor(score_list).view(-1, 1)
-        self.raw_tsrs = torch.cat([self.raw_tsrs, new_raw_tsrs], dim=0)
+        new_scores = torch.FloatTensor(score_list).view(-1, 1)
+        self.raw_tsrs = torch.cat([self.scores, new_scores], dim=0)
 
     @staticmethod
     def collate(data_list):
-        return torch.cat(data_list, dim=0)
-
-    def normalize(self, tsrs):
-        out = (tsrs - self.mean_scores.to(tsrs.device).unsqueeze(0)) / self.std_scores.to(tsrs.device)
-        return out
+        return torch.stack(data_list, dim=0)

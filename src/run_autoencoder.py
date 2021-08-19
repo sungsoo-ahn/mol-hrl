@@ -28,7 +28,9 @@ if __name__ == "__main__":
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=hparams.checkpoint_path,
-        monitor="train/loss/total"
+        monitor="train/loss/total",
+        filename="best",
+        mode="min"
         )
     trainer = pl.Trainer(
         gpus=1,

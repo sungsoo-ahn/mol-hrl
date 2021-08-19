@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
 # from module.autoencoder import AutoEncoderModule
-from module.plug import PlugVariationalAutoEncoderModule
+from pl_module.plug import PlugVariationalAutoEncoderModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

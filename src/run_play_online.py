@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import neptune.new as neptune
-from data.smiles.util import load_smiles_list
+from data.util import load_smiles_list
 from tqdm import tqdm
 import argparse
 

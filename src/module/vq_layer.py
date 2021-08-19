@@ -33,6 +33,7 @@ class VectorQuantizeLayer(nn.Module):
             + self.embed.pow(2).sum(0, keepdim=True)
         )
         _, embed_ind = (-dist).max(1)
+        
         embed_onehot = F.one_hot(embed_ind, self.n_embed).type(dtype)
         embed_ind = embed_ind.view(*input.shape[:-1])
         quantize = F.embedding(embed_ind, self.embed.transpose(0, 1))
@@ -52,4 +53,4 @@ class VectorQuantizeLayer(nn.Module):
         return quantize, embed_ind, loss
     
     def compute_embedding(self, embed_ind):
-        return F.embedding(embed_ind, self.embed.transpose(0, 1))
+        return F.embedding(embed_ind, self.embed.transpose(0, 1)).view(embed_ind.size(0), -1)

@@ -39,6 +39,6 @@ def load_score_list(task, split):
         return score_list
     
     elif task == "plogp":
-        score_list_path = os.path.join(TASK_DIR, f"plogp/raw/zinc/plogp_scores.txt")
+        score_list_path = os.path.join(TASK_DIR, f"plogp/raw/zinc/plogp_score.txt")
         score_list = list(map(float, Path(score_list_path).read_text(encoding="utf-8").splitlines()))
         return score_list

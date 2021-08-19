@@ -1,6 +1,7 @@
 import random
 import tokenizers
 from tqdm import tqdm
+import numpy as np
     
 from data.util import load_smiles_list, load_tokenizer
 from data.score import BindingScorer, PLogPScorer
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     )
     tokenizer.save(f"../resource/data/tokenizer.json")
     """
-    
+    """
     tokenizer = load_tokenizer()
     print(tokenizer.token_to_id("[PAD]"))
     for smiles in tqdm(smiles_list[:10000]):
@@ -50,8 +51,8 @@ if __name__ == "__main__":
             print(smiles)
             print(tokenizer.decode(tokenizer.encode(smiles).ids).replace(" ", ""))
             assert False
-
     """
+
     # create dataset for plogp
     smiles_list = load_smiles_list("zinc", "train")
     random.shuffle(smiles_list)
@@ -63,7 +64,8 @@ if __name__ == "__main__":
     
     scorer = PLogPScorer()
     score_list = scorer(smiles_list)
+    print(np.mean(score_list))
+    print(np.std(score_list))
     with open("../resource/data/plogp/raw/zinc/plogp_score.txt", "w") as f:
         for score in score_list:
             f.write(str(score) + "\n")
-    """

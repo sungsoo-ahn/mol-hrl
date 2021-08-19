@@ -4,13 +4,15 @@ import os, sys
 import networkx as nx
 from joblib import Parallel, delayed
 
-from rdkit import Chem
-from rdkit.Chem import Descriptors, RDConfig
+from rdkit import Chem, RDLogger
+RDLogger.logger().setLevel(RDLogger.CRITICAL)
 
+from rdkit.Chem import Descriptors, RDConfig
 sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
 import sascorer
 
 from docking_benchmark.data.proteins import get_proteins
+from data.smiles.util import canonicalize
 
 def _raw_plogp(smiles):
     try:
@@ -65,11 +67,13 @@ class PLogPScorer(object):
         
         elif isinstance(smiles_or_smiles_list, str):
             return self._score_smiles(smiles_or_smiles_list)
-
-    def _score_smiles(self, smiles):
         
-        return self._raw_score_smiles(smiles)
-
+        else:
+            print(smiles_or_smiles_list)
+            assert False
+    
+        
+        
 class BindingScorer(PLogPScorer):
     def __init__(self, protein, key, num_workers=8):
         self.pool = Parallel(n_jobs=num_workers) if num_workers > 0 else None

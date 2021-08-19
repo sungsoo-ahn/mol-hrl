@@ -32,10 +32,10 @@ class LSTMDecoder(nn.Module):
 
     def sample(self, codes, argmax, max_len):
         sample_size = codes.size(0)
-        sequences = [torch.full((sample_size, 1), self.tokenizer.token_to_id("[BOS]"), dtype=torch.long).cuda()]
+        sequences = [torch.full((sample_size, 1), self.tokenizer.token_to_id("[BOS]"), dtype=torch.long).to(codes.device)]
         hidden = None
-        terminated = torch.zeros(sample_size, dtype=torch.bool).cuda()
-        lengths = torch.ones(sample_size, dtype=torch.long).cuda()
+        terminated = torch.zeros(sample_size, dtype=torch.bool).to(codes.device)
+        lengths = torch.ones(sample_size, dtype=torch.long).to(codes.device)
 
         code_encoder_out = self.code_encoder(codes)
         for _ in range(max_len):
