@@ -1,6 +1,8 @@
 #!/bin/bash
 
 python run_autoencoder.py \
---decoder_name transformer_base \
---tags no_vq transformer graph2seq \
---checkpoint_path ../resource/checkpoint/no_vq_transformer_graph2seq
+--vq \
+--code_dim 16 \
+--dataset_name fraggraph2seq \
+--tags vq lstm fraggraph2seq 16 \
+--checkpoint_path ../resource/checkpoint/vq_lstm_fraggraph2seq_16

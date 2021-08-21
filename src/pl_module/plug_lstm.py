@@ -3,7 +3,7 @@ from enum import unique
 
 import torch
 from torch.utils.data import DataLoader
-
+import torch.nn as nn
 import pytorch_lightning as pl
 
 from data.factory import load_dataset, load_collate
@@ -15,114 +15,103 @@ from module.factory import load_encoder, load_decoder
 from module.vq_layer import VectorQuantizeLayer
 from pl_module.autoencoder import AutoEncoderModule
 
-class PlugVariationalAutoEncoder(torch.nn.Module):
-    def __init__(self, vq, vq_num_vocabs, code_dim, plug_code_dim, plug_hidden_dim, plug_beta):
-        super(PlugVariationalAutoEncoder, self).__init__()
-        self.vq = vq
+from torch.distributions import Categorical
+
+def compute_sequence_cross_entropy(logits, batched_sequence_data):
+    logits = logits[:, :-1]
+    targets = batched_sequence_data[:, 1:]
+
+    loss = torch.nn.functional.cross_entropy(
+        logits.reshape(-1, logits.size(-1)), targets.reshape(-1),
+    )
+
+    return loss
+
+class PlugLSTM(torch.nn.Module):
+    def __init__(self, vq_num_vocabs, code_dim, plug_hidden_dim):
+        super(PlugLSTM, self).__init__()
+        self.code_dim = code_dim
         self.vq_num_vocabs = vq_num_vocabs
-        x_dim = code_dim * vq_num_vocabs if vq else code_dim
-
-        self.encoder = torch.nn.Sequential(
-            torch.nn.Linear(x_dim, plug_hidden_dim),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(plug_hidden_dim, plug_hidden_dim),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(plug_hidden_dim, plug_hidden_dim),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(plug_hidden_dim, plug_code_dim),
-        )   
-        self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(plug_code_dim+1, plug_hidden_dim),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(plug_hidden_dim, plug_hidden_dim),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(plug_hidden_dim, plug_hidden_dim),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(plug_hidden_dim, x_dim),
+        self.encoder = nn.Embedding(vq_num_vocabs+1, plug_hidden_dim)
+        self.y_encoder = nn.Linear(1, plug_hidden_dim)
+        self.lstm = nn.LSTM(
+            plug_hidden_dim,
+            plug_hidden_dim,
+            batch_first=True,
+            num_layers=3,
         )
-
-        self.linear_mu = torch.nn.Linear(plug_code_dim, plug_code_dim)
-        self.linear_logstd = torch.nn.Linear(plug_code_dim, plug_code_dim)
-
-        self.plug_beta = plug_beta
-        self.plug_code_dim = plug_code_dim
-
+        self.decoder = nn.Linear(plug_hidden_dim, vq_num_vocabs)
+        
+    def forward(self, x, y):
+        x = torch.cat(
+            [torch.full((x.size(0), 1), self.vq_num_vocabs, device=x.device, dtype=torch.long), x[:, :-1]], dim=1
+            )
+        out = self.encoder(x)
+        out += self.y_encoder(y.unsqueeze(1)).unsqueeze(1)
+        out, _ = self.lstm(out, None)
+        out = self.decoder(out)
+        return out
+    
     def step(self, x, y):
-        loss, statistics = 0.0, dict()
-        
-        if self.vq:
-            out = torch.nn.functional.one_hot(x, self.vq_num_vocabs).float().view(x.size(0), -1)   
-        else:
-            out = x
+        logits = self(x, y)
 
-        out = self.encoder(out)
-        mu = self.linear_mu(out)
-        std = (self.linear_logstd(out).exp() + 1e-6)
-        
-        p = torch.distributions.Normal(torch.zeros_like(mu), torch.ones_like(std))
-        q = torch.distributions.Normal(mu, std)
-        
-        z = q.rsample()
-        x_hat = self.decoder(torch.cat([z, y.view(-1, 1)], dim=1))
-        
-        if self.vq:
-            x_hat = x_hat.view(-1, self.vq_num_vocabs)
-            recon_loss = torch.nn.functional.cross_entropy(x_hat, x.view(-1), reduction="mean")
-            statistics["acc/plug"] = (torch.argmax(x_hat, dim=-1) == x.view(-1)).float().mean()
-        else:
-            recon_loss = torch.nn.functional.mse_loss(x_hat, x, reduction="mean")
+        loss = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), x.view(-1))
 
-        log_qz = q.log_prob(z)
-        log_pz = p.log_prob(z)
+        preds = torch.argmax(logits, dim=-1)
+        correct = (preds == x)
+        elem_acc = correct.float().mean()
+        sequence_acc = correct.view(x.size(0), -1).all(dim=1).float().mean()
 
-        kl_loss = log_qz - log_pz
-        kl_loss = kl_loss.mean()
-        loss = self.plug_beta * kl_loss + recon_loss
-
-        statistics["loss/plug/recon"] = recon_loss
-        statistics["loss/plug/kl"] = kl_loss
+        statistics = {
+            "loss/plug_recon": loss,
+            "acc/plug_elem": elem_acc,
+            "acc/plug_seq": sequence_acc
+        }
 
         return loss, statistics
 
-    def sample(self, y):
-        mu = torch.zeros(y.size(0), self.plug_code_dim, device=y.device)
-        std = torch.ones(y.size(0), self.plug_code_dim, device=y.device)
-        p = torch.distributions.Normal(mu, std)
-        z = p.sample()
-        x_hat = self.decoder(torch.cat([z, y], dim=1))
-        if self.vq:
-            x_hat = torch.argmax(x_hat.view(-1, self.vq_num_vocabs), dim=1).view(y.size(0), -1)
-            
-        return x_hat
+    def sample(self, y, argmax=False):
+        sample_size = y.size(0)
+        sequences = [torch.full((sample_size, 1), self.vq_num_vocabs, dtype=torch.long).to(y.device)]
+        hidden = None
+        code_encoder_out = self.y_encoder(y)
+        for _ in range(self.code_dim):
+            out = self.encoder(sequences[-1])
+            out = out + code_encoder_out.unsqueeze(1)
+            out, hidden = self.lstm(out, hidden)
+            logit = self.decoder(out)
 
+            prob = torch.softmax(logit, dim=2)
+            if argmax == True:
+                tth_sequences = torch.argmax(logit, dim=2)
+            else:
+                distribution = Categorical(probs=prob)
+                tth_sequences = distribution.sample()
 
-class PlugVariationalAutoEncoderModule(pl.LightningModule):
+            sequences.append(tth_sequences)
+
+        sequences = torch.cat(sequences[1:], dim=1)
+
+        return sequences
+
+class PlugLSTMModule(pl.LightningModule):
     def __init__(self, hparams):
-        super(PlugVariationalAutoEncoderModule, self).__init__()
+        super(PlugLSTMModule, self).__init__()
         hparams = Namespace(**hparams) if isinstance(hparams, dict) else hparams
         self.save_hyperparameters(hparams)
 
         self.tokenizer = load_tokenizer()
-        code_dim = hparams.code_dim * hparams.vq_code_dim if hparams.vq else hparams.code_dim
+        code_dim = hparams.code_dim * hparams.vq_code_dim
         self.encoder = load_encoder(hparams.encoder_name, code_dim)
         self.decoder = load_decoder(hparams.decoder_name, code_dim)
-        self.plug_vae = PlugVariationalAutoEncoder(
-            hparams.vq, 
-            hparams.vq_num_vocabs, 
-            hparams.code_dim, 
-            hparams.plug_code_dim, 
-            hparams.plug_hidden_dim, 
-            hparams.plug_beta
-            )
-        if self.hparams.vq:
-            self.vq_layer = VectorQuantizeLayer(hparams.vq_code_dim, hparams.vq_num_vocabs)
+        self.plug_lstm = PlugLSTM(hparams.vq_num_vocabs, hparams.code_dim, hparams.plug_hidden_dim)
+        self.vq_layer = VectorQuantizeLayer(hparams.vq_code_dim, hparams.vq_num_vocabs)
 
         if hparams.load_checkpoint_path != "":
             pl_ae = AutoEncoderModule.load_from_checkpoint(hparams.load_checkpoint_path)
             self.encoder.load_state_dict(pl_ae.encoder.state_dict())
             self.decoder.load_state_dict(pl_ae.decoder.state_dict())
-            if hparams.vq:
-                self.vq_layer.load_state_dict(pl_ae.vq_layer.state_dict())
+            self.vq_layer.load_state_dict(pl_ae.vq_layer.state_dict())
 
         self.dataset = load_dataset(hparams.dataset_name, hparams.task, hparams.split)
         self.collate = load_collate(hparams.dataset_name)
@@ -157,8 +146,6 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         parser.add_argument("--load_checkpoint_path", type=str, default="")
 
         #
-        parser.add_argument("--plug_beta", type=float, default=0.01)
-        parser.add_argument("--plug_code_dim", type=int, default=64)
         parser.add_argument("--plug_hidden_dim", type=float, default=1024)
         return parser
 
@@ -178,10 +165,9 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         self.encoder.eval()
         with torch.no_grad():
             codes = self.encoder(batched_input_data)
-            if self.hparams.vq:
-                _, codes, _ = self.vq_layer(codes)
+            _, codes, _ = self.vq_layer(codes)
 
-        loss, statistics = self.plug_vae.step(codes, batched_cond_data)
+        loss, statistics = self.plug_lstm.step(codes, batched_cond_data)
 
         
 
@@ -219,9 +205,8 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         while len(smiles_list) < num_samples and len(unique_smiles_list) < num_unique_samples:
             batched_cond_data = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
             batched_cond_data = (batched_cond_data - score_mean) / score_std
-            codes = self.plug_vae.sample(batched_cond_data)
-            if self.hparams.vq:
-                codes = self.vq_layer.compute_embedding(codes)
+            codes = self.plug_lstm.sample(batched_cond_data)
+            codes = self.vq_layer.compute_embedding(codes)
         
             batched_sequence_data = self.decoder.sample(codes, argmax=True, max_len=self.hparams.max_len)
             smiles_list_ = [
@@ -262,5 +247,5 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
         return result, statistics
             
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.plug_vae.parameters(), lr=self.hparams.lr)
+        optimizer = torch.optim.Adam(self.plug_lstm.parameters(), lr=self.hparams.lr)
         return [optimizer]

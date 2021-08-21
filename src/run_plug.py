@@ -5,14 +5,15 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import NeptuneLogger
 
-# from module.autoencoder import AutoEncoderModule
-from pl_module.plug import PlugVariationalAutoEncoderModule
+from pl_module.plug_vae import PlugVariationalAutoEncoderModule
+from pl_module.plug_lstm import PlugLSTMModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    PlugVariationalAutoEncoderModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=100)
-    parser.add_argument("--evaluate_per_n_epoch", type=int, default=10)
+    #PlugVariationalAutoEncoderModule.add_args(parser)
+    PlugLSTMModule.add_args(parser)
+    parser.add_argument("--max_epochs", type=int, default=500)
+    parser.add_argument("--evaluate_per_n_epoch", type=int, default=50)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default_codedecoder.pth")
     parser.add_argument("--tags", type=str, nargs="+", default=[])
@@ -23,7 +24,8 @@ if __name__ == "__main__":
     )
     neptune_logger.append_tags(["plug"] + hparams.tags)
 
-    model = PlugVariationalAutoEncoderModule(hparams)
+    #model = PlugVariationalAutoEncoderModule(hparams)
+    model = PlugLSTMModule(hparams)
     trainer = pl.Trainer(
         gpus=1,
         logger=neptune_logger,
