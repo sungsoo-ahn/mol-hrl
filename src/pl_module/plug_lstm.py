@@ -16,6 +16,7 @@ from module.vq_layer import VectorQuantizeLayer
 from pl_module.autoencoder import AutoEncoderModule
 
 from torch.distributions import Categorical
+import random
 
 def compute_sequence_cross_entropy(logits, batched_sequence_data):
     logits = logits[:, :-1]
@@ -28,7 +29,7 @@ def compute_sequence_cross_entropy(logits, batched_sequence_data):
     return loss
 
 class PlugLSTM(torch.nn.Module):
-    def __init__(self, vq_num_vocabs, code_dim, plug_hidden_dim):
+    def __init__(self, vq_num_vocabs, code_dim, plug_hidden_dim, plug_num_layers, plug_temperature):
         super(PlugLSTM, self).__init__()
         self.code_dim = code_dim
         self.vq_num_vocabs = vq_num_vocabs
@@ -38,19 +39,33 @@ class PlugLSTM(torch.nn.Module):
             plug_hidden_dim,
             plug_hidden_dim,
             batch_first=True,
-            num_layers=3,
+            num_layers=plug_num_layers,
         )
         self.decoder = nn.Linear(plug_hidden_dim, vq_num_vocabs)
+        self.temperature = plug_temperature
         
-    def forward(self, x, y):
-        x = torch.cat(
-            [torch.full((x.size(0), 1), self.vq_num_vocabs, device=x.device, dtype=torch.long), x[:, :-1]], dim=1
-            )
-        out = self.encoder(x)
-        out += self.y_encoder(y.unsqueeze(1)).unsqueeze(1)
-        out, _ = self.lstm(out, None)
-        out = self.decoder(out)
-        return out
+    def forward(self, x, y, teacher_forcing_ratio=0.5):
+        trg = torch.full((x.size(0), ), self.vq_num_vocabs, device=x.device, dtype=torch.long)
+        hidden = None
+        y_encoded = self.y_encoder(y.unsqueeze(1))
+        logits = []
+        for t in range(self.code_dim):
+            trg_encoded = self.encoder(trg)
+            out = trg_encoded + y_encoded
+            out, hidden = self.lstm(out.unsqueeze(1), hidden)
+            out = self.decoder(out)
+
+            if random.random() < teacher_forcing_ratio:
+                trg = x[:, t]
+            else:
+                probs = torch.softmax(out.squeeze(1), dim=1)
+                distribution = Categorical(probs=probs)
+                trg = distribution.sample()
+
+            logits.append(out)
+
+        logits = torch.cat(logits, dim=1)
+        return logits
     
     def step(self, x, y):
         logits = self(x, y)
@@ -70,7 +85,7 @@ class PlugLSTM(torch.nn.Module):
 
         return loss, statistics
 
-    def sample(self, y, argmax=False):
+    def sample(self, y, argmax):
         sample_size = y.size(0)
         sequences = [torch.full((sample_size, 1), self.vq_num_vocabs, dtype=torch.long).to(y.device)]
         hidden = None
@@ -81,10 +96,11 @@ class PlugLSTM(torch.nn.Module):
             out, hidden = self.lstm(out, hidden)
             logit = self.decoder(out)
 
-            prob = torch.softmax(logit, dim=2)
             if argmax == True:
                 tth_sequences = torch.argmax(logit, dim=2)
             else:
+                logit /= self.temperature
+                prob = torch.softmax(logit, dim=2)
                 distribution = Categorical(probs=prob)
                 tth_sequences = distribution.sample()
 
@@ -104,7 +120,13 @@ class PlugLSTMModule(pl.LightningModule):
         code_dim = hparams.code_dim * hparams.vq_code_dim
         self.encoder = load_encoder(hparams.encoder_name, code_dim)
         self.decoder = load_decoder(hparams.decoder_name, code_dim)
-        self.plug_lstm = PlugLSTM(hparams.vq_num_vocabs, hparams.code_dim, hparams.plug_hidden_dim)
+        self.plug_lstm = PlugLSTM(
+            hparams.vq_num_vocabs, 
+            hparams.code_dim, 
+            hparams.plug_hidden_dim, 
+            hparams.plug_num_layers, 
+            hparams.plug_temperature
+            )
         self.vq_layer = VectorQuantizeLayer(hparams.vq_code_dim, hparams.vq_num_vocabs)
 
         if hparams.load_checkpoint_path != "":
@@ -118,7 +140,7 @@ class PlugLSTMModule(pl.LightningModule):
         
         if hparams.task == "plogp":
             self.scorer = PLogPScorer() 
-        elif hparams.task == "binhding":
+        elif hparams.task == "binding":
             self.scorer = BindingScorer(hparams.split, "default")
 
     @staticmethod
@@ -146,7 +168,10 @@ class PlugLSTMModule(pl.LightningModule):
         parser.add_argument("--load_checkpoint_path", type=str, default="")
 
         #
-        parser.add_argument("--plug_hidden_dim", type=float, default=1024)
+        parser.add_argument("--plug_hidden_dim", type=int, default=1024)
+        parser.add_argument("--plug_num_layers", type=int, default=3)
+        parser.add_argument("--plug_temperature", type=float, default=1e-1)
+        
         return parser
 
     def train_dataloader(self):
@@ -165,11 +190,9 @@ class PlugLSTMModule(pl.LightningModule):
         self.encoder.eval()
         with torch.no_grad():
             codes = self.encoder(batched_input_data)
-            _, codes, _ = self.vq_layer(codes)
+            codes, code_idxs, _ = self.vq_layer(codes)
 
-        loss, statistics = self.plug_lstm.step(codes, batched_cond_data)
-
-        
+        loss, statistics = self.plug_lstm.step(code_idxs, batched_cond_data)
 
         return loss, statistics
 
@@ -190,7 +213,7 @@ class PlugLSTMModule(pl.LightningModule):
             self.train()
 
     def evaluate_sampling(self):
-        score_queries = [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        score_queries = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         score_mean, score_std = PLOGP_MEAN, PLOGP_STD
         success_margin = 0.5
         for query in score_queries:
@@ -205,7 +228,7 @@ class PlugLSTMModule(pl.LightningModule):
         while len(smiles_list) < num_samples and len(unique_smiles_list) < num_unique_samples:
             batched_cond_data = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
             batched_cond_data = (batched_cond_data - score_mean) / score_std
-            codes = self.plug_lstm.sample(batched_cond_data)
+            codes = self.plug_lstm.sample(batched_cond_data, argmax=False)
             codes = self.vq_layer.compute_embedding(codes)
         
             batched_sequence_data = self.decoder.sample(codes, argmax=True, max_len=self.hparams.max_len)
@@ -218,7 +241,7 @@ class PlugLSTMModule(pl.LightningModule):
             valid_smiles_list.extend(valid_smiles_list_)
             unique_smiles_list = list(set(valid_smiles_list))
 
-        valid_score_list = self.scorer(valid_smiles_list)
+        valid_score_list = [score for score in self.scorer(valid_smiles_list) if score is not None]
         unique_score_list = self.scorer(unique_smiles_list)
 
         result = dict()

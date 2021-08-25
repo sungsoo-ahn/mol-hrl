@@ -3,8 +3,8 @@ import tokenizers
 from tqdm import tqdm
 import numpy as np
     
-from data.util import load_smiles_list, load_tokenizer
-from data.score import BindingScorer, PLogPScorer
+from data.util import load_smiles_list
+from data.score.score import PLogPScorer
 
 from tokenizers import Tokenizer
 from tokenizers import pre_tokenizers

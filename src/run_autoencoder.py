@@ -10,7 +10,7 @@ from pl_module.autoencoder import AutoEncoderModule
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     AutoEncoderModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=200)
+    parser.add_argument("--max_epochs", type=int, default=500)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default")
     parser.add_argument("--tags", type=str, nargs="+", default=[])

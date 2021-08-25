@@ -183,8 +183,6 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
 
         loss, statistics = self.plug_vae.step(codes, batched_cond_data)
 
-        
-
         return loss, statistics
 
     def training_step(self, batched_data, batch_idx):
@@ -204,7 +202,7 @@ class PlugVariationalAutoEncoderModule(pl.LightningModule):
             self.train()
 
     def evaluate_sampling(self):
-        score_queries = [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        score_queries = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         score_mean, score_std = PLOGP_MEAN, PLOGP_STD
         success_margin = 0.5
         for query in score_queries:
