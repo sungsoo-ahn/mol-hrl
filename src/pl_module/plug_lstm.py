@@ -10,7 +10,6 @@ from data.factory import load_dataset, load_collate
 from data.score.score import BindingScorer, PLogPScorer
 from data.score.dataset import PLOGP_MEAN, PLOGP_STD
 from data.util import load_tokenizer
-from data.smiles.util import canonicalize
 from module.factory import load_encoder, load_decoder
 from module.vq_layer import VectorQuantizeLayer
 from pl_module.autoencoder import AutoEncoderModule
@@ -44,7 +43,7 @@ class PlugLSTM(torch.nn.Module):
         self.decoder = nn.Linear(plug_hidden_dim, vq_num_vocabs)
         self.temperature = plug_temperature
         
-    def forward(self, x, y, teacher_forcing_ratio=0.5):
+    def forward(self, x, y, teacher_forcing_ratio=1.0):
         trg = torch.full((x.size(0), ), self.vq_num_vocabs, device=x.device, dtype=torch.long)
         hidden = None
         y_encoded = self.y_encoder(y.unsqueeze(1))
@@ -71,6 +70,7 @@ class PlugLSTM(torch.nn.Module):
         logits = self(x, y)
 
         loss = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), x.view(-1))
+        #loss += 0.1 * (torch.log_softmax(logits, dim=-1) * torch.softmax(logits, dim=-1)).sum(dim=-1).mean()
 
         preds = torch.argmax(logits, dim=-1)
         correct = (preds == x)
@@ -85,7 +85,7 @@ class PlugLSTM(torch.nn.Module):
 
         return loss, statistics
 
-    def sample(self, y, argmax):
+    def decode(self, y, decoding_scheme, k=10, p=0.9, filter_value=-float('Inf')):
         sample_size = y.size(0)
         sequences = [torch.full((sample_size, 1), self.vq_num_vocabs, dtype=torch.long).to(y.device)]
         hidden = None
@@ -96,20 +96,50 @@ class PlugLSTM(torch.nn.Module):
             out, hidden = self.lstm(out, hidden)
             logit = self.decoder(out)
 
-            if argmax == True:
+            if decoding_scheme == "greedy":
                 tth_sequences = torch.argmax(logit, dim=2)
-            else:
+            
+            elif decoding_scheme == "sampling":
                 logit /= self.temperature
                 prob = torch.softmax(logit, dim=2)
                 distribution = Categorical(probs=prob)
                 tth_sequences = distribution.sample()
 
+            elif decoding_scheme == "topk":
+                indices_to_remove = logit < torch.topk(logit, k)[0][..., -1, None]
+                logit[indices_to_remove] = filter_value
+                
+                #
+                prob = torch.softmax(logit, dim=2)
+                distribution = Categorical(probs=prob)
+                tth_sequences = distribution.sample()
+                
+            elif decoding_scheme == "nuclear":
+                logit = logit.squeeze(1)
+                sorted_logit, sorted_indices = torch.sort(logit, dim=-1, descending=True)
+                cumulative_probs = torch.cumsum(torch.softmax(sorted_logit, dim=-1), dim=-1)
+
+                # Remove tokens with cumulative probability above the threshold
+                sorted_indices_to_remove = cumulative_probs > p
+                
+                # Shift the indices to the right to keep also the first token above the threshold
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                sorted_logit[sorted_indices_to_remove] = filter_value
+                logit = sorted_logit.gather(1, sorted_indices.argsort(1))
+                
+                #
+                prob = torch.softmax(logit, dim=1)
+                distribution = Categorical(probs=prob)
+                tth_sequences = distribution.sample().unsqueeze(1)
+                
             sequences.append(tth_sequences)
 
         sequences = torch.cat(sequences[1:], dim=1)
 
         return sequences
-
+    
 class PlugLSTMModule(pl.LightningModule):
     def __init__(self, hparams):
         super(PlugLSTMModule, self).__init__()
@@ -153,7 +183,7 @@ class PlugLSTMModule(pl.LightningModule):
         parser.add_argument("--task", type=str, default="plogp")
         parser.add_argument("--split", type=str, default="none")
         parser.add_argument("--batch_size", type=int, default=256)
-        parser.add_argument("--num_queries", type=int, default=250)
+        parser.add_argument("--num_queries", type=int, default=5000)
         parser.add_argument("--query_batch_size", type=int, default=250)
         parser.add_argument("--num_workers", type=int, default=8)
         
@@ -162,15 +192,15 @@ class PlugLSTMModule(pl.LightningModule):
         parser.add_argument("--decoder_name", type=str, default="lstm_base")
         parser.add_argument("--vq", action="store_true")
         parser.add_argument("--vq_code_dim", type=int, default=128)
-        parser.add_argument("--vq_num_vocabs", type=int, default=256)
-        parser.add_argument("--code_dim", type=int, default=256)
+        parser.add_argument("--vq_num_vocabs", type=int, default=32)
+        parser.add_argument("--code_dim", type=int, default=16)
         parser.add_argument("--max_len", type=int, default=120)
         parser.add_argument("--load_checkpoint_path", type=str, default="")
 
         #
-        parser.add_argument("--plug_hidden_dim", type=int, default=1024)
-        parser.add_argument("--plug_num_layers", type=int, default=3)
-        parser.add_argument("--plug_temperature", type=float, default=1e-1)
+        parser.add_argument("--plug_hidden_dim", type=int, default=512)
+        parser.add_argument("--plug_num_layers", type=int, default=2)
+        parser.add_argument("--plug_temperature", type=float, default=5e-1)
         
         return parser
 
@@ -213,61 +243,32 @@ class PlugLSTMModule(pl.LightningModule):
             self.train()
 
     def evaluate_sampling(self):
-        score_queries = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        score_queries = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0]
         score_mean, score_std = PLOGP_MEAN, PLOGP_STD
         success_margin = 0.5
         for query in score_queries:
-            _, statistics = self.sample_queries(
+            statistics = self.sample_queries(
                 query, success_margin, score_mean, score_std, num_samples=self.hparams.num_queries
                 )
             for key, val in statistics.items():
                 self.log(f"query{query:.2f}/{key}", val, on_step=False, logger=True)
 
-    def sample_queries(self, query, success_margin, score_mean, score_std, num_samples=1e4, num_unique_samples=1e4):
-        smiles_list, valid_smiles_list, unique_smiles_list = [], [], []
-        while len(smiles_list) < num_samples and len(unique_smiles_list) < num_unique_samples:
+    def sample_queries(self, query, success_margin, score_mean, score_std, num_samples):
+        smiles_list = []
+        while len(smiles_list) < num_samples:
             batched_cond_data = torch.full((self.hparams.query_batch_size, 1), query, device=self.device)
             batched_cond_data = (batched_cond_data - score_mean) / score_std
-            codes = self.plug_lstm.sample(batched_cond_data, argmax=False)
+            codes = self.plug_lstm.decode(batched_cond_data, decoding_scheme="nuclear")
             codes = self.vq_layer.compute_embedding(codes)
         
             batched_sequence_data = self.decoder.sample(codes, argmax=True, max_len=self.hparams.max_len)
             smiles_list_ = [
                 self.tokenizer.decode(data).replace(" ", "") for data in batched_sequence_data.tolist()
                 ]
-            valid_smiles_list_ = [smi for smi in list(map(canonicalize, smiles_list_)) if smi is not None]
-
             smiles_list.extend(smiles_list_)
-            valid_smiles_list.extend(valid_smiles_list_)
-            unique_smiles_list = list(set(valid_smiles_list))
 
-        valid_score_list = [score for score in self.scorer(valid_smiles_list) if score is not None]
-        unique_score_list = self.scorer(unique_smiles_list)
-
-        result = dict()
-        result["smiles_list"] = smiles_list
-        result["valid_smiles_list"] = valid_smiles_list
-        result["unique_smiles_list"] = unique_smiles_list
-        result["valid_score_list"] = valid_score_list
-        result["unique_score_list"] = unique_score_list
-
-        statistics = dict()
-        statistics["valid_ratio"] = float(len(valid_smiles_list)) / len(smiles_list)
-        statistics["unique_ratio"] = float(len(set(smiles_list))) / len(smiles_list)
-        statistics["unique_valid_ratio"] = float(len(unique_smiles_list)) / len(smiles_list)
-
-        if len(valid_score_list) > 0:
-            valid_scores_tsr = torch.FloatTensor(valid_score_list)
-            statistics["mae_score"] = (query - valid_scores_tsr).abs().mean()
-            statistics["mean_score"] = valid_scores_tsr.mean()
-            statistics["std_score"] = valid_scores_tsr.std() if len(result["valid_score_list"]) > 1 else 0.0
-            statistics["max_score"] = valid_scores_tsr.max()
-
-            is_success = lambda score: (score > query - success_margin) and (score < query + success_margin)
-            num_success = len([score for score in result["unique_score_list"] if is_success(score)])
-            statistics["success_ratio"] = float(num_success) / len(smiles_list)
-
-        return result, statistics
+        statistics = self.scorer(smiles_list, query=query, success_margin=success_margin)
+        return statistics
             
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.plug_lstm.parameters(), lr=self.hparams.lr)

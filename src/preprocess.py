@@ -4,7 +4,7 @@ from tqdm import tqdm
 import numpy as np
     
 from data.util import load_smiles_list
-from data.score.score import PLogPScorer
+from data.score.score import _raw_plogp
 
 from tokenizers import Tokenizer
 from tokenizers import pre_tokenizers
@@ -56,14 +56,13 @@ if __name__ == "__main__":
     # create dataset for plogp
     smiles_list = load_smiles_list("zinc", "train")
     random.shuffle(smiles_list)
-    smiles_list = smiles_list[:5000]
+    smiles_list = smiles_list[:1024]
             
     with open("../resource/data/plogp/raw/zinc/plogp_smiles.txt", "w") as f:
         for smiles in smiles_list:
             f.write(smiles + "\n")
     
-    scorer = PLogPScorer()
-    score_list = scorer(smiles_list)
+    score_list = [_raw_plogp(smiles) for smiles in smiles_list]
     print(np.mean(score_list))
     print(np.std(score_list))
     with open("../resource/data/plogp/raw/zinc/plogp_score.txt", "w") as f:
