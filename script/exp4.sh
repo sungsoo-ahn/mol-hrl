@@ -1,9 +1,7 @@
 #!/bin/bash
 
 python run_autoencoder.py \
---vq \
---code_dim 16 \
---vq_num_vocabs 256 \
+--code_dim 128 \
 --dataset_name fraggraph2seq \
---tags vq lstm fraggraph2seq code16 vocab256 \
---checkpoint_path ../resource/checkpoint/vq_lstm_fraggraph2seq_code16_vocab256
+--tags lstm fraggraph2seq code128 \
+--checkpoint_path ../resource/checkpoint/lstm_fraggraph2seq_code128

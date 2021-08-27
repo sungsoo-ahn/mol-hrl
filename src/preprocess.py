@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # create dataset for plogp
     smiles_list = load_smiles_list("zinc", "train")
     random.shuffle(smiles_list)
-    smiles_list = smiles_list[:1024]
+    smiles_list = smiles_list[:5000]
             
     with open("../resource/data/plogp/raw/zinc/plogp_smiles.txt", "w") as f:
         for smiles in smiles_list:

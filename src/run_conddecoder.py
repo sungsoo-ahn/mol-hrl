@@ -11,8 +11,8 @@ from pl_module.conddecoder import CondDecoderModule
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     CondDecoderModule.add_args(parser)
-    parser.add_argument("--max_epochs", type=int, default=1000)
-    parser.add_argument("--evaluate_per_n_epoch", type=int, default=100)
+    parser.add_argument("--max_epochs", type=int, default=100)
+    parser.add_argument("--evaluate_per_n_epoch", type=int, default=10)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default_codedecoder.pth")
     parser.add_argument("--tags", type=str, nargs="+", default=[])

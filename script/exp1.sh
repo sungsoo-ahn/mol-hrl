@@ -1,9 +1,7 @@
 #!/bin/bash
 
 python run_autoencoder.py \
---vq \
---code_dim 16 \
---vq_num_vocabs 128 \
+--code_dim 128 \
 --dataset_name graph2seq \
---tags vq lstm graph2seq code16 vocab128 \
---checkpoint_path ../resource/checkpoint/vq_lstm_graph2seq_code16_vocab128
+--tags lstm graph2seq code128 \
+--checkpoint_path ../resource/checkpoint/lstm_graph2seq_code128
