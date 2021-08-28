@@ -3,22 +3,26 @@ import torch
 import os
 import numpy as np
 
-PLOGP_MEAN = -0.028084750892405044
-PLOGP_STD = 2.0570724640259397
-PLOGP_SUCCESS_MARGIN = 0.5
+def load_statistics(task):
+    if task == "plogp":
+        mean = 0.024503251342150357
+        std = 1.9413246309350511
+        success_margin = 0.5
+    
+    return mean, std, success_margin
 
-class PLogPDataset(torch.utils.data.Dataset):
+class ScoreDataset(torch.utils.data.Dataset):
     def __init__(self, task, split):
-        super(PLogPDataset, self).__init__()
+        super(ScoreDataset, self).__init__()
         # Setup normalization statistics
-        self.scores = torch.FloatTensor(load_score_list("plogp", None)).T
-        
+        self.scores = torch.FloatTensor(load_score_list(task, split)).T
+        self.mean, self.std, _ = load_statistics(task)
+
     def __len__(self):
         return self.scores.size(0)
 
     def __getitem__(self, idx):
-        #noise = np.random.uniform(-PLOGP_SUCCESS_MARGIN, PLOGP_SUCCESS_MARGIN)
-        return (self.scores[idx] - PLOGP_MEAN) / PLOGP_STD
+        return (self.scores[idx] - self.mean) / self.std
     
     def update(self, score_list):
         new_scores = torch.FloatTensor(score_list).view(-1, 1)

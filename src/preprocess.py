@@ -56,15 +56,29 @@ if __name__ == "__main__":
     # create dataset for plogp
     smiles_list = load_smiles_list("zinc", "train")
     random.shuffle(smiles_list)
-    smiles_list = smiles_list[:5000]
-            
-    with open("../resource/data/plogp/raw/zinc/plogp_smiles.txt", "w") as f:
-        for smiles in smiles_list:
+    
+    #
+    train_smiles_list = smiles_list[:4000]        
+    with open("../resource/data/plogp/train.txt", "w") as f:
+        for smiles in train_smiles_list:
             f.write(smiles + "\n")
     
-    score_list = [_raw_plogp(smiles) for smiles in smiles_list]
-    print(np.mean(score_list))
-    print(np.std(score_list))
-    with open("../resource/data/plogp/raw/zinc/plogp_score.txt", "w") as f:
-        for score in score_list:
+    train_score_list = [_raw_plogp(smiles) for smiles in train_smiles_list]
+    print(np.mean(train_score_list))
+    print(np.std(train_score_list))
+    with open("../resource/data/plogp/train_score.txt", "w") as f:
+        for score in train_score_list:
+            f.write(str(score) + "\n")
+
+    #
+    valid_smiles_list = smiles_list[4000:5000]        
+    with open("../resource/data/plogp/valid.txt", "w") as f:
+        for smiles in valid_smiles_list:
+            f.write(smiles + "\n")
+    
+    valid_score_list = [_raw_plogp(smiles) for smiles in valid_smiles_list]
+    print(np.mean(valid_score_list))
+    print(np.std(valid_score_list))
+    with open("../resource/data/plogp/valid_score.txt", "w") as f:
+        for score in valid_score_list:
             f.write(str(score) + "\n")

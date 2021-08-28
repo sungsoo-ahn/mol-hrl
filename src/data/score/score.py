@@ -63,8 +63,9 @@ class PLogPScorer(object):
     def __init__(self, num_workers=8):
         self.pool = Parallel(n_jobs=num_workers) if num_workers > 0 else None
         self._score_smiles = _raw_plogp
+        self.success_margin = 0.5
 
-    def __call__(self, smiles_list, query=None, success_margin=None):
+    def __call__(self, smiles_list, query=None, success_margin=0.5):
         statistics = dict()
         unique_smiles_list = list(set(smiles_list))
         statistics["unique_ratio"] = float(len(set(unique_smiles_list))) / len(smiles_list)
@@ -82,7 +83,9 @@ class PLogPScorer(object):
                 statistics["std_score"] = valid_scores_tsr.std().item() if len(valid_pairs) > 1 else 0.0
                 statistics["max_score"] = valid_scores_tsr.max().item()
 
-                is_success = lambda score: (score > query - success_margin) and (score < query + success_margin)
+                def is_success(score):
+                    return (score > query - self.success_margin) and (score < query + self.success_margin)
+
                 success_pairs = [(smiles, score) for smiles, score in valid_pairs if is_success(score)]
                 statistics["success_ratio"] = float(len(success_pairs)) / len(smiles_list)
                 
@@ -100,3 +103,12 @@ class BindingScorer(PLogPScorer):
     def __init__(self, protein, key, num_workers=8):
         self.pool = Parallel(n_jobs=num_workers) if num_workers > 0 else None
         self._score_smiles = lambda smiles: _raw_binding_scorer(smiles, protein, key)
+
+    
+def load_scorer(task):
+    if task == "plogp":
+        scorer = PLogPScorer() 
+    elif task in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
+        scorer = BindingScorer(task, "default")
+
+    return scorer

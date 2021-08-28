@@ -48,33 +48,33 @@ class GINConv(MessagePassing):
 
 
 class GNNEncoder(torch.nn.Module):
-    def __init__(self, encoder_num_layers, encoder_hidden_dim, code_dim):
+    def __init__(self, num_layers, hidden_dim, code_dim):
         super(GNNEncoder, self).__init__()
-        self.num_layers = encoder_num_layers
+        self.num_layers = num_layers
 
         if self.num_layers < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.x_embedding1 = torch.nn.Embedding(num_atom_type, encoder_hidden_dim)
-        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, encoder_hidden_dim)
+        self.x_embedding1 = torch.nn.Embedding(num_atom_type, hidden_dim)
+        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hidden_dim)
 
         torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
         torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
 
         ###List of MLPs
         self.gnns = torch.nn.ModuleList()
-        for layer in range(encoder_num_layers):
-            self.gnns.append(GINConv(encoder_hidden_dim))
+        for layer in range(num_layers):
+            self.gnns.append(GINConv(hidden_dim))
 
         ###List of batchnorms
         self.batch_norms = torch.nn.ModuleList()
-        for _ in range(encoder_num_layers):
-            self.batch_norms.append(torch.nn.BatchNorm1d(encoder_hidden_dim))
+        for _ in range(num_layers):
+            self.batch_norms.append(torch.nn.BatchNorm1d(hidden_dim))
 
         self.projector = torch.nn.Sequential(
-            torch.nn.Linear(encoder_hidden_dim, encoder_hidden_dim),
+            torch.nn.Linear(hidden_dim, hidden_dim),
             torch.nn.ReLU(),
-            torch.nn.Linear(encoder_hidden_dim, code_dim),
+            torch.nn.Linear(hidden_dim, code_dim),
         )
 
     def forward(self, batched_data):

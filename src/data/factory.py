@@ -2,7 +2,6 @@ import torch
 from data.graph.dataset import GraphDataset
 from data.graph.transform import fragment, mask
 from data.sequence.dataset import SequenceDataset, EnumSequenceDataset
-from data.score.dataset import PLogPDataset
 
 class TensorDataset(torch.utils.data.Dataset):
     def __init__(self, tsrs):
@@ -48,11 +47,6 @@ def load_dataset(dataset_name, task, split):
         input_dataset = GraphDataset(task, split, transform=mask)
         target_dataset = SequenceDataset(task, split)
         dataset = ZipDataset(input_dataset, target_dataset)
-    elif dataset_name == "plogp":
-        input_dataset = GraphDataset(task, split)
-        target_dataset = SequenceDataset(task, split)
-        score_dataset = PLogPDataset(task, split)
-        dataset = ZipDataset(input_dataset, target_dataset, score_dataset)
 
     return dataset
 

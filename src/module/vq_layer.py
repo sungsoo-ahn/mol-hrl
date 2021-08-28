@@ -8,7 +8,7 @@ def ema_inplace(moving_avg, new, decay):
 def laplace_smoothing(x, n_categories, eps=1e-5):
     return (x + eps) / (x.sum() + n_categories * eps)
 
-class VectorQuantizeLayer(nn.Module):
+class FlattenedVectorQuantizeLayer(nn.Module):
     def __init__(self, dim, n_embed, decay=0.99, eps=1e-5):
         super().__init__()
 

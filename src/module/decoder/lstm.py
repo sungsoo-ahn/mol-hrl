@@ -4,20 +4,20 @@ from torch.distributions import Categorical
 from data.util import load_tokenizer
 
 class LSTMDecoder(nn.Module):
-    def __init__(self, decoder_num_layers, decoder_hidden_dim, code_dim):
+    def __init__(self, num_layers, hidden_dim, code_dim):
         super(LSTMDecoder, self).__init__()
         self.tokenizer = load_tokenizer()
         num_vocabs = self.tokenizer.get_vocab_size()
 
-        self.encoder = nn.Embedding(num_vocabs, decoder_hidden_dim)
-        self.code_encoder = nn.Linear(code_dim, decoder_hidden_dim)
+        self.encoder = nn.Embedding(num_vocabs, hidden_dim)
+        self.code_encoder = nn.Linear(code_dim, hidden_dim)
         self.lstm = nn.LSTM(
-            decoder_hidden_dim,
-            decoder_hidden_dim,
+            hidden_dim,
+            hidden_dim,
             batch_first=True,
-            num_layers=decoder_num_layers,
+            num_layers=num_layers,
         )
-        self.decoder = nn.Linear(decoder_hidden_dim, num_vocabs)
+        self.decoder = nn.Linear(hidden_dim, num_vocabs)
         
     def forward(self, batched_sequence_data, codes):
         codes = codes.unsqueeze(1).expand(-1, batched_sequence_data.size(1), -1)
@@ -30,7 +30,7 @@ class LSTMDecoder(nn.Module):
 
         return out
 
-    def sample(self, codes, argmax, max_len):
+    def decode(self, codes, argmax, max_len):
         sample_size = codes.size(0)
         sequences = [torch.full((sample_size, 1), self.tokenizer.token_to_id("[BOS]"), dtype=torch.long).to(codes.device)]
         hidden = None
