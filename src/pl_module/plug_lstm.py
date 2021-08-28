@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from module.encoder.gnn import GNNEncoder
 from module.decoder.lstm import LSTMDecoder
-from module.decoder.plug_lstm import PlugLSTM
+from module.plug.lstm import PlugLSTM
 from module.vq_layer import FlattenedVectorQuantizeLayer
 from pl_module.conddecoder import CondDecoderModule
 from pl_module.autoencoder import VectorQuantizedAutoEncoderModule
@@ -48,9 +48,8 @@ class PlugLSTMModule(CondDecoderModule):
         parser.add_argument("--lr", type=float, default=1e-3)
     
         # Common - data
-        parser.add_argument("--dataset_name", type=str, default="plogp")
         parser.add_argument("--task", type=str, default="plogp")
-        parser.add_argument("--split", type=str, default="none")
+        parser.add_argument("--batch_size", type=int, default=256)
         parser.add_argument("--batch_size", type=int, default=256)
         
         # model        

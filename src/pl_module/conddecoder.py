@@ -61,9 +61,7 @@ class CondDecoderModule(pl.LightningModule):
     @staticmethod
     def add_args(parser):
         # Common - data
-        parser.add_argument("--dataset_name", type=str, default="plogp")
         parser.add_argument("--task", type=str, default="plogp")
-        parser.add_argument("--split", type=str, default="none")
         parser.add_argument("--batch_size", type=int, default=256)
         
         # model
