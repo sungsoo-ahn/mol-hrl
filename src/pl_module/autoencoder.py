@@ -196,8 +196,8 @@ class VectorQuantizedAutoEncoderModule(AutoEncoderModule):
 
         # model - code
         parser.add_argument("--vq_code_dim", type=int, default=64)
-        parser.add_argument("--vq_codebook_dim", type=int, default=64)
-        parser.add_argument("--vq_num_vocabs", type=int, default=256)
+        parser.add_argument("--vq_codebook_dim", type=int, default=128)
+        parser.add_argument("--vq_num_vocabs", type=int, default=64)
         
         # model - encoder
         parser.add_argument("--encoder_num_layers", type=int, default=5)
