@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_epochs", type=int, default=500)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--checkpoint_dir", type=str, default="../resource/checkpoint/default")
-    parser.add_argument("--tag", type=str, nargs="+", default=[])
+    parser.add_argument("--tag", type=str, default="default")
     hparams = parser.parse_args()
 
     neptune_logger = NeptuneLogger(project="sungsahn0215/molrep")
