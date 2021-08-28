@@ -44,7 +44,7 @@ class AutoEncoderModule(pl.LightningModule):
     def setup_datasets(self, hparams):
         self.tokenizer = load_tokenizer()
         self.train_dataset = load_dataset(hparams.dataset_name, hparams.task, "train")
-        self.val_dataset = load_dataset(hparams.dataset_name, hparams.task, "valid")
+        self.val_dataset = load_dataset("graph2seq", hparams.task, "valid")
         self.collate = load_collate(hparams.dataset_name)
 
     @staticmethod
@@ -196,7 +196,7 @@ class VectorQuantizedAutoEncoderModule(AutoEncoderModule):
 
         # model - code
         parser.add_argument("--vq_code_dim", type=int, default=64)
-        parser.add_argument("--vq_codebook_dim", type=int, default=256)
+        parser.add_argument("--vq_codebook_dim", type=int, default=64)
         parser.add_argument("--vq_num_vocabs", type=int, default=256)
         
         # model - encoder
