@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python run0_autoencoder.py --code_dim 128 --tag ae_code128
+python run0_autoencoder.py --dataset_name fraggraph2seq --tag ae_frag
