@@ -34,7 +34,7 @@ class PlugVariationalAutoEncoderModule(CondDecoderModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--lr", type=float, default=1e-4)
     
         # Common - data
         parser.add_argument("--task", type=str, default="plogp")
@@ -55,10 +55,10 @@ class PlugVariationalAutoEncoderModule(CondDecoderModule):
         parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
         
         # model - plug lstm
-        parser.add_argument("--plug_num_layers", type=int, default=3)
+        parser.add_argument("--plug_num_layers", type=int, default=2)
         parser.add_argument("--plug_hidden_dim", type=int, default=512)
         parser.add_argument("--plug_latent_dim", type=int, default=128)
-        parser.add_argument("--plug_beta", type=float, default=1e-1)
+        parser.add_argument("--plug_beta", type=float, default=1e-2)
         
         # sampling
         parser.add_argument("--num_queries", type=int, default=5000)
@@ -81,6 +81,7 @@ class PlugVariationalAutoEncoderModule(CondDecoderModule):
         loss = recon_loss + self.hparams.plug_beta * kl_loss
         
         statistics = dict()        
+        statistics["loss/total"] = loss
         statistics["loss/plug_recon"] = recon_loss
         statistics["loss/plug_kl"] = kl_loss
 
@@ -129,7 +130,7 @@ class PlugDiscreteVariationalAutoEncoderModule(CondDecoderModule):
     @staticmethod
     def add_args(parser):
         # Common - model
-        parser.add_argument("--lr", type=float, default=1e-3)
+        parser.add_argument("--lr", type=float, default=1e-4)
     
         # Common - data
         parser.add_argument("--task", type=str, default="plogp")
@@ -155,7 +156,7 @@ class PlugDiscreteVariationalAutoEncoderModule(CondDecoderModule):
         parser.add_argument("--plug_num_layers", type=int, default=3)
         parser.add_argument("--plug_hidden_dim", type=int, default=512)
         parser.add_argument("--plug_latent_dim", type=int, default=128)
-        parser.add_argument("--plug_beta", type=float, default=1e-1)
+        parser.add_argument("--plug_beta", type=float, default=1e-2)
         
         # sampling
         parser.add_argument("--num_queries", type=int, default=5000)

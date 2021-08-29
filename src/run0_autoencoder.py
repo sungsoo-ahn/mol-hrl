@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     neptune_logger = NeptuneLogger(project="sungsahn0215/molrep")
     neptune_logger.run["params"] = vars(hparams)
-    neptune_logger.run['sys/tags'].add(["autoencoder"] + hparams.tag.split("_"))
+    neptune_logger.run['sys/tags'].add(["run0", "autoencoder"] + hparams.tag.split("_"))
 
     model = AutoEncoderModule(hparams)
 

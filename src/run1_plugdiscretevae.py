@@ -8,7 +8,7 @@ from neptune.new.integrations.pytorch_lightning import NeptuneLogger
 
 from pl_module.plug_vae import PlugDiscreteVariationalAutoEncoderModule
 
-BASE_CHECKPOINT_DIR = "../resource/checkpoint/run1_pluglstm"
+BASE_CHECKPOINT_DIR = "../resource/checkpoint/run1_plugdiscretevae"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     neptune_logger = NeptuneLogger(project="sungsahn0215/molrep", close_after_fit=False)
     neptune_logger.run["params"] = vars(hparams)
-    neptune_logger.run['sys/tags'].add(["plugdiscretevae"] + hparams.tag.split("_"))
+    neptune_logger.run['sys/tags'].add(["run1", "plugdiscretevae"] + hparams.tag.split("_"))
 
     model = PlugDiscreteVariationalAutoEncoderModule(hparams)
     checkpoint_callback = ModelCheckpoint(

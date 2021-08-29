@@ -3,14 +3,14 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 from data.util import load_tokenizer
 
-class LSTMEncoder(nn.Module):
+class GRUEncoder(nn.Module):
     def __init__(self, num_layers, hidden_dim, code_dim):
-        super(LSTMEncoder, self).__init__()
+        super(GRUEncoder, self).__init__()
         self.tokenizer = load_tokenizer()
         num_vocabs = self.tokenizer.get_vocab_size()
 
         self.encoder = nn.Embedding(num_vocabs, hidden_dim)
-        self.lstm = nn.LSTM(
+        self.gru = nn.GRU(
             hidden_dim,
             hidden_dim,
             batch_first=True,
@@ -23,7 +23,7 @@ class LSTMEncoder(nn.Module):
         lengths = torch.sum(batched_sequence_data != self.tokenizer.token_to_id("[PAD]"), dim=1)
         out = self.encoder(batched_sequence_data)
         out = pack_padded_sequence(out, batch_first=True, lengths=lengths.cpu(), enforce_sorted=False)
-        _, (h, _) = self.lstm(out, None)
+        _, h = self.gru(out, None)
         out = torch.cat([h[-2], h[-1]], 1)
         out = self.decoder(out)
 

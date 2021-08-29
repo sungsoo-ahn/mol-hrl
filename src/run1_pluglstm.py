@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     neptune_logger = NeptuneLogger(project="sungsahn0215/molrep", close_after_fit=False)
     neptune_logger.run["params"] = vars(hparams)
-    neptune_logger.run['sys/tags'].add(["pluglstm"] + hparams.tag.split("_"))
+    neptune_logger.run['sys/tags'].add(["run1", "pluglstm"] + hparams.tag.split("_"))
 
     model = PlugLSTMModule(hparams)
     checkpoint_callback = ModelCheckpoint(

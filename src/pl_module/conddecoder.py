@@ -67,7 +67,7 @@ class CondDecoderModule(pl.LightningModule):
         # model
         parser.add_argument("--code_dim", type=int, default=256)
         parser.add_argument("--decoder_num_layers", type=int, default=2)
-        parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
+        parser.add_argument("--decoder_hidden_dim", type=int, default=512)
         
         # training
         parser.add_argument("--lr", type=float, default=1e-3)
@@ -110,7 +110,8 @@ class CondDecoderModule(pl.LightningModule):
         elem_acc, seq_acc = compute_sequence_accuracy(logits, batched_target_data)
         
         loss += recon_loss
-        statistics["loss/recon"] = loss
+        statistics["loss/total"] = loss
+        statistics["loss/recon"] = recon_loss
         statistics["acc/elem"] = elem_acc
         statistics["acc/seq"] = seq_acc
         
@@ -119,7 +120,7 @@ class CondDecoderModule(pl.LightningModule):
     def training_step(self, batched_data, batch_idx):
         loss, statistics = self.shared_step(batched_data)
         for key, val in statistics.items():
-            self.log(f"train/{key}", val, on_step=True, on_epoch=False, logger=True)
+            self.log(f"train/{key}", val, on_step=False, on_epoch=True, logger=True)
 
         return loss
     
@@ -169,8 +170,5 @@ class CondDecoderModule(pl.LightningModule):
 
             
     def configure_optimizers(self):
-        params = list(self.cond_embedding.parameters())
-        params += list(self.decoder.parameters())
-        
-        optimizer = torch.optim.Adam(params, lr=self.hparams.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         return [optimizer]
