@@ -57,28 +57,33 @@ if __name__ == "__main__":
     smiles_list = load_smiles_list("zinc", "train")
     random.shuffle(smiles_list)
     
-    #
-    train_smiles_list = smiles_list[:4000]        
-    with open("../resource/data/plogp/train.txt", "w") as f:
-        for smiles in train_smiles_list:
-            f.write(smiles + "\n")
-    
-    train_score_list = [_raw_plogp(smiles) for smiles in train_smiles_list]
-    print(np.mean(train_score_list))
-    print(np.std(train_score_list))
-    with open("../resource/data/plogp/train_score.txt", "w") as f:
-        for score in train_score_list:
-            f.write(str(score) + "\n")
+    for score_func_name in ["plogp", "logp", "molwt", "qed"]:
+        if score_func_name == "plogp":
+            score_func = _raw_plogp
+        elif score_func_name == "logp":
+            score_func = lambda smiles: rdkit.
+        #
+        train_smiles_list = smiles_list[:4000]        
+        with open(f"../resource/data/{score_func_name}/train.txt", "w") as f:
+            for smiles in train_smiles_list:
+                f.write(smiles + "\n")
+        
+        train_score_list = [score_func(smiles) for smiles in train_smiles_list]
+        print(np.mean(train_score_list))
+        print(np.std(train_score_list))
+        with open(f"../resource/data/{score_func_name}/train_score.txt", "w") as f:
+            for score in train_score_list:
+                f.write(str(score) + "\n")
 
-    #
-    valid_smiles_list = smiles_list[4000:5000]        
-    with open("../resource/data/plogp/valid.txt", "w") as f:
-        for smiles in valid_smiles_list:
-            f.write(smiles + "\n")
-    
-    valid_score_list = [_raw_plogp(smiles) for smiles in valid_smiles_list]
-    print(np.mean(valid_score_list))
-    print(np.std(valid_score_list))
-    with open("../resource/data/plogp/valid_score.txt", "w") as f:
-        for score in valid_score_list:
-            f.write(str(score) + "\n")
+        #
+        valid_smiles_list = smiles_list[4000:5000]        
+        with open(f"../resource/data/{score_func_name}/valid.txt", "w") as f:
+            for smiles in valid_smiles_list:
+                f.write(smiles + "\n")
+        
+        valid_score_list = [score_func(smiles) for smiles in valid_smiles_list]
+        print(np.mean(valid_score_list))
+        print(np.std(valid_score_list))
+        with open(f"../resource/data/{score_func_name}/valid_score.txt", "w") as f:
+            for score in valid_score_list:
+                f.write(str(score) + "\n")

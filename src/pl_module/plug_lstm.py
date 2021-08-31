@@ -73,7 +73,7 @@ class PlugLSTMModule(CondDecoderModule):
         parser.add_argument("--plug_hidden_dim", type=int, default=512)
         
         # sampling
-        parser.add_argument("--num_queries", type=int, default=5000)
+        parser.add_argument("--num_queries", type=int, default=1000)
         parser.add_argument("--query_batch_size", type=int, default=250)
         parser.add_argument("--num_workers", type=int, default=8)
         parser.add_argument("--max_len", type=int, default=120)

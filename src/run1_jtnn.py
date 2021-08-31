@@ -6,23 +6,24 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from neptune.new.integrations.pytorch_lightning import NeptuneLogger
 
-from pl_module.plug_vae import PlugVariationalAutoEncoderModule
+from pl_module.jtnn import JTNNModule
 
-BASE_CHECKPOINT_DIR = "../resource/checkpoint/run1_plugvae"
+BASE_CHECKPOINT_DIR = "../resource/checkpoint/run1_jtnn"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    PlugVariationalAutoEncoderModule.add_args(parser)
+    JTNNModule.add_args(parser)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
     parser.add_argument("--tag", type=str, default="default")
     hparams = parser.parse_args()
 
+    model = JTNNModule(hparams)
+    model.postsetup_datasets()
     neptune_logger = NeptuneLogger(project="sungsahn0215/molrep", close_after_fit=False)
     neptune_logger.run["params"] = vars(hparams)
-    neptune_logger.run['sys/tags'].add(["run1", "plugvae"] + hparams.tag.split("_"))
+    neptune_logger.run['sys/tags'].add(["run1", "jtnn"] + hparams.tag.split("_"))
 
-    model = PlugVariationalAutoEncoderModule(hparams)
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(BASE_CHECKPOINT_DIR, hparams.tag),
         monitor="validation/loss/total",
@@ -41,5 +42,6 @@ if __name__ == "__main__":
 
     model.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
     model.eval()
+    model = model.cuda()
     model.evaluate_sampling()
     

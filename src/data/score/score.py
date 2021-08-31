@@ -13,6 +13,7 @@ import sascorer
 
 from docking_benchmark.data.proteins import get_proteins
 from data.smiles.util import canonicalize
+from data.util import load_smiles_list
 
 from moses.metrics import internal_diversity
 
@@ -59,11 +60,37 @@ def _raw_binding_scorer(smiles, protein, key):
     protein = get_proteins()[protein]
     return protein.dock_smiles_to_protein(smiles)[key]
 
+def _raw_logp(smiles):
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        smiles = Chem.MolToSmiles(mol)
+        return Descriptors.MolLogP(mol)
+    except:
+        return None
+
+def _raw_molwt(smiles):
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        smiles = Chem.MolToSmiles(mol)
+        return Descriptors.MolWt(mol)
+    except:
+        return None
+
+def _raw_qed(smiles):
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        smiles = Chem.MolToSmiles(mol)
+        return Descriptors.qed(mol)
+    except:
+        return None
+    
+    
 class PLogPScorer(object):
     def __init__(self, num_workers=8):
         self.pool = Parallel(n_jobs=num_workers) if num_workers > 0 else None
         self._score_smiles = _raw_plogp
         self.success_margin = 0.5
+        self.seen_smiles = load_smiles_list("plogp", "train")
 
     def __call__(self, smiles_list, query=None, success_margin=0.5):
         statistics = dict()
@@ -75,18 +102,23 @@ class PLogPScorer(object):
         valid_pairs = [(smiles, score) for smiles, score in unique_pairs if score is not None]
         statistics["unique_valid_ratio"] = float(len(valid_pairs)) / len(smiles_list)
 
+        novel_pairs = [(smiles, score) for smiles, score in valid_pairs if canonicalize(smiles) not in self.seen_smiles]
+        statistics["unique_valid_novel_ratio"] = float(len(novel_pairs)) / len(smiles_list)
+
+
         if query is not None:
-            if len(valid_pairs) > 0:
+            if len(novel_pairs) > 0:
                 valid_scores_tsr = torch.FloatTensor([score for _, score in valid_pairs])
                 statistics["mae_score"] = (query - valid_scores_tsr).abs().mean().item()
                 statistics["mean_score"] = valid_scores_tsr.mean().item()
                 statistics["std_score"] = valid_scores_tsr.std().item() if len(valid_pairs) > 1 else 0.0
+                statistics["min_score"] = valid_scores_tsr.min().item()
                 statistics["max_score"] = valid_scores_tsr.max().item()
 
                 def is_success(score):
                     return (score > query - self.success_margin) and (score < query + self.success_margin)
 
-                success_pairs = [(smiles, score) for smiles, score in valid_pairs if is_success(score)]
+                success_pairs = [(smiles, score) for smiles, score in novel_pairs if is_success(score)]
                 statistics["success_ratio"] = float(len(success_pairs)) / len(smiles_list)
                 
                 if len(success_pairs) > 0:

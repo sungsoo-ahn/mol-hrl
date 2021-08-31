@@ -23,7 +23,14 @@ def load_smiles_list(task, split):
     
     elif task in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
         protein = get_proteins()[task]
-        smiles_list = protein.datasets[split][0]
+        smiles_list = protein.datasets["default"][0]
+
+        split_idx = int(0.9 * len(smiles_list))
+        if split == "train":
+            smiles_list = smiles_list[:split_idx]
+        elif split == "valid":
+            smiles_list = smiles_list[split_idx:]
+
         return smiles_list
     
     elif task == "plogp":
@@ -34,7 +41,14 @@ def load_smiles_list(task, split):
 def load_score_list(task, split):
     if task in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
         protein = get_proteins()[task]
-        score_list = protein.datasets[split][1]
+        score_list = protein.datasets["default"][1]
+        
+        split_idx = int(0.9 * len(score_list))
+        if split == "train":
+            score_list = score_list[:split_idx]
+        elif split == "valid":
+            score_list = score_list[split_idx:]
+        
         return score_list
     
     elif task == "plogp":

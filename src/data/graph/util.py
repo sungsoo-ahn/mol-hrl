@@ -55,7 +55,7 @@ def get_bond_feature(bond_type):
 
 
 def smiles2graph(smiles):
-    mol = Chem.MolFromSmiles(smiles, sanitize=True)
+    mol = Chem.MolFromSmiles(smiles, sanitize=True)    
     return mol2graph(mol)
 
 

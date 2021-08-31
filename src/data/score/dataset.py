@@ -8,6 +8,12 @@ def load_statistics(task):
         mean = 0.024503251342150357
         std = 1.9413246309350511
         success_margin = 0.5
+    elif task in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
+        score_list = load_score_list(task, "train")
+        mean = np.mean(score_list)
+        std = np.std(score_list)
+        print(np.max(score_list), np.min(score_list))
+        success_margin = 0.5
     
     return mean, std, success_margin
 

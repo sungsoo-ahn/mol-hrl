@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
 from data.util import load_tokenizer
-from data.factory import load_dataset, load_collate
 from data.graph.dataset import GraphDataset
 from data.sequence.dataset import SequenceDataset
 from data.util import ZipDataset
@@ -73,7 +72,7 @@ class CondDecoderModule(pl.LightningModule):
         parser.add_argument("--lr", type=float, default=1e-3)
         
         # sampling
-        parser.add_argument("--num_queries", type=int, default=5000)
+        parser.add_argument("--num_queries", type=int, default=1000)
         parser.add_argument("--query_batch_size", type=int, default=250)
         parser.add_argument("--num_workers", type=int, default=8)
         parser.add_argument("--max_len", type=int, default=120)
@@ -87,7 +86,7 @@ class CondDecoderModule(pl.LightningModule):
             shuffle=True,
             collate_fn=self.collate,
             num_workers=self.hparams.num_workers,
-            drop_last=True
+            drop_last=False
         )
     
     def val_dataloader(self):
@@ -132,8 +131,13 @@ class CondDecoderModule(pl.LightningModule):
         return loss
     
     def evaluate_sampling(self):
-        score_queries = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0]
-        for query in tqdm(score_queries):
+        if self.hparams.task == "plogp":
+            score_queries = [-6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        elif self.hparams.task in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
+            score_queries = [-6.0, -6.5, -7.0, -7.5, -8.0, -8.5, -9.0, -9.5, -10.0, -10.5, -11.0]
+
+        for query in score_queries:
+            print(query)
             smiles_list = self.decode_many_smiles(
                 query, num_samples=self.hparams.num_queries, max_len=self.hparams.max_len
                 )
@@ -145,7 +149,7 @@ class CondDecoderModule(pl.LightningModule):
     def decode_many_smiles(self, query, num_samples, max_len):
         offset = 0
         smiles_list = []
-        for _ in range(num_samples // self.hparams.query_batch_size):
+        for _ in tqdm(range(num_samples // self.hparams.query_batch_size)):
             batch_size = min(self.hparams.query_batch_size, num_samples - offset)
             offset += batch_size
             smiles_list += self.decode_smiles(query, batch_size, max_len)

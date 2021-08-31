@@ -15,7 +15,6 @@ if __name__ == "__main__":
     PlugLSTMModule.add_args(parser)
     parser.add_argument("--max_epochs", type=int, default=10)
     parser.add_argument("--gradient_clip_val", type=float, default=0.5)
-    parser.add_argument("--checkpoint_path", type=str, default="../resource/checkpoint/default_codedecoder.pth")
     parser.add_argument("--tag", type=str, default="default")
     hparams = parser.parse_args()
 
@@ -35,6 +34,7 @@ if __name__ == "__main__":
         logger=neptune_logger,
         default_root_dir="../resource/log/",
         max_epochs=hparams.max_epochs,
+        callbacks=[checkpoint_callback],
         gradient_clip_val=hparams.gradient_clip_val,
     )
     trainer.fit(model)
