@@ -116,8 +116,8 @@ class JTNNModule(CondDecoderModule):
         
         # model - plug lstm
         parser.add_argument("--plug_num_layers", type=int, default=2)
-        parser.add_argument("--plug_hidden_dim", type=int, default=64)
-        parser.add_argument("--plug_latent_dim", type=int, default=32)
+        parser.add_argument("--plug_hidden_dim", type=int, default=256)
+        parser.add_argument("--plug_latent_dim", type=int, default=128)
         parser.add_argument("--plug_beta", type=float, default=1e-1)
         
         # sampling
