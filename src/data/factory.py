@@ -1,6 +1,6 @@
 import torch
 from data.graph.dataset import GraphDataset
-from data.graph.transform import fragment, mask
+from data.graph.transform import fragment, fragment2, mask, mutate
 from data.sequence.dataset import SequenceDataset, EnumSequenceDataset
 
 class TensorDataset(torch.utils.data.Dataset):
@@ -43,8 +43,16 @@ def load_dataset(dataset_name, task, split):
         input_dataset = GraphDataset(task, split, transform=fragment)
         target_dataset = SequenceDataset(task, split)
         dataset = ZipDataset(input_dataset, target_dataset)
+    elif dataset_name == "frag2graph2seq":
+        input_dataset = GraphDataset(task, split, transform=fragment2)
+        target_dataset = SequenceDataset(task, split)
+        dataset = ZipDataset(input_dataset, target_dataset)
     elif dataset_name == "maskgraph2seq":
         input_dataset = GraphDataset(task, split, transform=mask)
+        target_dataset = SequenceDataset(task, split)
+        dataset = ZipDataset(input_dataset, target_dataset)
+    elif dataset_name == "mutategraph2seq":
+        input_dataset = GraphDataset(task, split, transform=mutate)
         target_dataset = SequenceDataset(task, split)
         dataset = ZipDataset(input_dataset, target_dataset)
 
@@ -52,20 +60,14 @@ def load_dataset(dataset_name, task, split):
 
 
 def load_collate(dataset_name):
-    if dataset_name in ["graph2seq", "graph2enumseq", "fraggraph2seq", "maskgraph2seq"]:
+    if dataset_name in [
+        "graph2seq", "graph2enumseq", "fraggraph2seq", "frag2graph2seq", "maskgraph2seq", "mutategraph2seq"
+        ]:
         def collate(data_list):
             input_data_list, target_data_list = zip(*data_list)
             batched_input_data = GraphDataset.collate(input_data_list)
             batched_target_data = SequenceDataset.collate(target_data_list)
             return batched_input_data, batched_target_data
-    elif dataset_name in ["plogp"]:
-        def collate(data_list):
-            input_data_list, target_data_list, cond_data_list = zip(*data_list)
-            batched_input_data = GraphDataset.collate(input_data_list)
-            batched_target_data = SequenceDataset.collate(target_data_list)
-            batched_cond_data = PLogPDataset.collate(cond_data_list)
-            
-            return batched_input_data, batched_target_data, batched_cond_data
     
     return collate
 
