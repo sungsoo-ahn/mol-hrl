@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 # Resource folder
-resource/
+#resource/
 
 # vscode
 .vscode
