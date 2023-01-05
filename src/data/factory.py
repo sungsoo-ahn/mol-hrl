@@ -35,6 +35,10 @@ def load_dataset(dataset_name, task, split):
         input_dataset = GraphDataset(task, split)
         target_dataset = SequenceDataset(task, split)
         dataset = ZipDataset(input_dataset, target_dataset)
+    if dataset_name == "graph2graph":
+        input_dataset = GraphDataset(task, split)
+        target_dataset = GraphDataset(task, split)
+        dataset = ZipDataset(input_dataset, target_dataset)
     elif dataset_name == "graph2enumseq":
         input_dataset = GraphDataset(task, split)
         target_dataset = EnumSequenceDataset(task, split)
@@ -61,12 +65,12 @@ def load_dataset(dataset_name, task, split):
 
 def load_collate(dataset_name):
     if dataset_name in [
-        "graph2seq", "graph2enumseq", "fraggraph2seq", "frag2graph2seq", "maskgraph2seq", "mutategraph2seq"
+        "graph2seq", "graph2enumseq", "fraggraph2seq", "frag2graph2seq", "maskgraph2seq", "mutategraph2seq", "graph2graph"
         ]:
         def collate(data_list):
             input_data_list, target_data_list = zip(*data_list)
             batched_input_data = GraphDataset.collate(input_data_list)
-            batched_target_data = SequenceDataset.collate(target_data_list)
+            batched_target_data = GraphDataset.collate(target_data_list)
             return batched_input_data, batched_target_data
     
     return collate

@@ -2,15 +2,24 @@ import torch
 import torch_geometric
 from data.graph.util import smiles2graph
 from data.util import load_smiles_list
-
+from rdkit import Chem
 
 class GraphDataset(torch.utils.data.Dataset):
     def __init__(self, task, split, transform=smiles2graph):
         super(GraphDataset, self).__init__()
         self.smiles_list = load_smiles_list(task, split)
+        #kekulized_smiles_list = []
+        #for smile in self.smiles_list:
+        #    m = Chem.MolFromSmiles(smile)
+        #    Chem.Kekulize(m)
+        #    kekulized_smiles_list.append(Chem.MolToSmiles(m, kekuleSmiles=True))
+        #self.smiles_list = kekulized_smiles_list
+
+            
         self.transform = transform
 
     def __getitem__(self, idx):
+        
         smiles = self.smiles_list[idx]
         graph = self.transform(smiles)
         return graph

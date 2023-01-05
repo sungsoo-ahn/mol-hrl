@@ -3,7 +3,7 @@ import tokenizers
 from tqdm import tqdm
 import numpy as np
     
-from data.util import load_smiles_list
+from data.util import load_smiles_list, load_tokenizer
 from data.score.score import _raw_plogp
 
 from tokenizers import Tokenizer
@@ -15,16 +15,20 @@ from tokenizers.processors import TemplateProcessing
 if __name__ == "__main__":
     # create vocabulary
     smiles_list = []
-    for split in ["train", "valid", "test"]:
-        smiles_list += load_smiles_list("zinc", split)
+    #for split in ["train", "valid", "test"]:
+    #    smiles_list += load_smiles_list("zinc", split)
     
-    for split in ["train", "valid", "test"]:
-        smiles_list += load_smiles_list("chembl24", split)
+    #for split in ["train", "valid", "test"]:
+    #    smiles_list += load_smiles_list("chembl24", split)
         
-    for score_name in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
-        smiles_list += load_smiles_list(score_name, "default")
+    #for score_name in ["5ht1b", "5ht2b", "acm2", "cyp2d6"]:
+    #    smiles_list += load_smiles_list(score_name, "default")
 
-    """        
+    smiles_list = []
+    with open("../resource/data/zinc/250k_rndm_zinc_drugs_clean_3_canonized.csv") as f:
+        for line in f.readlines()[1:]:
+            smiles_list.append(line.split(',')[0])
+
     tokenizer = Tokenizer(BPE())
     tokenizer.pad_token = "[PAD]"
     tokenizer.bos_token = "[BOS]"
@@ -40,8 +44,8 @@ if __name__ == "__main__":
         special_tokens=[("[BOS]", tokenizer.token_to_id("[BOS]")), ("[EOS]", tokenizer.token_to_id("[EOS]")),],
     )
     tokenizer.save(f"../resource/data/tokenizer.json")
-    """
-    """
+    #"""
+    #"""
     tokenizer = load_tokenizer()
     print(tokenizer.token_to_id("[PAD]"))
     for smiles in tqdm(smiles_list[:10000]):
@@ -61,7 +65,7 @@ if __name__ == "__main__":
         if score_func_name == "plogp":
             score_func = _raw_plogp
         elif score_func_name == "logp":
-            score_func = lambda smiles: rdkit.
+            score_func = lambda smiles: rdkit
         #
         train_smiles_list = smiles_list[:4000]        
         with open(f"../resource/data/{score_func_name}/train.txt", "w") as f:
@@ -87,3 +91,4 @@ if __name__ == "__main__":
         with open(f"../resource/data/{score_func_name}/valid_score.txt", "w") as f:
             for score in valid_score_list:
                 f.write(str(score) + "\n")
+    """

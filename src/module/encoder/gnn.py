@@ -37,7 +37,7 @@ class GINConv(MessagePassing):
         edge_attr = torch.cat((edge_attr, self_loop_attr), dim=0)
 
         edge_embeddings = self.edge_embedding1(edge_attr[:, 0]) + self.edge_embedding2(edge_attr[:, 1])
-
+        
         return self.propagate(edge_index, x=x, edge_attr=edge_embeddings)
 
     def message(self, x_j, edge_attr):
@@ -57,9 +57,13 @@ class GNNEncoder(torch.nn.Module):
 
         self.x_embedding1 = torch.nn.Embedding(num_atom_type, hidden_dim)
         self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, hidden_dim)
+        # For symmetry breaking
+        self.x_embedding3 = torch.nn.Embedding(100, hidden_dim)
 
         torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
         torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
+        # For symmetry breaking
+        torch.nn.init.xavier_uniform_(self.x_embedding3.weight.data)
 
         ###List of MLPs
         self.gnns = torch.nn.ModuleList()
@@ -83,18 +87,23 @@ class GNNEncoder(torch.nn.Module):
             batched_data.edge_index,
             batched_data.edge_attr,
         )
-
-        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
-
+        
+        h = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])+ self.x_embedding3(x[:, 2])
+        
+        
         for layer in range(self.num_layers):
             h = self.gnns[layer](h, edge_index, edge_attr)
+            
             h = self.batch_norms[layer](h)
             if layer < self.num_layers - 1:
                 h = F.relu(h)
-
+        
+        #raise dd
+        #print(h[20:,:5])
+        
         out = self.projector(h)
-        out = global_mean_pool(out, batched_data.batch)
-        return out
+        #global_out = global_mean_pool(out, batched_data.batch)
+        return out#, global_out
 
     def encode_smiles(self, smiles_list, device):
         data_list = [smiles2graph(smiles) for smiles in smiles_list]

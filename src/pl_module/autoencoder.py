@@ -12,6 +12,8 @@ plt.style.use('fivethirtyeight')
 
 #from module.factory import load_encoder, load_decoder
 from module.decoder.lstm import LSTMDecoder
+from module.decoder.transformer import TransformerDecoder
+
 from module.encoder.gnn import GNNEncoder
 from module.vq_layer import FlattenedVectorQuantizeLayer
 from pl_module.util import compute_sequence_cross_entropy, compute_sequence_accuracy
@@ -35,10 +37,20 @@ class AutoEncoderModule(pl.LightningModule):
             hidden_dim=hparams.encoder_hidden_dim,
             code_dim=hparams.code_dim
         )
-        self.decoder = LSTMDecoder(
+        if hparams.decoder == "lstm":
+            self.decoder = LSTMDecoder(
             num_layers=hparams.decoder_num_layers, 
             hidden_dim=hparams.decoder_hidden_dim, 
             code_dim=hparams.code_dim
+            )
+        elif hparams.decoder == "transformer":
+            self.decoder = TransformerDecoder(
+                num_encoder_layers = hparams.encoder_layers,
+                emb_size = hparams.emb_size,
+                nhead = hparams.nhead,
+                dim_feedforward = hparams.dim_feedforward,
+                dropout = hparams.dropout,
+                code_dim = hparams.code_dim
             )
 
     def setup_datasets(self, hparams):
@@ -56,15 +68,25 @@ class AutoEncoderModule(pl.LightningModule):
         parser.add_argument("--num_workers", type=int, default=8)
 
         # model - code
-        parser.add_argument("--code_dim", type=int, default=256)
+        parser.add_argument("--code_dim", type=int, default=512)
         
         # model - encoder
         parser.add_argument("--encoder_num_layers", type=int, default=5)
-        parser.add_argument("--encoder_hidden_dim", type=int, default=256)
+        parser.add_argument("--encoder_hidden_dim", type=int, default=512)
 
         # model - decoder
+        #parser.add_argument("--decoder", type=str, default="gnn")
+
+        # model - decoder (for lstm)
         parser.add_argument("--decoder_num_layers", type=int, default=3)
         parser.add_argument("--decoder_hidden_dim", type=int, default=1024)
+
+        # model - decoder (for transformer)
+        parser.add_argument("--encoder_layers", type=int, default=3)
+        parser.add_argument("--emb_size", type=int, default=512)
+        parser.add_argument("--nhead", type=int, default=8)
+        parser.add_argument("--dim_feedforward", type=int, default=2048)
+        parser.add_argument("--dropout", type=int, default=0.1)
         
         # training
         parser.add_argument("--lr", type=float, default=1e-4)
@@ -130,8 +152,11 @@ class AutoEncoderModule(pl.LightningModule):
 
     def validation_step(self, batched_data, batch_idx):
         loss, statistics = self.shared_step(batched_data)
+        #quality_statistics = self.check_sample_quality(batched_data)
         for key, val in statistics.items():
             self.log(f"validation/{key}", val, on_step=False, on_epoch=True, logger=True)
+        #for key, val in quality_statistics.items():
+        #    self.log(f"validation/{key}", val, on_step=False, on_epoch=True, logger=True)
 
         return loss
     

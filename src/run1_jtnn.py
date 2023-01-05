@@ -4,7 +4,7 @@ import argparse
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from neptune.new.integrations.pytorch_lightning import NeptuneLogger
+#from neptune.new.integrations.pytorch_lightning import NeptuneLogger
 
 from pl_module.jtnn import JTNNModule
 
@@ -20,9 +20,9 @@ if __name__ == "__main__":
 
     model = JTNNModule(hparams)
     model.postsetup_datasets()
-    neptune_logger = NeptuneLogger(project="sungsahn0215/molrep", close_after_fit=False)
-    neptune_logger.run["params"] = vars(hparams)
-    neptune_logger.run['sys/tags'].add(["run1", "jtnn"] + hparams.tag.split("_"))
+    #neptune_logger = NeptuneLogger(project="sungsahn0215/molrep", close_after_fit=False)
+    #neptune_logger.run["params"] = vars(hparams)
+    #neptune_logger.run['sys/tags'].add(["run1", "jtnn"] + hparams.tag.split("_"))
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(BASE_CHECKPOINT_DIR, hparams.tag),
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         )
     trainer = pl.Trainer(
         gpus=1,
-        logger=neptune_logger,
+        #logger=neptune_logger,
         default_root_dir="../resource/log/",
         max_epochs=hparams.max_epochs,
         callbacks=[checkpoint_callback],

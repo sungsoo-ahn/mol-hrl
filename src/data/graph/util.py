@@ -55,18 +55,20 @@ def get_bond_feature(bond_type):
 
 
 def smiles2graph(smiles):
-    mol = Chem.MolFromSmiles(smiles, sanitize=True)    
+    mol = Chem.MolFromSmiles(smiles, sanitize=True)
+    #Chem.Kekulize(mol)    
     return mol2graph(mol)
 
 
 def mol2graph(mol):
     # atoms
-    num_atom_features = 2  # atom type,  chirality tag
+    
+    num_atom_features = 3  # atom type,  chirality tag
     atom_features_list = []
-    for atom in mol.GetAtoms():
+    for (i,atom) in enumerate(mol.GetAtoms()):
         atom_feature = [allowable_features["possible_atomic_num_list"].index(atom.GetAtomicNum())] + [
-            allowable_features["possible_chirality_list"].index(atom.GetChiralTag())
-        ]
+            allowable_features["possible_chirality_list"].index(atom.GetChiralTag()) 
+        ]+ [i]
         atom_features_list.append(atom_feature)
     x = torch.tensor(np.array(atom_features_list), dtype=torch.long)
 
@@ -76,6 +78,7 @@ def mol2graph(mol):
         edges_list = []
         edge_features_list = []
         for bond in mol.GetBonds():
+            
             i = bond.GetBeginAtomIdx()
             j = bond.GetEndAtomIdx()
             edge_feature = [allowable_features["possible_bonds"].index(bond.GetBondType())] + [

@@ -137,4 +137,8 @@ resource/
 # neptune
 .neptune
 
-resource/
+resource/checkpoint
+resource/log
+
+# sjkim
+src/pretrained_gnn
